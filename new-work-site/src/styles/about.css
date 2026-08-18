@@ -37,7 +37,7 @@
     font-weight: 400;
     letter-spacing: -.075em;
     line-height: .74;
-    text-transform: uppercase;
+    text-transform: none;
   }
 
   .about-intro__lower {
@@ -101,7 +101,7 @@
     font-weight: 400;
     letter-spacing: -.05em;
     line-height: .84;
-    text-transform: uppercase;
+    text-transform: none;
   }
 
   .about-section-heading > p:last-child {
@@ -139,7 +139,7 @@
     font-weight: 400;
     letter-spacing: -.055em;
     line-height: .82;
-    text-transform: uppercase;
+    text-transform: none;
   }
 
   .about-person__role {

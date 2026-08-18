@@ -424,7 +424,7 @@
     font-weight: 400;
     letter-spacing: -.075em;
     line-height: .74;
-    text-transform: uppercase;
+    text-transform: none;
   }
   .utility-content__lead {
     max-width: 780px;
