@@ -149,6 +149,12 @@ describe('About people content', () => {
       height: 824,
     });
     expect(settings.compactMark).toEqual(settings.wordmark);
+    expect(settings.defaultSeo.shareImage).toEqual(expect.objectContaining({
+      src: '/media/brand/social-share.png',
+      width: 1200,
+      height: 630,
+    }));
+    expect(settings.defaultSeo.shareImageAlt).toBe('New Work Agency');
   });
 
   it('retains all three provisional profiles in prototype and preview modes', () => {

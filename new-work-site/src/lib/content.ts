@@ -321,7 +321,11 @@ function sourceUrl(value: unknown): string | undefined {
   const record = optionalRecord(value);
   if (!record) return undefined;
   const asset = optionalRecord(record.asset);
-  return stringFrom(record.url) || stringFrom(asset?.url) || stringFrom(record.assetUrl);
+  const source = stringFrom(record.url)
+    || stringFrom(asset?.url)
+    || stringFrom(record.assetUrl)
+    || stringFrom(record.file);
+  return source ? localPublicPath(source) : undefined;
 }
 
 function cropFraction(value: unknown): number {
