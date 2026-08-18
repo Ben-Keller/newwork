@@ -255,6 +255,18 @@ test('the type title reveals animated imagery one letter at a time on hover', as
   await expect(firstLetter.locator('[data-type-letter-canvas]')).toHaveCSS('opacity', '1');
   expect(await firstLetter.evaluate((element) => getComputedStyle(element, '::before').opacity)).toBe('0');
   expect(await firstLetter.evaluate((element) => getComputedStyle(element, '::after').opacity)).toBe('0');
+  const maskGeometry = await firstLetter.evaluate((element) => {
+    const canvas = element.querySelector<HTMLCanvasElement>('[data-type-letter-canvas]')!;
+    const glyph = element.querySelector<HTMLElement>('[data-type-letter-glyph]')!;
+    return {
+      canvasWidth: canvas.getBoundingClientRect().width,
+      letterWidth: element.getBoundingClientRect().width,
+      negativeTracking: Math.max(0, -Number.parseFloat(getComputedStyle(glyph).letterSpacing)),
+    };
+  });
+  expect(maskGeometry.canvasWidth).toBeGreaterThan(maskGeometry.letterWidth);
+  expect(maskGeometry.canvasWidth - maskGeometry.letterWidth)
+    .toBeCloseTo(maskGeometry.negativeTracking, 0);
   expect(await firstLetter.evaluate((element) => element.getBoundingClientRect().width)).toBeCloseTo(initialWidth, 1);
 });
 

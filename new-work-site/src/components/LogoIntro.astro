@@ -185,7 +185,12 @@ const titleWordmarkMarkup = titleKit.wordmark
                 data-glyph={glyph}
                 style={style}
               >
-                <span class="logo-intro__type-letter-rest">{glyph}</span>
+                <span class="logo-intro__type-letter-rest">
+                  <span data-type-letter-glyph>{glyph}</span><span
+                    class="logo-intro__type-letter-baseline"
+                    data-type-letter-baseline
+                  ></span>
+                </span>
                 <canvas class="logo-intro__type-letter-canvas" data-type-letter-canvas aria-hidden="true"></canvas>
                 {videoSource ? (
                   <video
@@ -375,13 +380,22 @@ const titleWordmarkMarkup = titleKit.wordmark
           const canvas = letter.querySelector<HTMLCanvasElement>('[data-type-letter-canvas]');
           const video = letter.querySelector<HTMLVideoElement>('[data-type-letter-video]');
           const rest = letter.querySelector<HTMLElement>('.logo-intro__type-letter-rest');
-          if (!canvas || !video || !rest || activeLetter !== letter) return;
+          const glyphElement = letter.querySelector<HTMLElement>('[data-type-letter-glyph]');
+          const baselineMarker = letter.querySelector<HTMLElement>('[data-type-letter-baseline]');
+          if (!canvas || !video || !rest || !glyphElement || !baselineMarker || activeLetter !== letter) return;
           const rect = letter.getBoundingClientRect();
           const scale = Math.min(window.devicePixelRatio || 1, 2);
           const width = Math.max(1, Math.round(rect.width));
           const height = Math.max(1, Math.round(rect.height));
-          const pixelWidth = Math.round(width * scale);
+          const styles = getComputedStyle(glyphElement);
+          const letterSpacing = Number.parseFloat(styles.letterSpacing) || 0;
+          // The inline box includes the negative tracking used to overlap the
+          // title letters. Restore that trimmed advance only for the painted
+          // canvas so the glyph's right edge is not clipped.
+          const paintWidth = width + Math.max(0, -letterSpacing);
+          const pixelWidth = Math.round(paintWidth * scale);
           const pixelHeight = Math.round(height * scale);
+          canvas.style.width = `${paintWidth}px`;
           if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
             canvas.width = pixelWidth;
             canvas.height = pixelHeight;
@@ -389,30 +403,31 @@ const titleWordmarkMarkup = titleKit.wordmark
           const context = canvas.getContext('2d');
           if (context && video.readyState >= 2 && video.videoWidth && video.videoHeight) {
             context.setTransform(scale, 0, 0, scale, 0, 0);
-            context.clearRect(0, 0, width, height);
+            context.clearRect(0, 0, paintWidth, height);
             const [positionX = .5, positionY = .5] = (video.dataset.objectPosition || '.5,.5')
               .split(',')
               .map(Number);
-            const mediaScale = Math.max(width / video.videoWidth, height / video.videoHeight);
+            const mediaScale = Math.max(paintWidth / video.videoWidth, height / video.videoHeight);
             const mediaWidth = video.videoWidth * mediaScale;
             const mediaHeight = video.videoHeight * mediaScale;
             context.drawImage(
               video,
-              (width - mediaWidth) * positionX,
+              (paintWidth - mediaWidth) * positionX,
               (height - mediaHeight) * positionY,
               mediaWidth,
               mediaHeight,
             );
             context.globalCompositeOperation = 'destination-in';
-            const styles = getComputedStyle(rest);
             context.font = `${styles.fontWeight} ${styles.fontSize} ${styles.fontFamily}`;
             context.textBaseline = 'alphabetic';
             context.fillStyle = '#fff';
             const glyph = letter.dataset.glyph || '';
-            const metrics = context.measureText(glyph);
-            const ascent = metrics.actualBoundingBoxAscent || Number.parseFloat(styles.fontSize) * .75;
-            const descent = metrics.actualBoundingBoxDescent || Number.parseFloat(styles.fontSize) * .2;
-            context.fillText(glyph, (width - metrics.width) / 2, (height + ascent - descent) / 2);
+            const markerRect = baselineMarker.getBoundingClientRect();
+            const baseline = markerRect.top - rect.top;
+            // Use the browser's real inline baseline instead of centering from
+            // canvas font metrics. The latter differs substantially for the
+            // very tight title line-height and shifts the media glyph upward.
+            context.fillText(glyph, 0, baseline);
             context.globalCompositeOperation = 'source-over';
             canvas.dataset.mediaReady = 'true';
             letter.dataset.typeMediaReady = 'true';
@@ -585,6 +600,14 @@ const titleWordmarkMarkup = titleKit.wordmark
   .logo-intro__type-letter-rest {
     display: block;
     transition: opacity .42s cubic-bezier(.22, 1, .36, 1);
+  }
+
+  .logo-intro__type-letter-baseline {
+    display: inline-block;
+    width: 0;
+    height: 0;
+    vertical-align: baseline;
+    pointer-events: none;
   }
 
   .logo-intro__type-line { pointer-events: auto; }
