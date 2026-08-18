@@ -32,10 +32,11 @@
     max-width: none;
     margin-top: .3rem;
     font-family: var(--font-editorial, var(--font-display));
-    font-size: clamp(6rem, 20vw, 24rem);
-    font-stretch: condensed;
-    letter-spacing: -.09em;
-    line-height: .68;
+    font-size: clamp(6rem, 17vw, 20rem);
+    font-stretch: normal;
+    font-weight: 400;
+    letter-spacing: -.075em;
+    line-height: .74;
     text-transform: uppercase;
   }
 
@@ -95,10 +96,11 @@
 
   .about-section-heading h2 {
     font-family: var(--font-editorial, var(--font-display));
-    font-size: clamp(2.4rem, 5.8vw, 6.7rem);
-    font-stretch: condensed;
-    letter-spacing: -.065em;
-    line-height: .78;
+    font-size: clamp(2.4rem, 5.3vw, 6.2rem);
+    font-stretch: normal;
+    font-weight: 400;
+    letter-spacing: -.05em;
+    line-height: .84;
     text-transform: uppercase;
   }
 
@@ -132,10 +134,11 @@
   .about-person h3 {
     margin-left: -.06em;
     font-family: var(--font-editorial, var(--font-display));
-    font-size: clamp(5rem, 9.5vw, 11rem);
-    font-stretch: condensed;
-    letter-spacing: -.08em;
-    line-height: .72;
+    font-size: clamp(4rem, 6vw, 7.5rem);
+    font-stretch: normal;
+    font-weight: 400;
+    letter-spacing: -.055em;
+    line-height: .82;
     text-transform: uppercase;
   }
 
@@ -380,10 +383,11 @@
 
   .about-content .capabilities li strong {
     font-family: var(--font-editorial, var(--font-display));
-    font-size: clamp(2.5rem, 6.5vw, 7.5rem);
-    font-stretch: condensed;
-    letter-spacing: -.065em;
-    line-height: .8;
+    font-size: clamp(2.5rem, 5.8vw, 6.7rem);
+    font-stretch: normal;
+    font-weight: 400;
+    letter-spacing: -.05em;
+    line-height: .86;
     text-transform: uppercase;
   }
 
@@ -400,10 +404,11 @@
 
   .about-contact h2 {
     font-family: var(--font-editorial, var(--font-display));
-    font-size: clamp(3.6rem, 8vw, 9.5rem);
-    font-stretch: condensed;
-    letter-spacing: -.075em;
-    line-height: .76;
+    font-size: clamp(3.6rem, 7vw, 8.5rem);
+    font-stretch: normal;
+    font-weight: 400;
+    letter-spacing: -.055em;
+    line-height: .82;
     text-transform: uppercase;
   }
 
@@ -525,7 +530,7 @@
   }
 
   .about-person h3 {
-    font-size: clamp(4.8rem, 25vw, 7.5rem);
+    font-size: clamp(3.3rem, 16vw, 5.8rem);
   }
 
   .about-person__bio {
@@ -582,7 +587,7 @@
 
 @media (max-width: 359px) {
   .about-person h3 {
-    font-size: 22vw;
+    font-size: 16vw;
   }
 }
 

@@ -419,10 +419,11 @@
     max-width: none;
     margin-top: .3rem;
     font-family: var(--font-editorial, var(--font-display));
-    font-size: clamp(6rem, 20vw, 24rem);
-    font-stretch: condensed;
-    letter-spacing: -.09em;
-    line-height: .68;
+    font-size: clamp(6rem, 17vw, 20rem);
+    font-stretch: normal;
+    font-weight: 400;
+    letter-spacing: -.075em;
+    line-height: .74;
     text-transform: uppercase;
   }
   .utility-content__lead {
@@ -464,11 +465,11 @@
     background: var(--color-action);
     color: var(--color-action-ink);
     font-family: var(--font-editorial, var(--font-display));
-    font-size: clamp(2.6rem, 8vw, 10rem);
-    font-stretch: condensed;
-    font-weight: 900;
-    letter-spacing: -.065em;
-    line-height: .85;
+    font-size: clamp(2.6rem, 7vw, 8.5rem);
+    font-stretch: normal;
+    font-weight: 400;
+    letter-spacing: -.05em;
+    line-height: .9;
     text-decoration: none;
   }
   .contact-email__arrow { flex: 0 0 auto; font-family: var(--font-body); font-size: .6em; }
@@ -624,7 +625,7 @@
   .project-disclosures dl { grid-template-columns: 1fr; }
   .project-disclosures dd { margin-bottom: .7rem; }
   .utility-content { padding-top: 1.5rem; }
-  .utility-content h1 { font-size: clamp(5.5rem, 28vw, 8.5rem); line-height: .72; }
+  .utility-content h1 { font-size: clamp(4.8rem, 24vw, 7.5rem); line-height: .78; }
   .utility-content__lead,
   .capabilities { margin-inline-start: 0; }
   .about-image { width: 100%; }

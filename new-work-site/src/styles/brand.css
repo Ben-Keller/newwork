@@ -1,10 +1,8 @@
 /*
  * NEW WORK BRAND HANDOFF
  * ----------------------
- * This is the only brand token/font seam. Local preview resolves to the
- * licensed desktop installations of PP Neue Montreal and Futura without
- * redistributing their source files. For deployment, replace the local()
- * sources with approved WOFF2 files while keeping these family aliases.
+ * This is the only brand token/font seam. Body copy resolves to PP Neue
+ * Montreal and editorial display typography resolves to Futura Regular.
  *
  * Final vector artwork belongs in Wordmark.astro via its `paths` + `viewBox`
  * props. Do not convert the logo to a background image or bake its name into
@@ -61,37 +59,17 @@
 
 @font-face {
   font-family: "New Work Display";
-  src: local("Futura Medium"), local("Futura-Medium"), local("Futura");
+  src: local("Futura Medium"), local("Futura-Medium"), local("Futura"), local("Futura PT Medium");
   font-style: normal;
   font-weight: 400 600;
-  font-stretch: normal;
   font-display: swap;
 }
 
 @font-face {
   font-family: "New Work Display";
-  src: local("Futura Bold"), local("Futura-Bold");
+  src: local("Futura Bold"), local("Futura-Bold"), local("Futura PT Bold");
   font-style: normal;
   font-weight: 700 900;
-  font-stretch: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "New Work Display";
-  src: local("Futura Condensed Medium"), local("Futura-CondensedMedium");
-  font-style: normal;
-  font-weight: 400 700;
-  font-stretch: condensed;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "New Work Display";
-  src: local("Futura Condensed ExtraBold"), local("Futura-CondensedExtraBold");
-  font-style: normal;
-  font-weight: 800 900;
-  font-stretch: condensed;
   font-display: swap;
 }
 
