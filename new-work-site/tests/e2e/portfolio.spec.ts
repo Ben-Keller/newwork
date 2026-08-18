@@ -7,6 +7,7 @@ test.beforeEach(async ({ page }, testInfo) => {
     || testInfo.title.includes('landing intro')
     || testInfo.title.includes('landing loads')
     || testInfo.title.includes('disabled entrance')
+    || testInfo.title.includes('disabled title entrance')
     || testInfo.title.includes('each settled title')
   ) return;
   await page.addInitScript(() => {
@@ -18,20 +19,20 @@ test.beforeEach(async ({ page }, testInfo) => {
   });
 });
 
-test('the landing loads directly into the black title while its entrance is disabled', async ({ page }) => {
+test('the landing loads directly into the stacked typographic title while its entrance is disabled', async ({ page }) => {
   const intro = page.locator('[data-logo-intro]');
   await page.goto('/', { waitUntil: 'domcontentloaded' });
   await expect(intro).toHaveAttribute('data-entrance-enabled', 'false');
   await expect(intro).toHaveAttribute('data-state', 'settled');
   await expect(intro).not.toHaveAttribute('data-intro-started-at');
-  await expect(intro.locator('[data-intro-solid]')).toBeVisible();
-  await expect(intro.locator('[data-intro-media]')).toHaveCSS('visibility', 'hidden');
-  await expect(intro.locator('[data-intro-video-source]')).not.toHaveAttribute('src');
+  await expect(intro).toHaveAttribute('data-title-treatment', 'type');
+  await expect(intro.locator('[data-type-title-line]')).toHaveText(['new', 'work']);
+  await expect(intro.locator('[data-svg-title]')).toHaveCount(0);
   expect(await page.evaluate(() => sessionStorage.getItem('new-work:logo-intro:title:v1'))).toBeNull();
 
   await page.reload({ waitUntil: 'domcontentloaded' });
   await expect(intro).toHaveAttribute('data-state', 'settled');
-  await expect(intro.locator('[data-intro-media]')).toHaveCSS('visibility', 'hidden');
+  await expect(intro.locator('[data-type-title]')).toBeVisible();
 });
 
 test('refreshing a scrolled route returns it to the top', async ({ page }) => {
@@ -77,6 +78,35 @@ test('the supplied NW artwork is the persistent header, footer, and browser icon
   await expect(page.locator('body')).toHaveAttribute('data-page-theme', 'dark');
   await expect(page.locator('[data-site-header] .site-header__full-mark img')).not.toHaveCSS('filter', 'none');
   await expect(page.locator('[data-site-footer] .site-footer__brand img')).not.toHaveCSS('filter', 'none');
+});
+
+test('the header keeps the full title and default logo without preview sliders', async ({ page }) => {
+  await page.goto('/');
+  const header = page.locator('[data-site-header]');
+  await expect(page.locator('[data-header-design-controls], [data-header-logo-control], .identity-slider'))
+    .toHaveCount(0);
+
+  await expect(page.locator('html')).not.toHaveAttribute('data-title-mask');
+  await expect(page.locator('[data-type-title-line="new"]')).toHaveCSS('clip-path', 'none');
+  await expect(page.locator('[data-type-title]')).toHaveCSS('align-items', 'flex-start');
+  await expect(page.locator('[data-logo-descriptor]')).toHaveCSS('text-align', 'start');
+  expect(await page.evaluate(() => localStorage.getItem('new-work:title-mask'))).toBeNull();
+  expect(await page.evaluate(() => localStorage.getItem('new-work:title-alignment'))).toBeNull();
+
+  await expect(header).not.toHaveAttribute('data-header-logo');
+  await expect(header.locator('.site-header__full-mark img')).toHaveAttribute('src', '/media/brand/new-black.svg');
+  expect(await page.evaluate(() => localStorage.getItem('new-work:header-logo'))).toBeNull();
+
+  await page.goto('/about');
+  await expect(page.locator('html')).not.toHaveAttribute('data-title-mask');
+  await expect(page.locator('[data-site-header]')).not.toHaveAttribute('data-header-logo');
+  await expect(page.locator('[data-site-header] .site-header__full-mark img'))
+    .toHaveAttribute('src', '/media/brand/new-black.svg');
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.locator('[data-header-design-controls], input[type="range"]')).toHaveCount(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth))
+    .toBeLessThanOrEqual(1);
 });
 
 test('the gallery order toolbar stays hidden from the review UI', async ({ page }) => {
@@ -144,13 +174,12 @@ test('the footer closes every route with a studio statement, directory, and over
   expect(mobile.overflow).toBeLessThanOrEqual(1);
 });
 
-test('the title stage remains non-blocking and keeps letter hover while its entrance is hidden', async ({ page }) => {
+test('the typographic title remains non-blocking while its entrance is hidden', async ({ page }) => {
   await page.goto('/', { waitUntil: 'domcontentloaded' });
   const intro = page.locator('[data-logo-intro]');
   await expect(intro).toHaveAttribute('data-state', 'settled');
-  await expect(intro.locator('[data-intro-cell]')).toHaveCount(4);
-  const source = intro.locator('[data-intro-video-source]');
-  await expect(source).not.toHaveAttribute('src');
+  await expect(intro.locator('[data-type-title-line]')).toHaveText(['new', 'work']);
+  await expect(intro.locator('[data-intro-cell]')).toHaveCount(0);
   const layout = await intro.evaluate((element) => {
     const header = document.querySelector<HTMLElement>('[data-site-header]');
     return {
@@ -170,51 +199,24 @@ test('the title stage remains non-blocking and keeps letter hover while its entr
   await expect(descriptor).toBeVisible();
   await expect(descriptor).toHaveCSS('text-transform', 'none');
   await expect(page.locator('[data-project-grid]')).toBeAttached();
-  const firstLetter = intro.locator('[data-nw-letter]').first();
-  await firstLetter.hover();
-  await expect(intro.locator('[data-intro-letter-layer]').first())
-    .toHaveAttribute('data-letter-active', 'true');
 });
 
-test('each settled title letter reveals its own animated media treatment on hover', async ({ page }) => {
+test('the earlier SVG title kits remain available behind the title treatment switch', async ({ page }) => {
   await page.goto('/');
   const intro = page.locator('[data-logo-intro]');
-  const triggers = intro.locator('[data-nw-letter]');
-  const layers = intro.locator('[data-intro-letter-layer]');
   await expect(intro).toHaveAttribute('data-state', 'settled', { timeout: 6_000 });
-  await expect(triggers).toHaveCount(7);
-  await expect(layers).toHaveCount(7);
-  await expect(intro).toHaveAttribute('data-title-source', 'new-work-title-letter-kit');
-  await expect(intro.locator('#new-work-title-letter-logo'))
-    .toHaveAttribute('viewBox', '0 0 5176.81 834');
-  await expect(intro.locator('#new-work-title-letter-logo')).not.toHaveAttribute('style', /color/iu);
-  expect(await triggers.first().evaluate((letter) => getComputedStyle(letter).color))
-    .toBe('rgba(0, 0, 0, 0)');
-  await expect(triggers.nth(0)).toHaveAttribute('id', 'nw-letter-01-n');
-  await expect(triggers.nth(6)).toHaveAttribute('id', 'nw-letter-07-k');
+  await expect(intro).toHaveAttribute('data-title-source', 'pp-neue-montreal');
+  await expect(intro).toHaveAttribute('data-title-treatment', 'type');
+  await expect(intro.locator('[data-svg-title]')).toHaveCount(0);
   expect((await page.request.get('/media/brand/new-work-title-letter-kit/new-work-title-letters.svg')).ok())
     .toBe(true);
   expect((await page.request.get('/media/brand/new-work-sentence-clean-letter-kit/new-work-sentence-letters.svg')).ok())
     .toBe(true);
   expect((await page.request.get('/media/brand/new-work-letter-kit/new-work-letters.svg')).ok())
     .toBe(true);
-
-  await triggers.nth(0).hover();
-  await expect(layers.nth(0)).toHaveAttribute('data-letter-active', 'true');
-  await expect(layers.nth(0)).toHaveCSS('visibility', 'visible');
-  await expect(layers.nth(0).locator('[data-intro-letter-video-source]')).toHaveAttribute('src', /\.mp4$/u);
-
-  await triggers.nth(1).hover();
-  await expect(layers.nth(0)).not.toHaveAttribute('data-letter-active', 'true');
-  await expect(layers.nth(1)).toHaveAttribute('data-letter-active', 'true');
-  await expect(layers.nth(1)).toHaveAttribute('data-letter-kind', 'flip');
-
-  await page.locator('[data-site-header]').hover();
-  await expect(layers.nth(1)).not.toHaveAttribute('data-letter-active', 'true');
-  await expect(layers.nth(1)).toHaveCSS('opacity', '0');
 });
 
-test('the disabled entrance remains disabled across navigation without suppressing hover setup', async ({ page }) => {
+test('the disabled title entrance remains disabled across navigation', async ({ page }) => {
   await page.goto('/', { waitUntil: 'domcontentloaded' });
   await expect(page.locator('[data-logo-intro]')).toHaveAttribute('data-state', 'settled');
   await page.goto('/about');
@@ -223,13 +225,40 @@ test('the disabled entrance remains disabled across navigation without suppressi
   await page.goto('/', { waitUntil: 'domcontentloaded' });
   const intro = page.locator('[data-logo-intro]');
   await expect(intro).toHaveAttribute('data-state', 'settled');
-  await intro.locator('[data-nw-letter]').first().hover();
-  await expect(intro.locator('[data-intro-letter-layer]').first())
-    .toHaveAttribute('data-letter-active', 'true');
+  await expect(intro.locator('[data-type-title]')).toBeVisible();
   expect(await page.evaluate(() => sessionStorage.getItem('new-work:logo-intro:title:v1'))).toBeNull();
 });
 
-test('the settled title stays on one line above the staggered gallery columns', async ({ page }) => {
+test('the type title reveals animated imagery one letter at a time on hover', async ({ page }) => {
+  await page.goto('/');
+  test.skip(
+    !await page.evaluate(() => matchMedia('(hover: hover) and (pointer: fine)').matches),
+    'Per-letter title hover is a fine-pointer enhancement.',
+  );
+
+  const firstLetter = page.locator('[data-type-letter="0"]');
+  const nextLetter = page.locator('[data-type-letter="1"]');
+  const initialWidth = await firstLetter.evaluate((element) => element.getBoundingClientRect().width);
+  const firstLetterBox = await firstLetter.boundingBox();
+  expect(firstLetterBox).not.toBeNull();
+  await page.mouse.move(
+    firstLetterBox!.x + firstLetterBox!.width / 2,
+    firstLetterBox!.y + firstLetterBox!.height / 2,
+  );
+
+  await expect(firstLetter).toHaveAttribute('data-type-active', 'true');
+  await expect(firstLetter.locator('.logo-intro__type-letter-rest')).toHaveCSS('opacity', '0');
+  expect(await nextLetter.evaluate((element) => getComputedStyle(element, '::before').opacity)).toBe('0');
+  await expect(firstLetter.locator('[data-type-letter-video-source]'))
+    .toHaveAttribute('data-src', /stella-artois-daydream/u);
+  await expect(firstLetter).toHaveAttribute('data-type-media-ready', 'true');
+  await expect(firstLetter.locator('[data-type-letter-canvas]')).toHaveCSS('opacity', '1');
+  expect(await firstLetter.evaluate((element) => getComputedStyle(element, '::before').opacity)).toBe('0');
+  expect(await firstLetter.evaluate((element) => getComputedStyle(element, '::after').opacity)).toBe('0');
+  expect(await firstLetter.evaluate((element) => element.getBoundingClientRect().width)).toBeCloseTo(initialWidth, 1);
+});
+
+test('the settled title uses two lowercase lines above the staggered gallery columns', async ({ page }) => {
   for (const viewport of [
     { width: 1_440, height: 1_000 },
     { width: 1_024, height: 768 },
@@ -240,15 +269,20 @@ test('the settled title stays on one line above the staggered gallery columns', 
     await page.goto('/');
     const intro = page.locator('[data-logo-intro]');
     await expect(intro).toHaveAttribute('data-state', 'settled', { timeout: 6_000 });
-    await expect(intro).toHaveAttribute('data-title-layout', 'single-line');
+    await expect(intro).toHaveAttribute('data-title-layout', 'stacked');
     await expect(page.locator('.work-index__rail')).toHaveCount(0);
     await expect(page.getByText('Selected projects', { exact: true })).toHaveCount(0);
     const layout = await intro.evaluate((element) => {
       const box = element.getBoundingClientRect();
-      const stage = element.querySelector<HTMLElement>('.logo-intro__stage')?.getBoundingClientRect();
+      const titleElement = element.querySelector<HTMLElement>('[data-type-title]');
+      const titleLockup = element.querySelector<HTMLElement>('[data-type-lockup]');
+      const stage = titleElement?.getBoundingClientRect();
       const descriptor = element.querySelector<HTMLElement>('[data-logo-descriptor]')?.getBoundingClientRect();
-      const solid = element.querySelector<HTMLElement>('[data-intro-solid]');
+      const outline = element.querySelector<HTMLElement>('[data-type-title-line="new"]');
+      const solid = element.querySelector<HTMLElement>('[data-type-title-line="work"]');
+      const outlineStyles = outline ? getComputedStyle(outline) : null;
       const solidStyles = solid ? getComputedStyle(solid) : null;
+      const titleStyles = titleLockup ? getComputedStyle(titleLockup) : null;
       const grid = document.querySelector<HTMLElement>('[data-project-grid]')?.getBoundingClientRect();
       const gallery = document.querySelector<HTMLElement>('[data-work-gallery]');
       const firstColumnTops = [...document.querySelectorAll<HTMLElement>(
@@ -266,33 +300,55 @@ test('the settled title stays on one line above the staggered gallery columns', 
         stageBottom: stage?.bottom || 0,
         descriptorTop: descriptor?.top || 0,
         gridTop: grid?.top || 0,
+        galleryTop: gallery?.getBoundingClientRect().top || 0,
         introBottom: box.bottom,
         titleStack: Number(getComputedStyle(element).zIndex),
         galleryStack: Number(gallery ? getComputedStyle(gallery).zIndex : 0),
+        galleryOverflow: gallery ? getComputedStyle(gallery).overflow : '',
+        galleryClip: gallery ? getComputedStyle(gallery).clipPath : '',
         firstColumnTops,
-        mask: solidStyles?.maskImage || solidStyles?.getPropertyValue('-webkit-mask-image') || 'none',
-        maskSize: solidStyles?.maskSize || solidStyles?.getPropertyValue('-webkit-mask-size') || '',
-        inlineSize: getComputedStyle(element).getPropertyValue('--logo-title-inline-size').trim(),
+        firstColumnLifts: [...document.querySelectorAll<HTMLElement>(
+          '[data-project-card][data-desktop-column-start]',
+        )].reduce<Record<string, number>>((lifts, card) => {
+          const column = card.dataset.desktopColumn;
+          const translateY = Number.parseFloat(getComputedStyle(card).translate.split(' ')[1] || '0');
+          if (column) lifts[column] = Math.abs(translateY);
+          return lifts;
+        }, {}),
+        titleTranslate: titleStyles?.translate || '',
+        outlineColor: outlineStyles?.color,
+        outlineStroke: outlineStyles?.getPropertyValue('-webkit-text-stroke-width'),
+        solidColor: solidStyles?.color,
+        fontFamily: solidStyles?.fontFamily,
+        fontWeight: solidStyles?.fontWeight,
+        lineCount: element.querySelectorAll('[data-type-title-line]').length,
         overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
       };
     });
     expect(layout.height).toBeGreaterThanOrEqual(90);
     expect(layout.stageHeight).toBeGreaterThanOrEqual(42);
-    expect(layout.stageHeight / layout.stageWidth).toBeGreaterThanOrEqual(0.16);
-    expect(layout.stageHeight / layout.stageWidth).toBeLessThanOrEqual(0.162);
-    expect(layout.inlineSize).toBe('92%');
+    expect(layout.stageHeight / layout.stageWidth).toBeGreaterThanOrEqual(0.28);
+    expect(layout.titleTranslate).toMatch(/-10%$/u);
+    expect(layout.lineCount).toBe(2);
     expect(layout.descriptorTop).toBeGreaterThanOrEqual(layout.stageBottom);
     expect(layout.gridTop).toBeLessThan(layout.introBottom);
     expect(layout.titleStack).toBeGreaterThan(layout.galleryStack);
+    expect(layout.galleryOverflow).toBe('clip');
+    expect(layout.galleryClip).toBe('none');
     if (viewport.width >= 1_200) {
-      const raisedTop = Math.max(layout.firstColumnTops['2']!, layout.firstColumnTops['4']!);
-      const loweredTop = Math.min(layout.firstColumnTops['1']!, layout.firstColumnTops['3']!);
+      expect(Math.min(...Object.values(layout.firstColumnTops))).toBeGreaterThanOrEqual(layout.galleryTop);
       expect(layout.firstColumnTops['1']! - layout.firstColumnTops['2']!).toBeGreaterThanOrEqual(48);
-      expect(loweredTop - raisedTop).toBeGreaterThanOrEqual(48);
-      expect(raisedTop).toBeLessThan(layout.introBottom);
+      expect(layout.firstColumnTops['3']!).toBeLessThan(layout.firstColumnTops['2']!);
+      expect(Math.min(...Object.values(layout.firstColumnTops))).toBeLessThan(layout.introBottom);
+      expect(layout.firstColumnLifts['2']! / layout.firstColumnLifts['1']!).toBeCloseTo(.8, 1);
+      expect(layout.firstColumnLifts['3']! / layout.firstColumnLifts['1']!).toBeCloseTo(10 / 3, 1);
+      expect(layout.firstColumnLifts['4']! / layout.firstColumnLifts['1']!).toBeCloseTo(5 / 3, 1);
     }
-    expect(layout.mask).not.toBe('none');
-    expect(layout.maskSize).toContain('100%');
+    expect(layout.outlineColor).toBe('rgba(0, 0, 0, 0)');
+    expect(Number.parseFloat(layout.outlineStroke || '0')).toBeGreaterThanOrEqual(1);
+    expect(layout.solidColor).not.toBe('rgba(0, 0, 0, 0)');
+    expect(layout.fontFamily).toContain('New Work Sans');
+    expect(Number(layout.fontWeight)).toBeGreaterThanOrEqual(700);
     expect(layout.overflow).toBeLessThanOrEqual(1);
   }
 });

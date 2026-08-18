@@ -7,8 +7,9 @@ test('the work index and film fallback remain useful without JavaScript', async 
   const homeResponse = await page.goto('/');
   expect(homeResponse?.status()).toBe(200);
   await expect(page.locator('[data-logo-intro]')).toBeVisible();
-  await expect(page.locator('[data-intro-solid]')).toBeVisible();
-  await expect(page.locator('[data-intro-media]')).toHaveCSS('display', 'none');
+  await expect(page.locator('[data-type-title]')).toBeVisible();
+  await expect(page.locator('[data-type-title-line]')).toHaveText(['new', 'work']);
+  await expect(page.locator('[data-svg-title]')).toHaveCount(0);
   await expect(page.getByRole('heading', { level: 1, name: 'Selected work' })).toBeAttached();
   await expect(page.locator('[data-project-card]')).toHaveCount(32);
   await expect(page.locator('[data-gallery-remove]')).toHaveCount(0);

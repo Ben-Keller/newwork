@@ -55,6 +55,9 @@ const showGalleryTools = galleryEditing && currentPath === '/';
   class:list={['site-header', { 'site-header--sticky': sticky }, className]}
   id={id}
   data-site-header
+  data-default-logo-src={wordmarkAsset?.src}
+  data-default-logo-width={wordmarkAsset?.width}
+  data-default-logo-height={wordmarkAsset?.height}
 >
   <div class="site-header__inner">
     <a
@@ -128,6 +131,39 @@ const showGalleryTools = galleryEditing && currentPath === '/';
     }
   }
 
+  const LEGACY_TITLE_MASK_KEY = 'new-work:title-mask';
+  const LEGACY_TITLE_ALIGNMENT_KEY = 'new-work:title-alignment';
+  const LEGACY_HEADER_LOGO_KEY = 'new-work:header-logo';
+
+  const removeStoredValue = (key: string): void => {
+    try {
+      window.localStorage.removeItem(key);
+    } catch {
+      // The fixed left alignment still applies when storage is unavailable.
+    }
+  };
+
+  const resetHeaderPreviewState = (): void => {
+    const header = document.querySelector<HTMLElement>('[data-site-header]');
+    if (!header) return;
+    header.removeAttribute('data-header-logo');
+    delete document.documentElement.dataset.titleAlign;
+    delete document.documentElement.dataset.titleMask;
+    removeStoredValue(LEGACY_TITLE_ALIGNMENT_KEY);
+    removeStoredValue(LEGACY_TITLE_MASK_KEY);
+    removeStoredValue(LEGACY_HEADER_LOGO_KEY);
+    const defaultSrc = header.dataset.defaultLogoSrc;
+    const defaultWidth = Number(header.dataset.defaultLogoWidth);
+    const defaultHeight = Number(header.dataset.defaultLogoHeight);
+    if (defaultSrc) {
+      header.querySelectorAll<HTMLImageElement>('.site-header__full-mark .wordmark__image').forEach((image) => {
+        image.src = defaultSrc;
+        if (Number.isFinite(defaultWidth)) image.width = defaultWidth;
+        if (Number.isFinite(defaultHeight)) image.height = defaultHeight;
+      });
+    }
+  };
+
   const setupGalleryOrderTools = (): void => {
     const tools = document.querySelector<HTMLElement>('[data-gallery-order-tools]');
     if (!tools || !document.querySelector('[data-project-grid]')) return;
@@ -175,6 +211,8 @@ const showGalleryTools = galleryEditing && currentPath === '/';
   };
 
   setupGalleryOrderTools();
+  resetHeaderPreviewState();
   document.addEventListener('astro:page-load', setupGalleryOrderTools);
+  document.addEventListener('astro:page-load', resetHeaderPreviewState);
   document.addEventListener('astro:before-swap', () => window.__newWorkGalleryToolsFeedbackCleanup?.());
 </script>

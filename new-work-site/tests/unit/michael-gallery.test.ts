@@ -18,4 +18,17 @@ describe('standalone photography gallery', () => {
       && placeholder.opening.length > 0
       && placeholder.closing.length > 0)).toBe(true);
   });
+
+  it('pins the final photograph from the left track to the far-right track', () => {
+    const item = michaelDevelopmentGallery.find((candidate) =>
+      candidate.id === 'michael-rob-summerlin-curlers');
+
+    expect(item?.fixedDesktopColumn).toBe(4);
+  });
+
+  it('pins the rainbow pavement photograph to the first photo slot in column three', () => {
+    expect(michaelDevelopmentGallery[1]?.id).toBe('michael-wow-rainbow-pavement');
+    expect(michaelDevelopmentGallery[1]?.fixedDesktopColumn).toBe(3);
+    expect(michaelDevelopmentGallery[7]?.id).toBe('michael-8023156-uniform-portrait');
+  });
 });

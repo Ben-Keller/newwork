@@ -42,10 +42,13 @@ const TITLE_KITS = {
 
 // Switch this single value to `sentence-clean` or `legacy` to restore an earlier title kit.
 const ACTIVE_TITLE_KIT: keyof typeof TITLE_KITS = 'title';
+// Switch this to `svg-kit` to restore the masked, per-letter artwork above.
+const ACTIVE_TITLE_TREATMENT = 'type' as 'type' | 'svg-kit';
 // Keep the authored five-second sequence available, but load directly into
 // the black wordmark while the current design is being reviewed.
 const TITLE_ENTRANCE_ENABLED = false;
 const titleKit = TITLE_KITS[ACTIVE_TITLE_KIT];
+const usesTypeTitle = ACTIVE_TITLE_TREATMENT === 'type';
 
 export interface Props {
   siteName?: string;
@@ -73,6 +76,37 @@ const cellCount = Math.min(4, mediaProjects.length);
 const cells = Array.from({ length: cellCount }, (_, index) => ({
   primary: mediaProjects[index % mediaProjects.length],
   alternate: mediaProjects[(index + cellCount) % mediaProjects.length],
+}));
+const typeLetterAssignments = [
+  { slug: 'stella-artois-daydream', position: '0.52,0.48' },
+  { slug: 'native-cucumber-mint-stop-motion', position: '0.5,0.5' },
+  { slug: 'adobe', position: '0.52,0.46' },
+  { slug: 'tour-de-france-x-toyota', position: '0.62,0.5' },
+  { slug: 'specialized-globe', position: '0.5,0.52' },
+  { slug: 'rakuten', position: '0.48,0.5' },
+  { slug: 'olympics-toyota-in-due-time', position: '0.5,0.5' },
+] as const;
+const typeLetterProjects = typeLetterAssignments.map(({ slug }) =>
+  projects.find((project) => project.slug === slug));
+const typeWords = ['new', 'work'].map((word, wordIndex) => ({
+  word,
+  letters: [...word].map((glyph, letterIndex) => {
+    const index = (wordIndex === 0 ? 0 : 3) + letterIndex;
+    const primary = typeLetterProjects[index] || mediaProjects[(index + 1) % Math.max(1, mediaProjects.length)];
+    const alternate = typeLetterProjects[(index + 3) % typeLetterProjects.length] || primary;
+    const videoSource = primary?.cover.previewVideo;
+    return {
+      glyph,
+      index,
+      position: typeLetterAssignments[index]?.position || '0.5,0.5',
+      poster: primary?.cover.previewPosterOverride?.src || primary?.cover.poster.src,
+      videoMime: videoSource ? inferVideoMimeType(videoSource) : undefined,
+      videoSource,
+      style: primary
+        ? `--type-letter-primary:url("${primary.cover.poster.src}");--type-letter-alternate:url("${alternate!.cover.poster.src}")`
+        : undefined,
+    };
+  }),
 }));
 const decorative = (image: ImageView): ImageView => ({ ...image, alt: '' });
 const titleAssetRoot = titleKit.assetRoot;
@@ -128,11 +162,56 @@ const titleWordmarkMarkup = titleKit.wordmark
   data-state="pending"
   data-duration={boundedDuration}
   data-session-key={sessionKey}
-  data-title-layout="single-line"
-  data-title-source={titleKit.source}
+  data-title-layout={usesTypeTitle ? 'stacked' : 'single-line'}
+  data-title-source={usesTypeTitle ? 'pp-neue-montreal' : titleKit.source}
+  data-title-treatment={ACTIVE_TITLE_TREATMENT}
   data-entrance-enabled={TITLE_ENTRANCE_ENABLED ? 'true' : 'false'}
 >
-  <div class="logo-intro__stage" aria-hidden="true">
+  {usesTypeTitle ? (
+    <div class="logo-intro__type-lockup" data-type-lockup>
+      <div class="logo-intro__type-title" data-type-title aria-hidden="true">
+        {typeWords.map(({ word, letters }, wordIndex) => (
+          <span
+            class:list={[
+              'logo-intro__type-line',
+              wordIndex === 0 ? 'logo-intro__type-line--outline' : 'logo-intro__type-line--solid',
+            ]}
+            data-type-title-line={word}
+          >
+            {letters.map(({ glyph, index, position, poster, style, videoMime, videoSource }) => (
+              <span
+                class="logo-intro__type-letter"
+                data-type-letter={index}
+                data-glyph={glyph}
+                style={style}
+              >
+                <span class="logo-intro__type-letter-rest">{glyph}</span>
+                <canvas class="logo-intro__type-letter-canvas" data-type-letter-canvas aria-hidden="true"></canvas>
+                {videoSource ? (
+                  <video
+                    class="logo-intro__type-letter-video"
+                    muted
+                    loop
+                    playsinline
+                    preload="none"
+                    poster={poster}
+                    data-type-letter-video
+                    data-object-position={position}
+                    aria-hidden="true"
+                  >
+                    <source data-type-letter-video-source data-src={videoSource} type={videoMime} />
+                  </video>
+                ) : null}
+              </span>
+            ))}
+          </span>
+        ))}
+      </div>
+      {descriptor ? <p class="logo-intro__descriptor" data-logo-descriptor>{descriptor}</p> : null}
+    </div>
+  ) : (
+  <>
+  <div class="logo-intro__stage" data-svg-title aria-hidden="true">
     <div class="logo-intro__solid" data-intro-solid></div>
     <div class="logo-intro__media" data-intro-media>
       <div class="logo-intro__mosaic">
@@ -227,6 +306,8 @@ const titleWordmarkMarkup = titleKit.wordmark
     ></div>
   </div>
   {descriptor ? <p class="logo-intro__descriptor" data-logo-descriptor>{descriptor}</p> : null}
+  </>
+  )}
   <noscript><style>.logo-intro__media{display:none!important}</style></noscript>
 </section>
 
@@ -270,6 +351,114 @@ const titleWordmarkMarkup = titleKit.wordmark
       const saveData = prefersReducedData();
       const routeSignal = logoIntroRouteController.signal;
       if (routeSignal.aborted) return;
+
+      if (intro.dataset.titleTreatment === 'type') {
+        const letters = [...intro.querySelectorAll<HTMLElement>('[data-type-letter]')];
+        const lines = [...intro.querySelectorAll<HTMLElement>('[data-type-title-line]')];
+        let activeLetter: HTMLElement | null = null;
+        let renderFrame = 0;
+
+        const stopActiveLetter = (): void => {
+          if (renderFrame) window.cancelAnimationFrame(renderFrame);
+          renderFrame = 0;
+          if (!activeLetter) return;
+          activeLetter.removeAttribute('data-type-active');
+          const canvas = activeLetter.querySelector<HTMLCanvasElement>('[data-type-letter-canvas]');
+          const video = activeLetter.querySelector<HTMLVideoElement>('[data-type-letter-video]');
+          video?.pause();
+          canvas?.removeAttribute('data-media-ready');
+          activeLetter.removeAttribute('data-type-media-ready');
+          activeLetter = null;
+        };
+
+        const renderLetterVideo = (letter: HTMLElement): void => {
+          const canvas = letter.querySelector<HTMLCanvasElement>('[data-type-letter-canvas]');
+          const video = letter.querySelector<HTMLVideoElement>('[data-type-letter-video]');
+          const rest = letter.querySelector<HTMLElement>('.logo-intro__type-letter-rest');
+          if (!canvas || !video || !rest || activeLetter !== letter) return;
+          const rect = letter.getBoundingClientRect();
+          const scale = Math.min(window.devicePixelRatio || 1, 2);
+          const width = Math.max(1, Math.round(rect.width));
+          const height = Math.max(1, Math.round(rect.height));
+          const pixelWidth = Math.round(width * scale);
+          const pixelHeight = Math.round(height * scale);
+          if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
+            canvas.width = pixelWidth;
+            canvas.height = pixelHeight;
+          }
+          const context = canvas.getContext('2d');
+          if (context && video.readyState >= 2 && video.videoWidth && video.videoHeight) {
+            context.setTransform(scale, 0, 0, scale, 0, 0);
+            context.clearRect(0, 0, width, height);
+            const [positionX = .5, positionY = .5] = (video.dataset.objectPosition || '.5,.5')
+              .split(',')
+              .map(Number);
+            const mediaScale = Math.max(width / video.videoWidth, height / video.videoHeight);
+            const mediaWidth = video.videoWidth * mediaScale;
+            const mediaHeight = video.videoHeight * mediaScale;
+            context.drawImage(
+              video,
+              (width - mediaWidth) * positionX,
+              (height - mediaHeight) * positionY,
+              mediaWidth,
+              mediaHeight,
+            );
+            context.globalCompositeOperation = 'destination-in';
+            const styles = getComputedStyle(rest);
+            context.font = `${styles.fontWeight} ${styles.fontSize} ${styles.fontFamily}`;
+            context.textBaseline = 'alphabetic';
+            context.fillStyle = '#fff';
+            const glyph = letter.dataset.glyph || '';
+            const metrics = context.measureText(glyph);
+            const ascent = metrics.actualBoundingBoxAscent || Number.parseFloat(styles.fontSize) * .75;
+            const descent = metrics.actualBoundingBoxDescent || Number.parseFloat(styles.fontSize) * .2;
+            context.fillText(glyph, (width - metrics.width) / 2, (height + ascent - descent) / 2);
+            context.globalCompositeOperation = 'source-over';
+            canvas.dataset.mediaReady = 'true';
+            letter.dataset.typeMediaReady = 'true';
+          }
+          renderFrame = window.requestAnimationFrame(() => renderLetterVideo(letter));
+        };
+
+        const startLetter = (letter: HTMLElement): void => {
+          if (activeLetter === letter) return;
+          stopActiveLetter();
+          activeLetter = letter;
+          letter.dataset.typeActive = 'true';
+          const video = letter.querySelector<HTMLVideoElement>('[data-type-letter-video]');
+          const source = video?.querySelector<HTMLSourceElement>('[data-type-letter-video-source]');
+          if (!reducedMotion && !saveData && video && source?.dataset.src) {
+            if (!source.hasAttribute('src')) {
+              source.src = source.dataset.src;
+              video.load();
+            }
+            void video.play().catch(() => undefined);
+            renderLetterVideo(letter);
+          }
+        };
+
+        lines.forEach((line) => {
+          const lineLetters = letters.filter((letter) => letter.parentElement === line);
+          line.addEventListener('pointermove', (event) => {
+            const nearest = lineLetters.reduce<HTMLElement | null>((closest, letter) => {
+              const rect = letter.getBoundingClientRect();
+              if (!closest) return letter;
+              const closestRect = closest.getBoundingClientRect();
+              return Math.abs(event.clientX - (rect.left + rect.width / 2))
+                < Math.abs(event.clientX - (closestRect.left + closestRect.width / 2))
+                ? letter
+                : closest;
+            }, null);
+            if (nearest) startLetter(nearest);
+          });
+          line.addEventListener('pointerleave', stopActiveLetter);
+          line.addEventListener('pointercancel', stopActiveLetter);
+        });
+        routeSignal.addEventListener('abort', stopActiveLetter, { once: true });
+        markIntroSettled();
+        settleIntro(intro);
+        return;
+      }
 
       let skipIntro = false;
       try {
@@ -357,6 +546,136 @@ const titleWordmarkMarkup = titleKit.wordmark
     margin-inline: auto;
   }
 
+  .logo-intro__type-lockup {
+    translate: 0 -10%;
+  }
+
+  .logo-intro__type-title {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    width: min(100%, 1600px);
+    margin-inline: auto;
+    font-family: "New Work Sans", "PP Neue Montreal", "Helvetica Neue", Arial, sans-serif;
+    font-size: clamp(8rem, 20.5vw, 20rem);
+    font-weight: 700;
+    letter-spacing: -.082em;
+    line-height: .66;
+    text-transform: lowercase;
+  }
+
+  .logo-intro__type-line {
+    display: block;
+    width: max-content;
+    max-width: 100%;
+    white-space: nowrap;
+  }
+
+  .logo-intro__type-letter {
+    position: relative;
+    display: inline-block;
+    cursor: crosshair;
+    pointer-events: none;
+  }
+
+  [data-type-title-line="new"] [data-type-letter="2"] {
+    margin-inline-start: clamp(-7px, -.42vw, -4px);
+  }
+
+  .logo-intro__type-letter-rest {
+    display: block;
+    transition: opacity .42s cubic-bezier(.22, 1, .36, 1);
+  }
+
+  .logo-intro__type-line { pointer-events: auto; }
+
+  .logo-intro__type-letter-canvas {
+    position: absolute;
+    z-index: 2;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    transition: opacity .42s cubic-bezier(.22, 1, .36, 1);
+    pointer-events: none;
+  }
+
+  .logo-intro__type-letter-canvas[data-media-ready="true"] { opacity: 1; }
+
+  .logo-intro__type-letter-video {
+    position: fixed;
+    width: 1px;
+    height: 1px;
+    inset: auto auto 0 0;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .logo-intro__type-letter::before,
+  .logo-intro__type-letter::after {
+    position: absolute;
+    inset: 0;
+    content: attr(data-glyph);
+    color: transparent;
+    background-position: 50% 50%;
+    background-repeat: no-repeat;
+    background-size: cover;
+    opacity: 0;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-stroke: 0 transparent;
+    transform: scale(.975) translateY(3%);
+    transition:
+      opacity .52s cubic-bezier(.22, 1, .36, 1),
+      transform .75s cubic-bezier(.22, 1, .36, 1);
+    pointer-events: none;
+  }
+
+  .logo-intro__type-letter::before { background-image: var(--type-letter-primary); }
+  .logo-intro__type-letter::after { background-image: var(--type-letter-alternate); }
+
+  .logo-intro__type-letter[data-type-active="true"] .logo-intro__type-letter-rest { opacity: 0; }
+  .logo-intro__type-letter[data-type-active="true"]::before {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    animation: type-letter-drift 3.2s cubic-bezier(.37, 0, .18, 1) infinite alternate;
+  }
+  .logo-intro__type-letter[data-type-active="true"]::after {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    animation: type-letter-flip 3.2s cubic-bezier(.37, 0, .18, 1) infinite alternate;
+  }
+
+  /* The stills are a loading fallback for video-backed letters. Once the
+     canvas has a decoded frame, keep a single mask source active. Layering
+     the text-clipped stills with the canvas creates doubled glyph edges. */
+  .logo-intro__type-letter[data-type-media-ready="true"]::before,
+  .logo-intro__type-letter[data-type-media-ready="true"]::after {
+    opacity: 0 !important;
+    animation: none !important;
+    transition: none;
+  }
+
+  @keyframes type-letter-drift {
+    from { background-position: 45% 48%; }
+    to { background-position: 58% 54%; }
+  }
+
+  @keyframes type-letter-flip {
+    0%, 42% { opacity: 0; background-position: 58% 48%; }
+    58%, 100% { opacity: 1; background-position: 44% 54%; }
+  }
+
+  .logo-intro__type-line--outline {
+    color: transparent;
+    -webkit-text-stroke: clamp(1.5px, .17vw, 3px) var(--color-ink, #101010);
+    paint-order: stroke fill;
+  }
+
+  .logo-intro__type-line--solid {
+    color: var(--color-ink, #101010);
+  }
+
   .logo-intro__descriptor {
     width: var(--logo-title-inline-size, 100%);
     margin: clamp(.55rem, 1vw, .9rem) auto 0;
@@ -366,6 +685,10 @@ const titleWordmarkMarkup = titleKit.wordmark
     letter-spacing: .065em;
     line-height: 1;
     text-transform: none;
+  }
+
+  .logo-intro[data-title-treatment="type"] .logo-intro__descriptor {
+    width: min(100%, 1600px);
   }
 
   .logo-intro__solid,
@@ -505,6 +828,10 @@ const titleWordmarkMarkup = titleKit.wordmark
     .logo-intro {
       padding-block: clamp(2.25rem, 7vh, 3.75rem) .5rem;
     }
+    .logo-intro__type-title {
+      font-size: clamp(6.1rem, 31vw, 11rem);
+      line-height: .68;
+    }
     .logo-intro__mosaic { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .logo-intro__cell:nth-child(n + 3) { display: none; }
   }
@@ -512,9 +839,17 @@ const titleWordmarkMarkup = titleKit.wordmark
   @media (prefers-reduced-motion: reduce) {
     .logo-intro__media { display: none; }
     .logo-intro__letter-face { transform: none !important; }
+    .logo-intro__type-letter::before,
+    .logo-intro__type-letter::after { animation: none !important; transition: none !important; }
+    .logo-intro__type-letter::after { display: none; }
   }
 
   @media (forced-colors: active) {
+    .logo-intro__type-line--outline {
+      color: Canvas;
+      -webkit-text-stroke-color: CanvasText;
+    }
+    .logo-intro__type-line--solid { color: CanvasText; }
     .logo-intro__solid { background: CanvasText; }
     .logo-intro__media, .logo-intro__letter-media, .logo-intro__letter-triggers { display: none; }
   }

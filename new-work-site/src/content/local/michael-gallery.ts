@@ -6,6 +6,7 @@ export interface DevelopmentGalleryImage {
   label: string;
   image: ImageView;
   desktopColumn?: 1 | 2 | 3 | 4;
+  fixedDesktopColumn?: 1 | 2 | 3 | 4;
   tabletColumn?: 1 | 2;
 }
 
@@ -73,13 +74,18 @@ const selectedImage = (filename: string, width: number, height: number, objectPo
 // the asset manifest but intentionally remain unnamed until editorial review.
 export const michaelDevelopmentGallery: readonly DevelopmentGalleryImage[] = [
   { id: 'michael-poolside-product', label: 'Michael — selected work', image: image('michael-poolside-product', 1440, 1800) },
-  { id: 'michael-8023156-uniform-portrait', label: 'Michael — selected work', image: image('michael-8023156-uniform-portrait', 1760, 2200, '50% 42%') },
+  {
+    id: 'michael-wow-rainbow-pavement',
+    label: 'Michael — selected work',
+    image: image('michael-wow-rainbow-pavement', 2200, 1466),
+    fixedDesktopColumn: 3,
+  },
   { id: 'michael-food-test-sandwich', label: 'Michael — selected work', image: image('michael-food-test-sandwich', 1760, 2200) },
   { id: 'michael-aw50273-dark-portrait', label: 'Michael — selected work', image: image('michael-aw50273-dark-portrait', 1929, 1543) },
   { id: 'michael-ad-interior', label: 'Michael — selected work', image: image('michael-ad-interior', 1603, 1069) },
   { id: 'michael-rainbow-cart-portrait', label: 'Michael — selected work', image: image('michael-rainbow-cart-portrait', 1798, 1438) },
   { id: 'michael-nanu-black-pot', label: 'Michael — selected work', image: image('michael-nanu-black-pot', 1667, 1667) },
-  { id: 'michael-wow-rainbow-pavement', label: 'Michael — selected work', image: image('michael-wow-rainbow-pavement', 2200, 1466) },
+  { id: 'michael-8023156-uniform-portrait', label: 'Michael — selected work', image: image('michael-8023156-uniform-portrait', 1760, 2200, '50% 42%') },
   { id: 'michael-cradlewise-family', label: 'Michael — selected work', image: image('michael-cradlewise-family', 2200, 1650) },
   { id: 'michael-native-haircare-cupcakes', label: 'Michael — selected work', image: image('michael-native-haircare-cupcakes', 1080, 1080) },
   { id: 'michael-aw50519-court-bw', label: 'Michael — selected work', image: image('michael-aw50519-court-bw', 2185, 1639) },
@@ -92,7 +98,12 @@ export const michaelDevelopmentGallery: readonly DevelopmentGalleryImage[] = [
   { id: 'michael-img8738-wedding-bw', label: 'Michael — selected work', image: image('michael-img8738-wedding-bw', 2200, 1821) },
   { id: 'michael-sports-product-graphic', label: 'Michael — selected work', image: image('michael-sports-product-graphic', 1226, 1533) },
   { id: 'michael-aw51026-court-portrait', label: 'Michael — selected work', image: image('michael-aw51026-court-portrait', 1633, 1633) },
-  { id: 'michael-rob-summerlin-curlers', label: 'Michael — selected work', image: image('michael-rob-summerlin-curlers', 1665, 1665) },
+  {
+    id: 'michael-rob-summerlin-curlers',
+    label: 'Michael — selected work',
+    image: image('michael-rob-summerlin-curlers', 1665, 1665),
+    fixedDesktopColumn: 4,
+  },
   { id: 'michael-aw59536-group', label: 'Michael — selected work', image: image('michael-aw59536-group', 2200, 2200) },
   { id: 'michael-img7198-portrait', label: 'Michael — selected work', image: image('michael-img7198-portrait', 1295, 1295) },
   { id: 'michael-aw59665-double-exposure', label: 'Michael — selected work', image: image('michael-aw59665-double-exposure', 2200, 2200) },

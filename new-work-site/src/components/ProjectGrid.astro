@@ -52,7 +52,12 @@ const assignColumns = (columnCount: number) => {
     return column;
   });
 };
-const desktopColumns = assignColumns(4);
+// A fixed visual column is applied after the placement cursor is calculated,
+// so moving one editorial tile does not reshuffle every card that follows it.
+const desktopColumns = assignColumns(4).map((column, index) => {
+  const entry = galleryEntries[index];
+  return entry?.kind === 'image' ? entry.item.fixedDesktopColumn ?? column : column;
+});
 const tabletColumns = assignColumns(2);
 const desktopColumnStarts = desktopColumns.map((column, index) =>
   column !== undefined && desktopColumns.indexOf(column) === index);
@@ -101,7 +106,9 @@ const tabletColumnStarts = tabletColumns.map((column, index) =>
     }
   }
 
-  const galleryOrderStorageKey = 'new-work:gallery-order:v1';
+  // Editorial source order changed after the original review shuffle. Keep
+  // removals, but do not let that stale saved sequence override new placements.
+  const galleryOrderStorageKey = 'new-work:gallery-order:v2';
   const galleryHiddenStorageKey = 'new-work:gallery-hidden:v1';
 
   const getGalleryCards = (grid: HTMLElement): HTMLElement[] =>
