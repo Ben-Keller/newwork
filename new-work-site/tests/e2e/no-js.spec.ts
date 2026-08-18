@@ -10,9 +10,8 @@ test('the work index and film fallback remain useful without JavaScript', async 
   await expect(page.locator('[data-intro-solid]')).toBeVisible();
   await expect(page.locator('[data-intro-media]')).toHaveCSS('display', 'none');
   await expect(page.getByRole('heading', { level: 1, name: 'Selected work' })).toBeAttached();
-  await expect(page.locator('[data-project-card]')).toHaveCount(43);
-  expect(await page.locator('[data-gallery-remove]').evaluateAll((buttons) =>
-    buttons.every((button) => (button as HTMLButtonElement).hidden))).toBe(true);
+  await expect(page.locator('[data-project-card]')).toHaveCount(32);
+  await expect(page.locator('[data-gallery-remove]')).toHaveCount(0);
   await expect(page.getByRole('link', { name: /Arc/u })).toBeVisible();
   await expect(page.locator('[data-project-grid]')).not.toHaveAttribute('data-masonry-ready');
   await expect(page.locator('[data-gallery-entrance]')).toHaveCSS('transform', 'none');

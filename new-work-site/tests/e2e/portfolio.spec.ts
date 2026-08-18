@@ -81,7 +81,7 @@ test('the supplied NW artwork is the persistent header, footer, and browser icon
 
 test('the gallery order toolbar stays hidden from the review UI', async ({ page }) => {
   await page.goto('/');
-  await expect(page.locator('[data-project-card]')).toHaveCount(44);
+  await expect(page.locator('[data-project-card]')).toHaveCount(32);
   await expect(page.locator('[data-gallery-order-tools]')).toHaveCount(0);
   await expect(page.getByRole('button', { name: /shuffle gallery|save gallery|restore removed/iu }))
     .toHaveCount(0);
@@ -636,7 +636,8 @@ async function expectAboutLayout(page: Page, width: number, height: number) {
 
 test('the work index has exactly 4, 2, and 2 complete columns', async ({ page }) => {
   await page.goto('/');
-  await expect(page.locator('[data-project-card]')).toHaveCount(44);
+  await expect(page.locator('[data-project-card]')).toHaveCount(32);
+  await expect(page.locator('[data-gallery-remove]')).toHaveCount(0);
   const addedMichaelStill = page.locator('[data-gallery-item-id="michael-native-stop-motion-still"]');
   await expect(addedMichaelStill).toHaveCount(1);
   await expect(addedMichaelStill).toHaveAttribute('data-desktop-column', '4');
@@ -658,6 +659,28 @@ test('the work index has exactly 4, 2, and 2 complete columns', async ({ page })
   await expectGridColumns(page, 1440, 4);
   await expectGridColumns(page, 1024, 2);
   await expectGridColumns(page, 375, 2);
+});
+
+test('every standalone gallery photograph opens an image page and never routes through About', async ({ page }) => {
+  await page.goto('/');
+  const photoLinks = page.locator('[data-gallery-photo-link]');
+  await expect(photoLinks).toHaveCount(15);
+
+  const destinations = await photoLinks.evaluateAll((links) => links.map((link) =>
+    (link as HTMLAnchorElement).getAttribute('href') || ''));
+  expect(destinations.every((href) => /^\/gallery\/[a-z\d-]+$/u.test(href))).toBe(true);
+  expect(destinations.some((href) => href.includes('/about'))).toBe(false);
+
+  const destination = destinations[0]!;
+  await page.goto(destination);
+  await expect(page.locator('[data-gallery-photo-page]')).toBeVisible();
+  await expect(page.locator('[data-gallery-photo-primary] img')).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(/\S/u);
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex, nofollow');
+
+  await page.goto('/about');
+  await expect(page.locator('[data-about-page] img[src*="/portfolio-expansion/"]')).toHaveCount(0);
+  await expect(page.locator('[data-about-work-item][href^="/gallery/"]')).toHaveCount(0);
 });
 
 test('static and reduced motion routes defer the full animation runtime', async ({ page }) => {

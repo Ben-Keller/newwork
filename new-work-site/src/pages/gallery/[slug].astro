@@ -1,0 +1,74 @@
+---
+import GalleryPhotoPage from '../../components/GalleryPhotoPage.astro';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { excludedWorkGalleryItemIds } from '../../content/local/gallery-curation';
+import {
+  developmentGalleryPlaceholder,
+  michaelDevelopmentGallery,
+  type DevelopmentGalleryImage,
+} from '../../content/local/michael-gallery';
+import { getSiteContent } from '../../lib/content';
+import type { SiteContent } from '../../lib/types';
+import '../../styles/gallery-photo.css';
+
+export async function getStaticPaths() {
+  const content = await getSiteContent();
+  if (content.mode === 'production') return [];
+
+  const visibleItems = michaelDevelopmentGallery.filter((item) => !excludedWorkGalleryItemIds.has(item.id));
+
+  return michaelDevelopmentGallery.map((item, index) => {
+    const visibleIndex = visibleItems.findIndex((candidate) => candidate.id === item.id);
+    const previous = visibleIndex > 0 ? visibleItems[visibleIndex - 1] : undefined;
+    const next = visibleIndex >= 0 && visibleIndex < visibleItems.length - 1 ? visibleItems[visibleIndex + 1] : undefined;
+    const placeholderFor = (candidate?: DevelopmentGalleryImage) => candidate
+      ? developmentGalleryPlaceholder(michaelDevelopmentGallery.findIndex((source) => source.id === candidate.id)).title
+      : undefined;
+    return {
+      params: { slug: item.id },
+      props: {
+        item,
+        placeholder: developmentGalleryPlaceholder(index),
+        previous,
+        next,
+        previousTitle: placeholderFor(previous),
+        nextTitle: placeholderFor(next),
+        content,
+      },
+    };
+  });
+}
+
+interface Props {
+  item: DevelopmentGalleryImage;
+  placeholder: ReturnType<typeof developmentGalleryPlaceholder>;
+  previous?: DevelopmentGalleryImage;
+  next?: DevelopmentGalleryImage;
+  previousTitle?: string;
+  nextTitle?: string;
+  content: SiteContent;
+}
+
+const { item, placeholder, previous, next, previousTitle, nextTitle, content } = Astro.props;
+---
+
+<BaseLayout
+  content={content}
+  title={`${placeholder.title} — Michael`}
+  description={placeholder.description}
+  seo={{ noIndex: true }}
+  kind="project"
+  pageClass="project-page gallery-photo-page"
+  pageTheme="warm"
+  preloadImage={item.image}
+  preloadImageSizes="(min-width: 1200px) 58vw, (min-width: 768px) 56vw, 100vw"
+>
+  <GalleryPhotoPage
+    item={item}
+    placeholder={placeholder}
+    previous={previous}
+    next={next}
+    previousTitle={previousTitle}
+    nextTitle={nextTitle}
+  />
+</BaseLayout>

@@ -9,6 +9,48 @@ export interface DevelopmentGalleryImage {
   tabletColumn?: 1 | 2;
 }
 
+export interface DevelopmentGalleryPlaceholder {
+  title: string;
+  description: string;
+  opening: string;
+  closing: string;
+}
+
+const placeholderTitles = [
+  'Lorem ipsum',
+  'Dolor sit amet',
+  'Consectetur adipiscing',
+  'Adipiscing elit',
+  'Sed do eiusmod',
+  'Tempor incididunt',
+  'Labore et dolore',
+  'Magna aliqua',
+  'Ut enim ad minim',
+  'Veniam quis nostrud',
+  'Exercitation ullamco',
+  'Laboris nisi',
+  'Aliquip ex ea',
+  'Commodo consequat',
+  'Duis aute irure',
+  'Dolor in reprehenderit',
+  'Voluptate velit',
+  'Esse cillum',
+  'Fugiat nulla',
+  'Pariatur excepteur',
+  'Sint occaecat',
+  'Cupidatat non proident',
+  'Sunt in culpa',
+  'Qui officia',
+  'Deserunt mollit',
+] as const;
+
+export const developmentGalleryPlaceholder = (index: number): DevelopmentGalleryPlaceholder => ({
+  title: placeholderTitles[index] ?? 'Lorem ipsum',
+  description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.',
+  opening: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer posuere erat a ante venenatis dapibus posuere velit aliquet. Donec ullamcorper nulla non metus auctor fringilla.',
+  closing: 'Curabitur blandit tempus porttitor. Maecenas faucibus mollis interdum. Vestibulum id ligula porta felis euismod semper.',
+});
+
 const image = (filename: string, width: number, height: number, objectPosition = '50% 50%'): ImageView => ({
   src: withBase(`/media/images/michael/portfolio-expansion/${filename}.webp`),
   width,

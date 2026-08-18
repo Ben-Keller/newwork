@@ -1,6 +1,7 @@
 ---
 import ProjectCard from './ProjectCard.astro';
 import GalleryImageCard from './GalleryImageCard.astro';
+import { excludedWorkGalleryItemIds } from '../content/local/gallery-curation';
 import { michaelDevelopmentGallery, type DevelopmentGalleryImage } from '../content/local/michael-gallery';
 import type { ContentMode, ProjectView } from '../lib/types';
 
@@ -10,6 +11,9 @@ interface Props {
 }
 
 const { projects, mode = 'prototype' } = Astro.props;
+// Temporary editorial tooling remains implemented, but is not rendered in the
+// review UI. Switch this flag back on when another curation pass is needed.
+const galleryEditingEnabled = false;
 type GalleryEntry =
   | { kind: 'project'; project: ProjectView }
   | { kind: 'image'; item: DevelopmentGalleryImage };
@@ -18,8 +22,12 @@ const developmentImages = mode === 'production' ? [] : michaelDevelopmentGallery
 for (let index = 0; index < Math.max(projects.length, developmentImages.length); index += 1) {
   const project = projects[index];
   const item = developmentImages[index];
-  if (project) galleryEntries.push({ kind: 'project', project });
-  if (item) galleryEntries.push({ kind: 'image', item });
+  if (project && !excludedWorkGalleryItemIds.has(project.slug)) {
+    galleryEntries.push({ kind: 'project', project });
+  }
+  if (item && !excludedWorkGalleryItemIds.has(item.id)) {
+    galleryEntries.push({ kind: 'image', item });
+  }
 }
 const isWideFeature = (entry: GalleryEntry, index: number) =>
   entry.kind === 'project' && entry.project.cover.cardRatio === 'wideFeature' && index >= 8;
@@ -64,7 +72,7 @@ const tabletColumnStarts = tabletColumns.map((column, index) =>
             tabletColumn={tabletColumns[index]}
             desktopColumnStart={desktopColumnStarts[index]}
             tabletColumnStart={tabletColumnStarts[index]}
-            editable={mode !== 'production'}
+            editable={galleryEditingEnabled && mode !== 'production'}
           />
         ) : (
           <GalleryImageCard
@@ -74,6 +82,7 @@ const tabletColumnStarts = tabletColumns.map((column, index) =>
             tabletColumn={tabletColumns[index] ?? index % 2 + 1}
             desktopColumnStart={desktopColumnStarts[index]}
             tabletColumnStart={tabletColumnStarts[index]}
+            editable={galleryEditingEnabled && mode !== 'production'}
           />
         ))}
     </div>
@@ -160,9 +169,6 @@ const tabletColumnStarts = tabletColumns.map((column, index) =>
       if (id && window.__newWorkGalleryRemoved?.has(id)) card.remove();
     });
     applyGalleryOrder(grid, readGalleryOrder());
-    grid.querySelectorAll<HTMLButtonElement>('[data-gallery-remove]').forEach((button) => {
-      button.hidden = false;
-    });
     if (window.__newWorkGalleryRemoved.size > 0) {
       document.dispatchEvent(new CustomEvent('new-work:gallery-order-feedback', {
         detail: { action: 'removed' },
@@ -378,6 +384,7 @@ const tabletColumnStarts = tabletColumns.map((column, index) =>
       window.__newWorkGalleryRemoved?.clear();
       window.location.reload();
     });
+
   };
 
   if (!window.__newWorkHistoryRestoreReady) {

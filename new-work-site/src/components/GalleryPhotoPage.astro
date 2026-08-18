@@ -1,0 +1,95 @@
+---
+import type { DevelopmentGalleryImage, DevelopmentGalleryPlaceholder } from '../content/local/michael-gallery';
+import { withBase } from '../lib/base-path';
+import ResponsiveImage from './ResponsiveImage.astro';
+
+interface Props {
+  item: DevelopmentGalleryImage;
+  placeholder: DevelopmentGalleryPlaceholder;
+  previous?: DevelopmentGalleryImage;
+  next?: DevelopmentGalleryImage;
+  previousTitle?: string;
+  nextTitle?: string;
+}
+
+const { item, placeholder, previous, next, previousTitle, nextTitle } = Astro.props;
+---
+
+<article class="gallery-photo" data-gallery-photo-page data-gallery-photo-id={item.id}>
+  <header class="gallery-photo__hero">
+    <div class="gallery-photo__intro" data-motion-reveal="up">
+      <p class="gallery-photo__eyebrow">Photography · Michael</p>
+      <h1>{placeholder.title}</h1>
+      <p class="gallery-photo__standfirst">{placeholder.description}</p>
+    </div>
+
+    <figure
+      class="gallery-photo__primary"
+      transition:name={`gallery-${item.id}-media`}
+      data-motion-reveal="clip"
+      data-gallery-photo-primary
+    >
+      <ResponsiveImage
+        image={item.image}
+        sizes="(min-width: 1200px) 58vw, (min-width: 768px) 56vw, 100vw"
+        eager
+        projectPoster
+      />
+    </figure>
+  </header>
+
+  <section class="gallery-photo__story" aria-label="Image notes">
+    <p data-motion-split="lines" data-motion-split-aria="none">{placeholder.opening}</p>
+    <aside data-motion-reveal="up">
+      <span>Artist</span>
+      <strong>Michael</strong>
+      <span>Format</span>
+      <strong>Photography</strong>
+      <span>Status</span>
+      <strong>Lorem ipsum</strong>
+    </aside>
+  </section>
+
+  <figure class="gallery-photo__detail" data-motion-reveal="clip">
+    <div data-motion-parallax="2">
+      <ResponsiveImage
+        image={item.image}
+        sizes="(min-width: 1200px) 72vw, (min-width: 768px) 82vw, 100vw"
+      />
+    </div>
+  </figure>
+
+  <p class="gallery-photo__closing" data-motion-split="lines" data-motion-split-aria="none">{placeholder.closing}</p>
+
+  <nav class="gallery-photo__navigation" aria-label="Photography navigation">
+    {previous ? (
+      <a href={withBase(`/gallery/${previous.id}`)} rel="prev">
+        <span>Previous image</span>
+        <strong>{previousTitle || previous.label}</strong>
+      </a>
+    ) : <span aria-hidden="true"></span>}
+    {next ? (
+      <a href={withBase(`/gallery/${next.id}`)} rel="next">
+        <span>Next image</span>
+        <strong>{nextTitle || next.label}</strong>
+      </a>
+    ) : <span aria-hidden="true"></span>}
+  </nav>
+
+  <a class="gallery-photo__return" href={withBase('/')} data-restore-work-scroll>
+    <span>All work</span><span aria-hidden="true">↙</span>
+  </a>
+</article>
+
+<script>
+  const setupGalleryReturn = () => {
+    document.querySelectorAll<HTMLAnchorElement>('[data-gallery-photo-page] [data-restore-work-scroll]:not([data-ready])')
+      .forEach((link) => {
+        link.dataset.ready = 'true';
+        link.addEventListener('click', () => sessionStorage.setItem('new-work-restore-requested', 'true'));
+      });
+  };
+
+  setupGalleryReturn();
+  document.addEventListener('astro:page-load', setupGalleryReturn);
+</script>

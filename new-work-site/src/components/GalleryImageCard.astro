@@ -11,6 +11,7 @@ interface Props {
   tabletColumn: number;
   desktopColumnStart?: boolean;
   tabletColumnStart?: boolean;
+  editable?: boolean;
 }
 
 const {
@@ -20,6 +21,7 @@ const {
   tabletColumn,
   desktopColumnStart = false,
   tabletColumnStart = false,
+  editable = false,
 } = Astro.props;
 ---
 
@@ -39,9 +41,9 @@ const {
   data-motion-delay={Math.min(index, 7) * .025}
   style="--home-offset:0px"
 >
-  <a href={withBase('/about#about-person-michael')} data-gallery-link>
+  <a href={withBase(`/gallery/${item.id}`)} data-gallery-link data-gallery-photo-link>
     <span class="sr-only">{item.label}</span>
-    <div class="project-card__media">
+    <div class="project-card__media" transition:name={`gallery-${item.id}-media`}>
       <div class="project-card__media-inner" data-card-media>
         <ResponsiveImage
           image={item.image}
@@ -54,7 +56,9 @@ const {
       </div>
     </div>
   </a>
-  <button class="gallery-card-remove" type="button" data-gallery-remove hidden aria-label={`Remove ${item.label} from gallery`}>
-    <span aria-hidden="true">×</span>
-  </button>
+  {editable ? (
+    <button class="gallery-card-remove" type="button" data-gallery-remove hidden aria-label={`Remove ${item.label} from gallery`}>
+      <span aria-hidden="true">×</span>
+    </button>
+  ) : null}
 </article>
