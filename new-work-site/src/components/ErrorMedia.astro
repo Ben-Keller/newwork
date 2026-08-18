@@ -1,0 +1,13 @@
+---
+interface Props {
+  message?: string;
+  visible?: boolean;
+}
+
+const { message = 'Media unavailable', visible = false } = Astro.props;
+---
+
+<div class="error-media" data-error-media hidden={!visible} role="status">
+  <span>{message}</span>
+  <small>The project information remains available below.</small>
+</div>

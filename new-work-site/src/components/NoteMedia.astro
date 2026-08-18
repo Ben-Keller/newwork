@@ -1,0 +1,86 @@
+---
+import LazyVideoEmbed from './LazyVideoEmbed.astro';
+import ResponsiveImage from './ResponsiveImage.astro';
+import ErrorMedia from './ErrorMedia.astro';
+import MediaAccessibility from './media/MediaAccessibility.astro';
+import { inferVideoMimeType } from './media/video-mime';
+import type { ContentMode, ImageView, VideoView } from '../lib/types';
+
+interface Props {
+  media: ImageView | VideoView;
+  title: string;
+  mode: ContentMode;
+  sizes?: string;
+  compact?: boolean;
+}
+
+const { media, title, mode, sizes = '100vw', compact = false } = Astro.props;
+const isImage = 'alt' in media;
+const image = isImage ? media as ImageView : undefined;
+const video = isImage ? undefined : media as VideoView;
+const videoRatio = video?.aspectRatio || (video?.poster
+  ? `${video.poster.width} / ${video.poster.height}`
+  : '16 / 9');
+const sourceMime = inferVideoMimeType(video?.src, video?.mimeType);
+---
+
+{image && compact ? (
+  <ResponsiveImage image={image} sizes={sizes} />
+) : image ? (
+  <figure class="note-media note-media--image">
+    <ResponsiveImage image={image} sizes={sizes} />
+    {image.caption || image.credit ? (
+      <figcaption>
+        {image.caption ? <span>{image.caption}</span> : null}
+        {image.credit ? <span class="media-credit">{image.credit}</span> : null}
+      </figcaption>
+    ) : null}
+  </figure>
+) : compact && video?.poster ? (
+  <ResponsiveImage image={video.poster} sizes={sizes} />
+) : video?.src ? (
+  <figure class="note-media note-media--video" data-note-media data-media-frame style={`--video-ratio:${videoRatio}`}>
+    <video
+      controls
+      playsinline
+      preload="metadata"
+      poster={video.poster?.src}
+      width={video.width}
+      height={video.height}
+      crossorigin={video.captionsFile ? 'anonymous' : undefined}
+      aria-label={video.accessibleDescription || title}
+      data-error-managed-note-video
+    >
+      <source src={video.src} type={sourceMime} />
+      {video.captionsFile ? <track kind="captions" src={video.captionsFile} srclang={video.captionsLanguage || 'en'} label={video.captionsLabel || 'English'} default /> : null}
+      <p>Your browser cannot play this clip.</p>
+    </video>
+    <ErrorMedia message={`Film unavailable for ${title}`} />
+    {video.caption || video.credit ? (
+      <figcaption>
+        {video.caption ? <span>{video.caption}</span> : null}
+        {video.credit ? <span class="media-credit">{video.credit}</span> : null}
+      </figcaption>
+    ) : null}
+    <MediaAccessibility transcript={video.transcript} captionsFile={video.captionsFile} />
+  </figure>
+) : video ? (
+  <LazyVideoEmbed video={video} title={title} mode={mode} />
+) : null}
+
+<script>
+  const setupNoteVideoErrors = (): void => {
+    document.querySelectorAll<HTMLVideoElement>('video[data-error-managed-note-video]:not([data-ready])').forEach((video) => {
+      video.dataset.ready = 'true';
+      video.addEventListener('error', () => {
+        video.pause();
+        video.controls = false;
+        const error = video.parentElement?.querySelector<HTMLElement>('[data-error-media]');
+        if (error) error.hidden = false;
+      }, { once: true });
+    });
+  };
+
+  setupNoteVideoErrors();
+  document.addEventListener('astro:page-load', setupNoteVideoErrors);
+</script>

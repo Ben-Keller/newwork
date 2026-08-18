@@ -1,0 +1,64 @@
+---
+import { withBase, withoutBase } from '../lib/base-path';
+
+export interface NavItem {
+  href: string;
+  label: string;
+  match?: 'exact' | 'section';
+}
+
+export interface Props {
+  items?: readonly NavItem[];
+  currentPath?: string;
+  ariaLabel?: string;
+  class?: string;
+}
+
+const {
+  items = [
+    { href: withBase('/'), label: 'Work', match: 'section' },
+    { href: withBase('/about'), label: 'About', match: 'section' },
+    { href: withBase('/contact'), label: 'Contact', match: 'section' },
+  ],
+  currentPath = withoutBase(Astro.url.pathname),
+  ariaLabel = 'Primary',
+  class: className,
+} = Astro.props;
+
+const normalizePath = (path: string): string => {
+  if (path === '/') return path;
+  return path.replace(/\/+$/, '');
+};
+
+const activePath = normalizePath(withoutBase(currentPath));
+const isExactPage = (item: NavItem): boolean => activePath === normalizePath(withoutBase(item.href));
+const isCurrent = (item: NavItem): boolean => {
+  const href = normalizePath(withoutBase(item.href));
+
+  if (href === '/') {
+    return activePath === '/' || (item.match === 'section' && activePath.startsWith('/work/'));
+  }
+
+  return item.match === 'exact'
+    ? activePath === href
+    : activePath === href || activePath.startsWith(`${href}/`);
+};
+---
+
+<nav class:list={['desktop-nav', className]} aria-label={ariaLabel} data-desktop-nav>
+  <ul class="desktop-nav__list" role="list">
+    {
+      items.map((item) => (
+        <li class="desktop-nav__item">
+          <a
+            class:list={['desktop-nav__link', { 'is-current': isCurrent(item) }]}
+            href={item.href}
+            aria-current={isExactPage(item) ? 'page' : undefined}
+          >
+            {item.label}
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+</nav>

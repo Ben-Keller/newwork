@@ -1,0 +1,92 @@
+---
+import MediaControlIcon from './MediaControlIcon.astro';
+
+interface Props {
+  targetId: string;
+  showFullscreen?: boolean;
+  showMute?: boolean;
+}
+
+const { targetId, showFullscreen = true, showMute = true } = Astro.props;
+---
+
+<div class="video-controls" data-video-controls={targetId}>
+  <button type="button" data-video-play data-video-action="play" aria-label="Play video">
+    <MediaControlIcon name="play" />
+    <MediaControlIcon name="pause" />
+  </button>
+  {showMute ? <button type="button" data-video-mute aria-label="Unmute video">Sound on</button> : null}
+  {showFullscreen ? <button type="button" data-video-fullscreen>Full screen</button> : null}
+  <span class="sr-only" data-video-status aria-live="polite"></span>
+</div>
+
+<script>
+  import { selectDeferredVideoSource } from './media/video-mime';
+
+  const setupVideoControls = () => {
+    document.querySelectorAll<HTMLElement>('[data-video-controls]:not([data-ready])').forEach((controls) => {
+      controls.dataset.ready = 'true';
+      const targetId = controls.dataset.videoControls;
+      const video = targetId ? document.getElementById(targetId) as HTMLVideoElement | null : null;
+      if (!video) return;
+      const playButton = controls.querySelector<HTMLButtonElement>('[data-video-play]');
+      const muteButton = controls.querySelector<HTMLButtonElement>('[data-video-mute]');
+      const fullscreenButton = controls.querySelector<HTMLButtonElement>('[data-video-fullscreen]');
+      const status = controls.querySelector<HTMLElement>('[data-video-status]');
+      const attachDeferredSource = () => {
+        const source = video.querySelector<HTMLSourceElement>('source[data-deferred-source]');
+        if (!source || source.hasAttribute('src')) return;
+        const narrow = window.matchMedia('(max-width: 767px)').matches;
+        const { sourceUrl, sourceType } = selectDeferredVideoSource(source.dataset, narrow);
+        if (!sourceUrl) return;
+        source.src = sourceUrl;
+        if (sourceType) source.type = sourceType;
+        video.load();
+      };
+      const sync = () => {
+        if (playButton) {
+          playButton.dataset.videoAction = video.paused ? 'play' : 'pause';
+          playButton.setAttribute('aria-label', video.paused ? 'Play video' : 'Pause video');
+        }
+        if (muteButton) {
+          muteButton.textContent = video.muted ? 'Sound on' : 'Mute';
+          muteButton.setAttribute('aria-label', video.muted ? 'Unmute video' : 'Mute video');
+        }
+      };
+      playButton?.addEventListener('click', async () => {
+        if (!video.paused) {
+          video.dataset.userPaused = 'true';
+          video.pause();
+          return;
+        }
+        delete video.dataset.userPaused;
+        attachDeferredSource();
+        try { await video.play(); } catch { sync(); }
+      });
+      muteButton?.addEventListener('click', () => { video.muted = !video.muted; sync(); });
+      fullscreenButton?.addEventListener('click', async () => {
+        const safariVideo = video as HTMLVideoElement & {webkitEnterFullscreen?: () => void};
+        try {
+          if (video.requestFullscreen) await video.requestFullscreen();
+          else if (safariVideo.webkitEnterFullscreen) safariVideo.webkitEnterFullscreen();
+          else throw new Error('unsupported');
+        } catch {
+          if (status) status.textContent = 'Full screen is unavailable in this browser.';
+        }
+      });
+      if (fullscreenButton) {
+        const safariVideo = video as HTMLVideoElement & {webkitEnterFullscreen?: () => void};
+        if (!video.requestFullscreen && !safariVideo.webkitEnterFullscreen) {
+          fullscreenButton.disabled = true;
+          fullscreenButton.title = 'Full screen is unavailable in this browser';
+        }
+      }
+      video.addEventListener('play', sync);
+      video.addEventListener('pause', sync);
+      video.addEventListener('volumechange', sync);
+      sync();
+    });
+  };
+  setupVideoControls();
+  document.addEventListener('astro:page-load', setupVideoControls);
+</script>

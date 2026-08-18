@@ -1,0 +1,11 @@
+---
+import ResponsiveImage from '../ResponsiveImage.astro';
+import MediaCaption from './MediaCaption.astro';
+import type { ContainedImageBlock } from '../../lib/types';
+interface Props { block: ContainedImageBlock; eager?: boolean; sizes?: string }
+const { block, eager = false, sizes = '(min-width: 1200px) 90vw, 100vw' } = Astro.props;
+---
+<figure class:list={['media-block', 'media-block--contained', `media-width--${block.width || 'wide'}`, `media-align--${block.alignment || 'center'}`]}>
+  <ResponsiveImage image={block.image} sizes={sizes} eager={eager} projectPoster={eager} />
+  <MediaCaption caption={block.caption} credit={block.credit} />
+</figure>

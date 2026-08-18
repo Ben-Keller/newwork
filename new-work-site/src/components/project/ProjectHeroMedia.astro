@@ -1,0 +1,49 @@
+---
+import type { CaptionBlock, ContentMode } from '../../lib/types';
+import type { ProjectMediaBlock } from '../../lib/project-layout';
+import ProjectContentBlock from './ProjectContentBlock.astro';
+
+interface Props {
+  block: ProjectMediaBlock;
+  captions?: CaptionBlock[];
+  mode: ContentMode;
+  projectTitle: string;
+  projectSlug: string;
+}
+
+const {
+  block,
+  captions = [],
+  mode,
+  projectTitle,
+  projectSlug,
+} = Astro.props;
+const safeKey = (key: string) => key.replace(/[^A-Za-z0-9_-]/gu, '-');
+const captionIds = captions.map((caption) => `project-hero-caption-${safeKey(caption._key)}`);
+---
+
+<div
+  class="project-hero-media"
+  aria-describedby={captionIds.length ? captionIds.join(' ') : undefined}
+  data-project-hero-media
+  data-project-media="true"
+  data-project-block={block._type}
+  data-first-media="true"
+  transition:name={`project-${projectSlug}-media`}
+>
+  <ProjectContentBlock
+    block={block}
+    mode={mode}
+    projectTitle={projectTitle}
+    eager
+    sizes="(min-width: 1200px) 56vw, (min-width: 768px) 52vw, 100vw"
+  />
+  {captions.map((caption, index) => (
+    <ProjectContentBlock
+      block={caption}
+      mode={mode}
+      projectTitle={projectTitle}
+      captionId={captionIds[index]}
+    />
+  ))}
+</div>

@@ -1,0 +1,115 @@
+---
+import ErrorMedia from '../ErrorMedia.astro';
+import ResponsiveImage from '../ResponsiveImage.astro';
+import VideoControls from '../VideoControls.astro';
+import MediaCaption from './MediaCaption.astro';
+import MediaAccessibility from './MediaAccessibility.astro';
+import { inferVideoMimeType } from './video-mime';
+import type { ShortLoopBlock } from '../../lib/types';
+interface Props { block: ShortLoopBlock; projectTitle: string; eager?: boolean; sizes?: string }
+const { block, projectTitle, eager = false, sizes = '100vw' } = Astro.props;
+const displayRatio = block.video.poster
+  ? `${block.video.poster.width} / ${block.video.poster.height}`
+  : '16 / 9';
+const sourceMime = inferVideoMimeType(block.video.src, block.video.mimeType);
+const videoId = `short-loop-${block._key.replace(/[^a-zA-Z0-9_-]/gu, '-')}`;
+---
+<figure class="media-block media-block--loop">
+  <div class:list={['hosted-video', 'hosted-video--loop', block.video.poster && 'hosted-video--poster-backed']} data-media-frame style={`--video-ratio:${displayRatio}`}>
+    {block.video.poster ? (
+      <ResponsiveImage
+        image={block.video.poster}
+        sizes={sizes}
+        eager={eager}
+        projectPoster={eager}
+      />
+    ) : null}
+    {block.video.src ? (
+      <video
+        id={videoId}
+        muted
+        loop
+        playsinline
+        preload="none"
+        crossorigin={block.video.captionsFile ? 'anonymous' : undefined}
+        aria-label={block.video.accessibleDescription || `${projectTitle} motion loop`}
+        data-short-loop
+        data-autoplay-policy={block.autoplayPolicy || 'never'}
+      >
+        <source data-deferred-source data-src={block.video.src} data-type={sourceMime} type={sourceMime} />
+        {block.video.captionsFile ? <track kind="captions" src={block.video.captionsFile} srclang={block.video.captionsLanguage || 'en'} label={block.video.captionsLabel || 'English'} default /> : null}
+      </video>
+    ) : null}
+    {block.video.src ? <VideoControls targetId={videoId} showFullscreen={false} showMute={false} /> : null}
+    <ErrorMedia message={`Motion loop unavailable for ${projectTitle}`} visible={!block.video.src && !block.video.poster} />
+  </div>
+  {!block.video.src && block.video.poster ? (
+    <p class="embed-fallback" role="status">Motion loop unavailable. The poster remains visible.</p>
+  ) : null}
+  <MediaAccessibility transcript={block.video.transcript} captionsFile={block.video.captionsFile} />
+  {block.video.src ? <noscript><p class="embed-fallback"><a href={block.video.src}>Open motion clip</a></p></noscript> : null}
+  <MediaCaption caption={block.caption} credit={block.credit} />
+</figure>
+
+<script>
+  import { registerMediaController } from '../../lib/motion/media-controller';
+
+  let disposeShortLoops = (): void => undefined;
+
+  const attach = (video: HTMLVideoElement): void => {
+    const source = video.querySelector<HTMLSourceElement>('source[data-deferred-source]');
+    if (!source || source.hasAttribute('src') || !source.dataset.src) return;
+    source.src = source.dataset.src;
+    video.load();
+  };
+
+  const setupShortLoops = (): void => {
+    disposeShortLoops();
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const saveData = Boolean((navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData);
+    const videos = Array.from(document.querySelectorAll<HTMLVideoElement>('[data-short-loop]'));
+    videos.forEach((video) => {
+      if (video.dataset.ready === 'true') return;
+      video.dataset.ready = 'true';
+      video.addEventListener('playing', () => { video.dataset.mediaActive = 'true'; });
+      video.addEventListener('pause', () => { delete video.dataset.mediaActive; });
+      video.addEventListener('error', () => {
+        video.pause();
+        delete video.dataset.mediaActive;
+        const error = video.parentElement?.querySelector<HTMLElement>('[data-error-media]');
+        if (error) error.hidden = false;
+      }, { once: true });
+    });
+
+    const observer = !reduced && !saveData
+      ? new IntersectionObserver((entries) => {
+          entries.forEach(async (entry) => {
+            const video = entry.target as HTMLVideoElement;
+            if (entry.intersectionRatio >= 0.6 && video.dataset.userPaused !== 'true') {
+              attach(video);
+              try { await video.play(); } catch { /* poster remains */ }
+            } else video.pause();
+          });
+        }, { threshold: [0, 0.6, 1] })
+      : undefined;
+    videos.forEach((video) => {
+      if (video.dataset.autoplayPolicy === 'inViewMuted') observer?.observe(video);
+    });
+    const unregister = registerMediaController({
+      destroy: () => observer?.disconnect(),
+      pause: () => videos.forEach((video) => video.pause()),
+      refresh: () => observer?.takeRecords(),
+    });
+
+    disposeShortLoops = () => {
+      observer?.disconnect();
+      unregister();
+      videos.forEach((video) => video.pause());
+      disposeShortLoops = () => undefined;
+    };
+  };
+
+  setupShortLoops();
+  document.addEventListener('astro:page-load', setupShortLoops);
+  document.addEventListener('astro:before-swap', () => disposeShortLoops());
+</script>

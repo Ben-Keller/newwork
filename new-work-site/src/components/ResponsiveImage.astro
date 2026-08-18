@@ -1,0 +1,128 @@
+---
+import ErrorMedia from './ErrorMedia.astro';
+import type { ImageView } from '../lib/types';
+import { buildResponsiveAvifSrcset, buildResponsiveSrcset } from '../lib/responsive-images';
+
+interface Props {
+  image: ImageView;
+  mobileImage?: ImageView;
+  sizes?: string;
+  eager?: boolean;
+  galleryPreload?: boolean;
+  class?: string;
+  projectPoster?: boolean;
+}
+
+const {
+  image,
+  mobileImage,
+  sizes = '100vw',
+  eager = false,
+  galleryPreload = false,
+  class: className = '',
+  projectPoster = false,
+} = Astro.props;
+
+const srcset = buildResponsiveSrcset(image);
+const avifSrcset = buildResponsiveAvifSrcset(image);
+const mobileSrcset = mobileImage ? buildResponsiveSrcset(mobileImage) || mobileImage.src : undefined;
+const mobileAvifSrcset = mobileImage ? buildResponsiveAvifSrcset(mobileImage) : undefined;
+---
+
+<div class:list={['responsive-image', className]} data-media-frame>
+  {image.src ? (
+    <picture>
+      {mobileAvifSrcset ? <source media="(max-width: 767px)" type="image/avif" srcset={mobileAvifSrcset} sizes={sizes} /> : null}
+      {mobileImage ? <source media="(max-width: 767px)" srcset={mobileSrcset} sizes={sizes} /> : null}
+      {avifSrcset ? <source type="image/avif" srcset={avifSrcset} sizes={sizes} /> : null}
+      <img
+        src={image.src}
+        srcset={srcset}
+        sizes={sizes}
+        width={image.width}
+        height={image.height}
+        alt={image.alt}
+        loading={eager ? 'eager' : 'lazy'}
+        decoding="async"
+        fetchpriority={eager ? 'high' : 'auto'}
+        style={`--image-position:${image.objectPosition || '50% 50%'};--image-mobile-position:${mobileImage?.objectPosition || image.objectPosition || '50% 50%'}`}
+        data-error-managed
+        data-first-gallery-poster={eager || undefined}
+        data-gallery-preload={galleryPreload && !eager || undefined}
+        data-project-poster={projectPoster || undefined}
+      />
+    </picture>
+  ) : null}
+  <ErrorMedia message="Image unavailable" visible={!image.src} />
+</div>
+
+<script>
+  let galleryPreloadObserver: IntersectionObserver | undefined;
+  let galleryPreloadDistance = 0;
+
+  const warmGalleryImage = (image: HTMLImageElement) => {
+    image.loading = 'eager';
+    image.fetchPriority = 'auto';
+    image.dataset.galleryPreloaded = 'true';
+    // Changing the loading hint alone is not guaranteed to start a deferred
+    // request. decode() explicitly fetches and prepares the chosen candidate.
+    void image.decode().catch(() => undefined);
+  };
+
+  const setupGalleryPreloading = () => {
+    const saveData = Boolean((navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData);
+    if (saveData || !('IntersectionObserver' in window)) return;
+
+    const nextDistance = Math.max(720, Math.round(window.innerHeight * 1.5));
+    if (galleryPreloadObserver && galleryPreloadDistance !== nextDistance) {
+      galleryPreloadObserver.disconnect();
+      galleryPreloadObserver = undefined;
+    }
+    galleryPreloadDistance = nextDistance;
+
+    galleryPreloadObserver ||= new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        const image = entry.target as HTMLImageElement;
+        warmGalleryImage(image);
+        galleryPreloadObserver?.unobserve(image);
+      });
+    }, {
+      rootMargin: `${galleryPreloadDistance}px 0px ${galleryPreloadDistance}px 0px`,
+      threshold: 0,
+    });
+
+    document.querySelectorAll<HTMLImageElement>(
+      'img[data-gallery-preload]:not([data-gallery-preload-ready])',
+    ).forEach((image) => {
+      image.dataset.galleryPreloadReady = 'true';
+      galleryPreloadObserver?.observe(image);
+    });
+  };
+
+  const setupImageErrors = () => {
+    document.querySelectorAll<HTMLImageElement>('img[data-error-managed]:not([data-error-ready])').forEach((image) => {
+      image.dataset.errorReady = 'true';
+      const showError = () => {
+        image.hidden = true;
+        const frame = image.closest<HTMLElement>('[data-media-frame]');
+        const error = frame?.querySelector<HTMLElement>('[data-error-media]');
+        if (error) error.hidden = false;
+      };
+      image.addEventListener('error', showError, { once: true });
+      if (image.complete && image.naturalWidth === 0) showError();
+    });
+  };
+  setupImageErrors();
+  setupGalleryPreloading();
+  document.addEventListener('astro:page-load', () => {
+    setupImageErrors();
+    setupGalleryPreloading();
+  });
+  window.addEventListener('resize', setupGalleryPreloading, { passive: true });
+  document.addEventListener('astro:before-swap', () => {
+    galleryPreloadObserver?.disconnect();
+    galleryPreloadObserver = undefined;
+    galleryPreloadDistance = 0;
+  });
+</script>

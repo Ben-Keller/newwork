@@ -1,0 +1,9 @@
+---
+import type { CaptionBlock } from '../../lib/types';
+interface Props { block: CaptionBlock; id: string }
+const { block, id } = Astro.props;
+---
+<p id={id} class="media-block standalone-caption" data-associated-media={block.association || 'previous'}>
+  <span>{block.text}</span>
+  {block.credit ? <span class="media-credit">{block.credit}</span> : null}
+</p>

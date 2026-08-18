@@ -1,0 +1,165 @@
+{
+  "name": "NEW WORK title animation-ready letter kit",
+  "source": "new-work-title.svg",
+  "master": "master/new-work-title-letters.svg",
+  "sprite": "sprite/new-work-title-letter-sprite.svg",
+  "wordmarkViewBox": "0 0 5176.81 834",
+  "letterSelector": "[data-nw-letter]",
+  "partSelector": "[data-nw-part]",
+  "letters": [
+    {
+      "index": 0,
+      "letter": "N",
+      "word": "new",
+      "masterId": "nw-letter-01-n",
+      "selector": "#nw-letter-01-n",
+      "dataSelector": "[data-letter-index=\"0\"]",
+      "partSelector": "#nw-letter-01-n [data-nw-part]",
+      "file": "letters/01-n-new.svg",
+      "viewBox": [
+        12.74,
+        0.0,
+        758.26,
+        834.0
+      ],
+      "bounds": [
+        24.74,
+        23.99,
+        734.26,
+        786.13
+      ]
+    },
+    {
+      "index": 1,
+      "letter": "E",
+      "word": "new",
+      "masterId": "nw-letter-02-e",
+      "selector": "#nw-letter-02-e",
+      "dataSelector": "[data-letter-index=\"1\"]",
+      "partSelector": "#nw-letter-02-e [data-nw-part]",
+      "file": "letters/02-e-new.svg",
+      "viewBox": [
+        712.0,
+        0.0,
+        628.0,
+        834.0
+      ],
+      "bounds": [
+        724.0,
+        24.0,
+        604.0,
+        786.0
+      ]
+    },
+    {
+      "index": 2,
+      "letter": "W",
+      "word": "new",
+      "masterId": "nw-letter-03-w",
+      "selector": "#nw-letter-03-w",
+      "dataSelector": "[data-letter-index=\"2\"]",
+      "partSelector": "#nw-letter-03-w [data-nw-part]",
+      "file": "letters/03-w-new.svg",
+      "viewBox": [
+        1312.82,
+        0.0,
+        830.54,
+        834.0
+      ],
+      "bounds": [
+        1324.82,
+        24.0,
+        806.54,
+        786.2
+      ]
+    },
+    {
+      "index": 3,
+      "letter": "W",
+      "word": "work",
+      "masterId": "nw-letter-04-w",
+      "selector": "#nw-letter-04-w",
+      "dataSelector": "[data-letter-index=\"3\"]",
+      "partSelector": "#nw-letter-04-w [data-nw-part]",
+      "file": "letters/04-w-work.svg",
+      "viewBox": [
+        2302.82,
+        0.0,
+        821.18,
+        834.0
+      ],
+      "bounds": [
+        2314.82,
+        24.01,
+        797.18,
+        786.19
+      ]
+    },
+    {
+      "index": 4,
+      "letter": "O",
+      "word": "work",
+      "masterId": "nw-letter-05-o",
+      "selector": "#nw-letter-05-o",
+      "dataSelector": "[data-letter-index=\"4\"]",
+      "partSelector": "#nw-letter-05-o [data-nw-part]",
+      "file": "letters/05-o-work.svg",
+      "viewBox": [
+        3038.94,
+        0.0,
+        712.63,
+        834.0
+      ],
+      "bounds": [
+        3050.94,
+        41.18,
+        688.63,
+        769.02
+      ]
+    },
+    {
+      "index": 5,
+      "letter": "R",
+      "word": "work",
+      "masterId": "nw-letter-06-r",
+      "selector": "#nw-letter-06-r",
+      "dataSelector": "[data-letter-index=\"5\"]",
+      "partSelector": "#nw-letter-06-r [data-nw-part]",
+      "file": "letters/06-r-work.svg",
+      "viewBox": [
+        3722.94,
+        0.0,
+        698.83,
+        834.0
+      ],
+      "bounds": [
+        3734.94,
+        54.39,
+        674.83,
+        751.87
+      ]
+    },
+    {
+      "index": 6,
+      "letter": "K",
+      "word": "work",
+      "masterId": "nw-letter-07-k",
+      "selector": "#nw-letter-07-k",
+      "dataSelector": "[data-letter-index=\"6\"]",
+      "partSelector": "#nw-letter-07-k [data-nw-part]",
+      "file": "letters/07-k-work.svg",
+      "viewBox": [
+        4407.79,
+        0.0,
+        668.95,
+        834.0
+      ],
+      "bounds": [
+        4419.79,
+        34.93,
+        644.95,
+        773.23
+      ]
+    }
+  ]
+}

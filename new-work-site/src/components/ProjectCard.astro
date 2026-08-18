@@ -1,0 +1,96 @@
+---
+import PreviewVideo from './PreviewVideo.astro';
+import ResponsiveImage from './ResponsiveImage.astro';
+import type { ProjectView } from '../lib/types';
+import { COLUMN_SCROLL_RESPONSES } from '../lib/motion/column-filter';
+import { withBase } from '../lib/base-path';
+
+interface Props {
+  project: ProjectView;
+  index: number;
+  desktopColumn?: number;
+  tabletColumn?: number;
+  desktopColumnStart?: boolean;
+  tabletColumnStart?: boolean;
+  editable?: boolean;
+}
+
+const {
+  project,
+  index,
+  desktopColumn,
+  tabletColumn,
+  desktopColumnStart = false,
+  tabletColumnStart = false,
+  editable = false,
+} = Astro.props;
+const eager = index === 0;
+const homeCardSize = project.homeCardSize || 'standard';
+const homeTreatment = project.homeTreatment || 'standard';
+const requestedOffset = Number.isFinite(project.homeOffset) ? project.homeOffset : 0;
+// Keep editorial staggering visible without letting repeated card offsets open
+// oversized holes inside an otherwise packed column.
+const safeOffset = Math.max(0, Math.min(12, requestedOffset || 0));
+const transitionName = `project-${project.slug}-media`;
+const columnResponse = desktopColumn ? COLUMN_SCROLL_RESPONSES[desktopColumn - 1] : undefined;
+const tabletColumnResponse = tabletColumn ? COLUMN_SCROLL_RESPONSES[tabletColumn - 1] : undefined;
+---
+
+<article
+  class:list={[
+    'project-card',
+    `project-card--${homeCardSize}`,
+    project.cover.cardRatio === 'wideFeature' && index >= 8 && 'project-card--wide',
+  ]}
+  id={`project-${project.slug}`}
+  data-project-card
+  data-gallery-item-id={project.slug}
+  data-home-size={homeCardSize}
+  data-home-treatment={homeTreatment}
+  data-desktop-column={desktopColumn}
+  data-tablet-column={tabletColumn}
+  data-desktop-column-start={desktopColumnStart || undefined}
+  data-tablet-column-start={tabletColumnStart || undefined}
+  data-motion-column
+  data-motion-column-response={columnResponse}
+  data-motion-column-response-tablet={tabletColumnResponse}
+  data-motion-reveal={index === 0 ? undefined : 'clip'}
+  data-motion-delay={index === 0 ? undefined : Math.min(index, 7) * 0.035}
+  style={`--home-offset:${safeOffset}px`}
+>
+  <a
+    href={withBase(`/work/${project.slug}`)}
+    data-project-link
+    data-project-slug={project.slug}
+  >
+    <span class="sr-only">{project.title}</span>
+    <div class="project-card__media" transition:name={transitionName}>
+      <div class="project-card__media-inner" data-card-media>
+        <ResponsiveImage
+          image={project.cover.poster}
+          mobileImage={project.cover.mobilePoster}
+          sizes="(min-width: 1200px) 25vw, (min-width: 768px) 50vw, 100vw"
+          eager={eager}
+          galleryPreload
+        />
+        {project.cover.previewVideo ? (
+          <PreviewVideo
+            source={project.cover.previewVideo}
+            poster={project.cover.previewPosterOverride?.src || project.cover.poster.src}
+            mobilePoster={project.cover.mobilePoster?.src}
+            title={project.title}
+            placeholder={project.cover.previewIsPlaceholder}
+          />
+        ) : null}
+      </div>
+      <div class="project-card__label project-card__label--overlay" aria-hidden="true">
+        <span class="project-card__label-mask"><span>{project.title}</span></span>
+      </div>
+    </div>
+  </a>
+  {editable ? (
+    <button class="gallery-card-remove" type="button" data-gallery-remove hidden aria-label={`Remove ${project.title} from gallery`}>
+      <span aria-hidden="true">×</span>
+    </button>
+  ) : null}
+</article>

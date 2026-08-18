@@ -1,0 +1,66 @@
+# Local dependency/cache and generated output
+/.pnpm-store/
+/new-work-site/node_modules/
+/new-work-site/dist/
+/new-work-site/.astro/
+/new-work-site/coverage/
+/new-work-site/playwright-report/
+/new-work-site/test-results/
+/new-work-site/.lighthouseci/
+
+# The original media package is migrated for local preservation, but never
+# published to GitHub. Deployable derivatives live in new-work-site/public/.
+/assets/
+/references/
+
+# Private build briefs and binding source documents
+/BUILD_PROMPT.md
+/PRODUCT_SPEC.md
+/CONTENT_MODEL.md
+/pasted-text*.txt
+/*Private*Brief*.docx
+
+# Local credentials and deployment secrets
+.env
+.env.*
+!.env.example
+.dev.vars
+.dev.vars.*
+.npmrc
+.netrc
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Editable media/design masters and transfer archives
+*.aep
+*.aepx
+*.ai
+*.braw
+*.fig
+*.mov
+*.mxf
+*.prproj
+*.psb
+*.psd
+*.r3d
+*.sketch
+*.tif
+*.tiff
+*.wav
+*.aif
+*.aiff
+*.zip
+*.7z
+*.tar
+*.tar.gz
+
+# Local tooling and operating-system state
+**/.DS_Store
+*.log
+.idea/
+.vscode/
+*.swp
+*.swo
+

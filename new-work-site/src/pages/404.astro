@@ -1,0 +1,18 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { withBase } from '../lib/base-path';
+import { getSiteContent } from '../lib/content';
+const content = await getSiteContent();
+---
+<BaseLayout
+  content={content}
+  title="Page not found"
+  seo={{ noIndex: true }}
+  pageClass="utility-page error-page"
+>
+  <section class="utility-content" aria-labelledby="missing-heading">
+    <p class="eyebrow">404</p>
+    <h1 id="missing-heading">This page isn’t here.</h1>
+    <p><a class="text-link" href={withBase('/')}>Return to all work</a></p>
+  </section>
+</BaseLayout>

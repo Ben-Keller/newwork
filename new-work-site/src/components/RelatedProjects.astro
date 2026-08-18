@@ -1,0 +1,48 @@
+---
+import ResponsiveImage from './ResponsiveImage.astro';
+import type { ProjectView } from '../lib/types';
+import { withBase } from '../lib/base-path';
+interface Props { previous?: ProjectView; next?: ProjectView }
+const { previous, next } = Astro.props;
+---
+<nav class="related-projects" aria-label="Project navigation">
+  <div class="related-projects__grid">
+    {previous ? (
+      <a class="related-projects__link related-projects__link--previous" href={withBase(`/work/${previous.slug}`)} rel="prev" data-project-nav="previous">
+        <span class="related-projects__media" transition:name={`project-${previous.slug}-media`}>
+          <ResponsiveImage image={previous.cover.poster} sizes="50vw" />
+        </span>
+        <span class="related-projects__copy">
+          <span class="eyebrow"><span class="related-projects__arrow" aria-hidden="true">←</span> Previous project</span>
+          <strong>{previous.title}</strong>
+        </span>
+      </a>
+    ) : null}
+    {next ? (
+      <a class="related-projects__link related-projects__link--next" href={withBase(`/work/${next.slug}`)} rel="next" data-project-nav="next">
+        <span class="related-projects__media" transition:name={`project-${next.slug}-media`}>
+          <ResponsiveImage image={next.cover.poster} sizes="50vw" />
+        </span>
+        <span class="related-projects__copy">
+          <span class="eyebrow">Next project <span class="related-projects__arrow" aria-hidden="true">→</span></span>
+          <strong>{next.title}</strong>
+        </span>
+      </a>
+    ) : null}
+  </div>
+  <a href={withBase('/')} class="all-work-link" data-restore-work-scroll data-project-return>
+    <span>All work</span><span class="all-work-link__arrow" aria-hidden="true">↙</span>
+  </a>
+</nav>
+
+<script>
+  const setupRestoreLinks = () => {
+    document.querySelectorAll<HTMLAnchorElement>('[data-restore-work-scroll]:not([data-ready])').forEach((link) => {
+      link.dataset.ready = 'true';
+      link.addEventListener('click', () => sessionStorage.setItem('new-work-restore-requested', 'true'));
+    });
+  };
+
+  document.addEventListener('astro:page-load', setupRestoreLinks);
+  setupRestoreLinks();
+</script>

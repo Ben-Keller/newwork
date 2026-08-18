@@ -1,0 +1,59 @@
+---
+import CreditsDisclosure from '../CreditsDisclosure.astro';
+import MediaStream from '../MediaStream.astro';
+import RelatedProjects from '../RelatedProjects.astro';
+import { projectPresentationStyle } from '../../lib/project-layout';
+import ProjectHeroMedia from './ProjectHeroMedia.astro';
+import ProjectPlaceholderMedia from './ProjectPlaceholderMedia.astro';
+import ProjectTemplateHeader from './ProjectTemplateHeader.astro';
+import type { ProjectTemplateProps } from './template-props';
+
+type Props = ProjectTemplateProps;
+const { project, mode, heroBlock, heroCaptions, blocks, presentation, previous, next } = Astro.props;
+const style = projectPresentationStyle(presentation);
+---
+
+<article
+  class="project-template project-template--experimental"
+  data-project-template="experimental"
+  data-project-theme={presentation.projectTheme}
+  data-title-treatment={presentation.titleTreatment}
+  data-hero-treatment={presentation.heroTreatment}
+  data-motion-intensity={presentation.motionIntensity}
+  style={style}
+  aria-labelledby="project-title"
+>
+  <div class="project-template__experimental-intro">
+    <ProjectTemplateHeader
+      project={project}
+      variant="experimental"
+      titleTreatment={presentation.titleTreatment}
+    >
+      <ProjectHeroMedia
+        slot="media"
+        block={heroBlock}
+        captions={heroCaptions}
+        mode={mode}
+        projectTitle={project.title}
+        projectSlug={project.slug}
+      />
+    </ProjectTemplateHeader>
+  </div>
+  {blocks.length ? (
+    <MediaStream
+      blocks={blocks}
+      mode={mode}
+      projectTitle={project.title}
+      maskSequence={['vertical', 'notch', 'offset', 'letterbox']}
+      motionIntensity={presentation.motionIntensity}
+    />
+  ) : null}
+  <ProjectPlaceholderMedia
+    mode={mode}
+    projectTitle={project.title}
+    projectSlug={project.slug}
+    variant="experimental"
+  />
+  <CreditsDisclosure credits={project.credits} whatWeDid={project.whatWeDid} />
+  <RelatedProjects previous={previous} next={next} />
+</article>

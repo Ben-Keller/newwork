@@ -1,0 +1,38 @@
+---
+import Manifesto from '../components/Manifesto.astro';
+import NotesStrip from '../components/NotesStrip.astro';
+import LogoIntro from '../components/LogoIntro.astro';
+import ProjectGrid from '../components/ProjectGrid.astro';
+import Reel from '../components/Reel.astro';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { withBase } from '../lib/base-path';
+import { getSiteContent } from '../lib/content';
+
+const content = await getSiteContent();
+const { settings, projects, notes, mode } = content;
+const homeProjects = mode === 'production' ? projects.filter((project) => project.featuredOnHome) : projects;
+---
+<BaseLayout
+  content={content}
+  title={settings.siteName}
+  description={settings.defaultSeo.metaDescription}
+  seo={settings.defaultSeo}
+  structuredData={{
+    '@type': 'Organization',
+    name: settings.siteName,
+    url: Astro.site?.href,
+    logo: settings.compactMark?.src || settings.wordmark?.src || withBase('/media/brand/new-black.svg'),
+    email: settings.contactEmail,
+    sameAs: settings.socialLinks.map((link) => link.url),
+  }}
+  pageClass="home-page"
+  preloadImage={homeProjects[0]?.cover.poster}
+  preloadMobileImage={homeProjects[0]?.cover.mobilePoster}
+  preloadImageSizes="(min-width: 1200px) 25vw, (min-width: 768px) 50vw, 100vw"
+>
+  <LogoIntro siteName="New Work" projects={homeProjects} />
+  <ProjectGrid projects={homeProjects} mode={mode} />
+  <Manifesto text={settings.manifesto} />
+  <Reel reel={settings.reel} />
+  <NotesStrip notes={notes} mode={mode} />
+</BaseLayout>

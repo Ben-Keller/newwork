@@ -1,0 +1,159 @@
+---
+import ResponsiveImage from './ResponsiveImage.astro';
+import MediaControlIcon from './MediaControlIcon.astro';
+import MediaAccessibility from './media/MediaAccessibility.astro';
+import type { ContentMode, VideoView } from '../lib/types';
+
+interface Props {
+  video: VideoView;
+  title: string;
+  mode: ContentMode;
+  eagerPoster?: boolean;
+  sizes?: string;
+}
+
+const { video, title, mode, eagerPoster = false, sizes = '100vw' } = Astro.props;
+const embedUrl = video.provider === 'vimeo' && video.providerId
+  ? `https://player.vimeo.com/video/${encodeURIComponent(video.providerId)}?dnt=1&title=0&byline=0&portrait=0`
+  : video.provider === 'youtube' && video.providerId
+    ? `https://www.youtube-nocookie.com/embed/${encodeURIComponent(video.providerId)}?rel=0`
+    : undefined;
+const externalUrl = video.externalUrl || (
+  video.provider === 'vimeo' && video.providerId
+    ? `https://vimeo.com/${video.providerId}`
+    : video.provider === 'youtube' && video.providerId
+      ? `https://www.youtube.com/watch?v=${encodeURIComponent(video.providerId)}`
+      : undefined
+);
+const displayRatio = (video.aspectRatio || '16 / 9').replace(':', ' / ');
+---
+
+<div
+  class="lazy-embed"
+  data-lazy-embed
+  data-embed-url={embedUrl}
+  data-embed-title={`${title} film player`}
+  style={`--video-ratio:${displayRatio}`}
+>
+  <div class="lazy-embed__stage">
+    <div class="lazy-embed__poster">
+      {video.poster ? (
+        <ResponsiveImage
+          image={video.poster}
+          sizes={sizes}
+          eager={eagerPoster}
+          projectPoster={eagerPoster}
+        />
+      ) : (
+        <div class="media-placeholder"><span>{title}</span></div>
+      )}
+      {embedUrl && !(mode !== 'production' && video.needsApprovedEmbed) ? (
+        <button type="button" class="lazy-embed__launch" data-load-embed aria-label="Play film">
+          <MediaControlIcon name="play" />
+          <small>Loads {video.provider === 'youtube' ? 'YouTube' : 'Vimeo'} after your choice</small>
+        </button>
+      ) : null}
+    </div>
+    <div class="lazy-embed__player" data-embed-player hidden>
+      <button type="button" class="lazy-embed__restore" data-restore-poster>Return to poster</button>
+    </div>
+  </div>
+  <p class="embed-status sr-only" data-embed-status aria-live="polite"></p>
+  {mode !== 'production' && video.needsApprovedEmbed ? (
+    <p class="embed-fallback">Film playback is unavailable. The poster remains visible.</p>
+  ) : null}
+  {externalUrl ? (
+    <p class="embed-fallback">
+      <a href={externalUrl} rel="noreferrer" target="_blank">Open film reference in a new tab</a>
+    </p>
+  ) : null}
+  <MediaAccessibility transcript={video.transcript} captionsFile={video.captionsFile} />
+  <noscript>
+    {externalUrl ? <p><a href={externalUrl}>Open film reference</a></p> : <p>Video playback requires JavaScript.</p>}
+  </noscript>
+</div>
+
+<script>
+  declare global {
+    interface Window {
+      __newWorkEmbedCleanups?: Set<() => void>;
+      __newWorkEmbedLifecycleReady?: boolean;
+    }
+  }
+
+  const embedCleanups = window.__newWorkEmbedCleanups ??= new Set<() => void>();
+  const setupEmbeds = () => {
+    document.querySelectorAll<HTMLElement>('[data-lazy-embed]:not([data-ready])').forEach((shell) => {
+      shell.dataset.ready = 'true';
+      const button = shell.querySelector<HTMLButtonElement>('[data-load-embed]');
+      const player = shell.querySelector<HTMLElement>('[data-embed-player]');
+      const poster = shell.querySelector<HTMLElement>('.lazy-embed__poster');
+      const restore = shell.querySelector<HTMLButtonElement>('[data-restore-poster]');
+      const status = shell.querySelector<HTMLElement>('[data-embed-status]');
+      let iframe: HTMLIFrameElement | null = null;
+      let loadTimer: number | undefined;
+      const restorePoster = (message = '') => {
+        if (loadTimer !== undefined) window.clearTimeout(loadTimer);
+        loadTimer = undefined;
+        iframe?.remove();
+        iframe = null;
+        if (player) player.hidden = true;
+        if (poster) {
+          poster.inert = false;
+          poster.removeAttribute('aria-hidden');
+        }
+        delete shell.dataset.playerActive;
+        if (status) status.textContent = message;
+        button?.focus();
+      };
+      const onRestore = () => restorePoster('Poster restored.');
+      const onLaunch = () => {
+        const url = shell.dataset.embedUrl;
+        if (!url || !player || !poster || iframe) return;
+        iframe = document.createElement('iframe');
+        iframe.src = url;
+        iframe.title = shell.dataset.embedTitle || 'Embedded film player';
+        iframe.allow = 'autoplay; fullscreen; picture-in-picture';
+        iframe.allowFullscreen = true;
+        iframe.loading = 'lazy';
+        iframe.referrerPolicy = 'strict-origin-when-cross-origin';
+        if (status) status.textContent = 'Loading external film player.';
+        iframe.addEventListener('load', () => {
+          if (loadTimer) window.clearTimeout(loadTimer);
+          if (status) status.textContent = 'External film player loaded.';
+        }, { once: true });
+        iframe.addEventListener('error', () => restorePoster('The external player could not be loaded. Poster restored.'), { once: true });
+        loadTimer = window.setTimeout(() => {
+          if (iframe) restorePoster('The external player did not respond. Poster restored.');
+        }, 12000);
+        player.prepend(iframe);
+        player.hidden = false;
+        poster.inert = true;
+        poster.setAttribute('aria-hidden', 'true');
+        shell.dataset.playerActive = 'true';
+        restore?.focus();
+      };
+      const cleanup = () => {
+        if (loadTimer !== undefined) window.clearTimeout(loadTimer);
+        loadTimer = undefined;
+        iframe?.remove();
+        iframe = null;
+        restore?.removeEventListener('click', onRestore);
+        button?.removeEventListener('click', onLaunch);
+        embedCleanups.delete(cleanup);
+      };
+      restore?.addEventListener('click', onRestore);
+      button?.addEventListener('click', onLaunch);
+      embedCleanups.add(cleanup);
+    });
+  };
+  setupEmbeds();
+  document.addEventListener('astro:page-load', setupEmbeds);
+  if (!window.__newWorkEmbedLifecycleReady) {
+    window.__newWorkEmbedLifecycleReady = true;
+    document.addEventListener('astro:before-swap', () => {
+      [...embedCleanups].forEach((cleanup) => cleanup());
+      embedCleanups.clear();
+    });
+  }
+</script>

@@ -1,0 +1,15 @@
+---
+import AboutContent from '../components/AboutContent.astro';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { getSiteContent } from '../lib/content';
+const content = await getSiteContent();
+---
+<BaseLayout
+  content={content}
+  title="About"
+  description={content.settings.defaultSeo.metaDescription}
+  seo={content.settings.aboutSeo}
+  pageClass="utility-page about-page"
+>
+  <AboutContent settings={content.settings} projects={content.projects} />
+</BaseLayout>

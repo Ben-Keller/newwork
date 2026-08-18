@@ -1,0 +1,60 @@
+---
+import type { ContentMode, SeoFields } from '../lib/types';
+import {
+  resolvePageSeo,
+  SOCIAL_IMAGE_HEIGHT,
+  SOCIAL_IMAGE_WIDTH,
+  socialImageUrl,
+} from '../lib/seo';
+
+interface Props {
+  siteName: string;
+  title?: string;
+  description?: string;
+  pathname: string;
+  mode: ContentMode;
+  seo?: SeoFields;
+  defaultSeo?: SeoFields;
+  kind?: 'website' | 'project' | 'article';
+  structuredData?: Record<string, unknown>;
+}
+
+const {
+  siteName,
+  title,
+  description,
+  pathname,
+  mode,
+  seo,
+  defaultSeo,
+  kind = 'website',
+  structuredData,
+} = Astro.props;
+const siteUrl = Astro.site || new URL(import.meta.env.PUBLIC_SITE_URL || 'http://localhost:4321');
+const canonical = new URL(pathname, siteUrl).href;
+const resolvedSeo = resolvePageSeo({ siteName, title, description, mode, seo, defaultSeo });
+const absoluteImage = socialImageUrl(resolvedSeo.shareImage, siteUrl);
+const schema = mode === 'production' && structuredData
+  ? { '@context': 'https://schema.org', ...structuredData }
+  : undefined;
+---
+
+<title>{resolvedSeo.title}</title>
+<meta name="description" content={resolvedSeo.description} />
+<meta name="robots" content={resolvedSeo.noIndex ? 'noindex, nofollow' : 'index, follow'} />
+<link rel="canonical" href={canonical} />
+<meta property="og:type" content={kind === 'project' ? 'article' : kind} />
+<meta property="og:site_name" content={siteName} />
+<meta property="og:title" content={resolvedSeo.title} />
+<meta property="og:description" content={resolvedSeo.description} />
+<meta property="og:url" content={canonical} />
+{absoluteImage ? <meta property="og:image" content={absoluteImage} /> : null}
+{absoluteImage ? <meta property="og:image:width" content={String(SOCIAL_IMAGE_WIDTH)} /> : null}
+{absoluteImage ? <meta property="og:image:height" content={String(SOCIAL_IMAGE_HEIGHT)} /> : null}
+{absoluteImage && resolvedSeo.shareImageAlt ? <meta property="og:image:alt" content={resolvedSeo.shareImageAlt} /> : null}
+<meta name="twitter:card" content={absoluteImage ? 'summary_large_image' : 'summary'} />
+<meta name="twitter:title" content={resolvedSeo.title} />
+<meta name="twitter:description" content={resolvedSeo.description} />
+{absoluteImage ? <meta name="twitter:image" content={absoluteImage} /> : null}
+{absoluteImage && resolvedSeo.shareImageAlt ? <meta name="twitter:image:alt" content={resolvedSeo.shareImageAlt} /> : null}
+{schema ? <script is:inline type="application/ld+json" set:html={JSON.stringify(schema).replace(/</g, '\\u003c')} /> : null}

@@ -1,0 +1,402 @@
+---
+import ProjectCard from './ProjectCard.astro';
+import GalleryImageCard from './GalleryImageCard.astro';
+import { michaelDevelopmentGallery, type DevelopmentGalleryImage } from '../content/local/michael-gallery';
+import type { ContentMode, ProjectView } from '../lib/types';
+
+interface Props {
+  projects: ProjectView[];
+  mode?: ContentMode;
+}
+
+const { projects, mode = 'prototype' } = Astro.props;
+type GalleryEntry =
+  | { kind: 'project'; project: ProjectView }
+  | { kind: 'image'; item: DevelopmentGalleryImage };
+const galleryEntries: GalleryEntry[] = [];
+const developmentImages = mode === 'production' ? [] : michaelDevelopmentGallery;
+for (let index = 0; index < Math.max(projects.length, developmentImages.length); index += 1) {
+  const project = projects[index];
+  const item = developmentImages[index];
+  if (project) galleryEntries.push({ kind: 'project', project });
+  if (item) galleryEntries.push({ kind: 'image', item });
+}
+const isWideFeature = (entry: GalleryEntry, index: number) =>
+  entry.kind === 'project' && entry.project.cover.cardRatio === 'wideFeature' && index >= 8;
+const assignColumns = (columnCount: number) => {
+  let nextColumn = 0;
+  return galleryEntries.map((entry, index) => {
+    if (isWideFeature(entry, index)) {
+      nextColumn = 0;
+      return undefined;
+    }
+
+    const requestedColumn = entry.kind === 'project'
+      ? entry.project.homeColumn
+      : columnCount === 4
+        ? entry.item.desktopColumn
+        : entry.item.tabletColumn;
+    const preferred = requestedColumn
+      ? ((requestedColumn - 1) % columnCount) + 1
+      : undefined;
+    const column = preferred || nextColumn + 1;
+    nextColumn = column % columnCount;
+    return column;
+  });
+};
+const desktopColumns = assignColumns(4);
+const tabletColumns = assignColumns(2);
+const desktopColumnStarts = desktopColumns.map((column, index) =>
+  column !== undefined && desktopColumns.indexOf(column) === index);
+const tabletColumnStarts = tabletColumns.map((column, index) =>
+  column !== undefined && tabletColumns.indexOf(column) === index);
+---
+
+<section aria-labelledby="work-heading" class="work-index" data-work-gallery>
+  <h1 id="work-heading" class="sr-only">Selected work</h1>
+  <div class="project-grid-stage" data-gallery-entrance data-gallery-entrance-state="pending">
+    <div class="project-grid" data-project-grid data-gallery-plane>
+      {galleryEntries.map((entry, index) => entry.kind === 'project' ? (
+          <ProjectCard
+            project={entry.project}
+            index={index}
+            desktopColumn={desktopColumns[index]}
+            tabletColumn={tabletColumns[index]}
+            desktopColumnStart={desktopColumnStarts[index]}
+            tabletColumnStart={tabletColumnStarts[index]}
+            editable={mode !== 'production'}
+          />
+        ) : (
+          <GalleryImageCard
+            item={entry.item}
+            index={index}
+            desktopColumn={desktopColumns[index] ?? index % 4 + 1}
+            tabletColumn={tabletColumns[index] ?? index % 2 + 1}
+            desktopColumnStart={desktopColumnStarts[index]}
+            tabletColumnStart={tabletColumnStarts[index]}
+          />
+        ))}
+    </div>
+  </div>
+  <noscript><style>.project-grid-stage{transform:none!important}</style></noscript>
+</section>
+
+<script>
+  declare global {
+    interface Window {
+      __newWorkMasonryCleanup?: () => void;
+      __newWorkHistoryRestoreReady?: boolean;
+      __newWorkPopstatePending?: boolean;
+      __newWorkGalleryOrderReady?: boolean;
+      __newWorkGalleryRemoved?: Set<string>;
+    }
+  }
+
+  const galleryOrderStorageKey = 'new-work:gallery-order:v1';
+  const galleryHiddenStorageKey = 'new-work:gallery-hidden:v1';
+
+  const getGalleryCards = (grid: HTMLElement): HTMLElement[] =>
+    [...grid.querySelectorAll<HTMLElement>('[data-project-card]')];
+
+  const getCardId = (card: HTMLElement): string | undefined => card.dataset.galleryItemId;
+
+  const readGalleryOrder = (): string[] => {
+    try {
+      const value: unknown = JSON.parse(localStorage.getItem(galleryOrderStorageKey) || '[]');
+      return Array.isArray(value) ? value.filter((slug): slug is string => typeof slug === 'string') : [];
+    } catch {
+      return [];
+    }
+  };
+
+  const readHiddenGalleryItems = (): string[] => {
+    try {
+      const value: unknown = JSON.parse(localStorage.getItem(galleryHiddenStorageKey) || '[]');
+      return Array.isArray(value) ? value.filter((id): id is string => typeof id === 'string') : [];
+    } catch {
+      return [];
+    }
+  };
+
+  const applyGalleryOrder = (grid: HTMLElement, order: string[]): void => {
+    if (!order.length) return;
+    const cards = getGalleryCards(grid);
+    const byId = new Map(cards.map((card) => [getCardId(card), card]));
+    const orderedCards = order.flatMap((id) => {
+      const card = byId.get(id);
+      if (!card) return [];
+      byId.delete(id);
+      return [card];
+    });
+    [...orderedCards, ...byId.values()].forEach((card) => grid.append(card));
+  };
+
+  const orderWithHiddenSlots = (
+    visibleOrder: string[],
+    previousOrder: string[],
+    hiddenItems: Set<string>,
+  ): string[] => {
+    if (!hiddenItems.size) return visibleOrder;
+    const remainingVisible = [...visibleOrder];
+    const merged = previousOrder.flatMap((id) => {
+      if (hiddenItems.has(id)) return [id];
+      const next = remainingVisible.shift();
+      return next ? [next] : [];
+    });
+    const recorded = new Set(merged);
+    return [
+      ...merged,
+      ...remainingVisible,
+      ...[...hiddenItems].filter((id) => !recorded.has(id)),
+    ];
+  };
+
+  const restoreGalleryOrder = (): void => {
+    const grid = document.querySelector<HTMLElement>('[data-project-grid]');
+    if (!grid) return;
+    window.__newWorkGalleryRemoved = new Set(readHiddenGalleryItems());
+    getGalleryCards(grid).forEach((card) => {
+      const id = getCardId(card);
+      if (id && window.__newWorkGalleryRemoved?.has(id)) card.remove();
+    });
+    applyGalleryOrder(grid, readGalleryOrder());
+    grid.querySelectorAll<HTMLButtonElement>('[data-gallery-remove]').forEach((button) => {
+      button.hidden = false;
+    });
+    if (window.__newWorkGalleryRemoved.size > 0) {
+      document.dispatchEvent(new CustomEvent('new-work:gallery-order-feedback', {
+        detail: { action: 'removed' },
+      }));
+    }
+  };
+
+  const setupWorkScroll = () => {
+    document.querySelectorAll<HTMLAnchorElement>('[data-project-link]:not([data-scroll-ready])').forEach((link) => {
+      link.dataset.scrollReady = 'true';
+      link.addEventListener('click', () => {
+        const slug = link.dataset.projectSlug;
+        if (slug) {
+          // This route owns an exact gallery-origin restore. Prevent WebKit's
+          // later native history pass from replacing that saved position.
+          history.scrollRestoration = 'manual';
+          sessionStorage.setItem('new-work-origin', JSON.stringify({slug, scrollY: window.scrollY}));
+        }
+      });
+    });
+    if (
+      document.querySelector('[data-project-grid]')
+      && window.__newWorkPopstatePending
+      && sessionStorage.getItem('new-work-origin')
+    ) {
+      sessionStorage.setItem('new-work-restore-requested', 'true');
+      window.__newWorkPopstatePending = false;
+    }
+    if (!document.querySelector('[data-project-grid]')) return;
+    if (sessionStorage.getItem('new-work-restore-requested') !== 'true') return;
+    const gallery = document.querySelector<HTMLElement>('[data-work-gallery]');
+    if (!gallery) return;
+    gallery.setAttribute('data-gallery-restore', 'true');
+    sessionStorage.removeItem('new-work-restore-requested');
+    try {
+      const origin = JSON.parse(sessionStorage.getItem('new-work-origin') || '{}') as {slug?: string; scrollY?: number};
+      const restore = () => {
+        if (!document.querySelector('[data-project-grid]')) return;
+        if (typeof origin.scrollY === 'number') {
+          window.scrollTo({top: origin.scrollY, behavior: 'auto'});
+          return;
+        }
+        const card = origin.slug ? document.getElementById(`project-${origin.slug}`) : null;
+        card?.scrollIntoView({block: 'center', behavior: 'auto'});
+      };
+
+      // Astro's router applies its own history position after the first page-load
+      // callback. Restore on the following paint so our saved gallery origin wins.
+      requestAnimationFrame(() => requestAnimationFrame(restore));
+    } catch {
+      sessionStorage.removeItem('new-work-origin');
+    }
+  };
+
+  const setupEditorialGrid = () => {
+    window.__newWorkMasonryCleanup?.();
+    const grid = document.querySelector<HTMLElement>('[data-project-grid]');
+    if (!grid) return;
+
+    const cards = [...grid.querySelectorAll<HTMLElement>('[data-project-card]')];
+    const cleanups: Array<() => void> = [];
+    let frame = 0;
+
+    const layout = () => {
+      frame = 0;
+      if (grid.querySelector('.project-card--wide')) {
+        grid.removeAttribute('data-masonry-ready');
+        cards.forEach((card) => card.style.removeProperty('grid-row-end'));
+        return;
+      }
+
+      grid.dataset.masonryReady = 'true';
+      cards.forEach((card) => {
+        const styles = getComputedStyle(card);
+        const rhythm = Number.parseFloat(styles.getPropertyValue('--card-rhythm')) || 8;
+        const content = card.querySelector<HTMLElement>(':scope > a');
+        const paddingStart = Number.parseFloat(styles.paddingBlockStart) || 0;
+        // Measure intrinsic content rather than the card's existing grid area.
+        // Otherwise a breakpoint resize can feed the previous row span back
+        // into the next calculation and open a full-tile hole in a lane.
+        const contentHeight = content?.offsetHeight ?? card.scrollHeight;
+        const span = Math.max(1, Math.ceil((contentHeight + paddingStart + rhythm) / 4));
+        const nextValue = `span ${span}`;
+        if (card.style.gridRowEnd !== nextValue) card.style.gridRowEnd = nextValue;
+      });
+    };
+
+    const requestLayout = () => {
+      if (frame) return;
+      frame = window.requestAnimationFrame(layout);
+    };
+
+    requestLayout();
+    const resizeObserver = 'ResizeObserver' in window ? new ResizeObserver(requestLayout) : undefined;
+    resizeObserver?.observe(grid);
+    cards.forEach((card) => resizeObserver?.observe(card));
+    cleanups.push(() => resizeObserver?.disconnect());
+    window.addEventListener('resize', requestLayout, { passive: true });
+    cleanups.push(() => window.removeEventListener('resize', requestLayout));
+
+    window.__newWorkMasonryCleanup = () => {
+      if (frame) cancelAnimationFrame(frame);
+      cleanups.forEach((cleanup) => cleanup());
+      delete window.__newWorkMasonryCleanup;
+    };
+  };
+
+  const installGalleryOrderControls = (): void => {
+    if (window.__newWorkGalleryOrderReady) return;
+    window.__newWorkGalleryOrderReady = true;
+
+    document.addEventListener('new-work:gallery-shuffle', () => {
+      const grid = document.querySelector<HTMLElement>('[data-project-grid]');
+      if (!grid) return;
+      const cards = getGalleryCards(grid);
+      const previous = cards.map(getCardId).filter((id): id is string => Boolean(id));
+      const shuffled = [...cards];
+      for (let index = shuffled.length - 1; index > 0; index -= 1) {
+        const swapIndex = Math.floor(Math.random() * (index + 1));
+        [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex]!, shuffled[index]!];
+      }
+      if (shuffled.length > 1 && shuffled.every((card, index) => getCardId(card) === previous[index])) {
+        shuffled.push(shuffled.shift()!);
+      }
+      shuffled.forEach((card) => grid.append(card));
+      grid.dataset.galleryOrder = 'unsaved';
+      if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        grid.animate([{ opacity: .72 }, { opacity: 1 }], { duration: 240, easing: 'ease-out' });
+      }
+      setupEditorialGrid();
+      document.dispatchEvent(new CustomEvent('new-work:gallery-order-feedback', {
+        detail: { action: 'shuffled' },
+      }));
+    });
+
+    document.addEventListener('new-work:gallery-save', () => {
+      const grid = document.querySelector<HTMLElement>('[data-project-grid]');
+      if (!grid) return;
+      const order = getGalleryCards(grid)
+        .map(getCardId)
+        .filter((id): id is string => Boolean(id));
+      try {
+        const hiddenItems = window.__newWorkGalleryRemoved ?? new Set<string>();
+        localStorage.setItem(
+          galleryOrderStorageKey,
+          JSON.stringify(orderWithHiddenSlots(order, readGalleryOrder(), hiddenItems)),
+        );
+        localStorage.setItem(
+          galleryHiddenStorageKey,
+          JSON.stringify([...hiddenItems]),
+        );
+        grid.dataset.galleryOrder = 'saved';
+        document.dispatchEvent(new CustomEvent('new-work:gallery-order-feedback', {
+          detail: { action: 'saved' },
+        }));
+      } catch {
+        document.dispatchEvent(new CustomEvent('new-work:gallery-order-feedback', {
+          detail: { action: 'error' },
+        }));
+      }
+    });
+
+    document.addEventListener('click', (event) => {
+      const target = event.target instanceof Element ? event.target.closest<HTMLElement>('[data-gallery-remove]') : null;
+      const card = target?.closest<HTMLElement>('[data-project-card]');
+      const grid = card?.closest<HTMLElement>('[data-project-grid]');
+      const id = card ? getCardId(card) : undefined;
+      if (!target || !card || !grid || !id) return;
+      event.preventDefault();
+      event.stopPropagation();
+      window.__newWorkGalleryRemoved ??= new Set<string>();
+      window.__newWorkGalleryRemoved.add(id);
+      try {
+        // Removal is an immediate curation decision. Persist it separately
+        // from the optional shuffled order so route changes cannot revive it.
+        const recordedOrder = readGalleryOrder();
+        if (!recordedOrder.includes(id)) {
+          const currentOrder = getGalleryCards(grid)
+            .map(getCardId)
+            .filter((cardId): cardId is string => Boolean(cardId));
+          localStorage.setItem(galleryOrderStorageKey, JSON.stringify(currentOrder));
+        }
+        localStorage.setItem(
+          galleryHiddenStorageKey,
+          JSON.stringify([...window.__newWorkGalleryRemoved]),
+        );
+      } catch {
+        document.dispatchEvent(new CustomEvent('new-work:gallery-order-feedback', {
+          detail: { action: 'error' },
+        }));
+      }
+
+      const finish = () => {
+        card.remove();
+        setupEditorialGrid();
+      };
+      if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        finish();
+      } else {
+        const removal = card.animate(
+          [{ opacity: 1 }, { opacity: 0 }],
+          { duration: 220, easing: 'ease-in', fill: 'forwards' },
+        );
+        removal.addEventListener('finish', finish, { once: true });
+      }
+      document.dispatchEvent(new CustomEvent('new-work:gallery-order-feedback', {
+        detail: { action: 'removed' },
+      }));
+    });
+
+    document.addEventListener('new-work:gallery-restore-all', () => {
+      localStorage.removeItem(galleryHiddenStorageKey);
+      window.__newWorkGalleryRemoved?.clear();
+      window.location.reload();
+    });
+  };
+
+  if (!window.__newWorkHistoryRestoreReady) {
+    window.__newWorkHistoryRestoreReady = true;
+    window.addEventListener('popstate', () => {
+      if (!sessionStorage.getItem('new-work-origin')) return;
+      // Astro/WebKit can dispatch popstate before the incoming route has
+      // replaced location.pathname. Defer the route decision until the home
+      // grid actually initializes instead of dropping the restore request.
+      window.__newWorkPopstatePending = true;
+    });
+  }
+
+  restoreGalleryOrder();
+  installGalleryOrderControls();
+  setupWorkScroll();
+  setupEditorialGrid();
+  document.addEventListener('astro:page-load', restoreGalleryOrder);
+  document.addEventListener('astro:page-load', setupWorkScroll);
+  document.addEventListener('astro:page-load', setupEditorialGrid);
+  document.addEventListener('astro:before-swap', () => window.__newWorkMasonryCleanup?.());
+</script>

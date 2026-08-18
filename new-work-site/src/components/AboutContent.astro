@@ -1,0 +1,260 @@
+---
+import type { ProjectView, SiteSettingsView } from '../lib/types';
+import { aboutProjectsForPerson } from '../lib/content';
+import { withBase } from '../lib/base-path';
+import '../styles/about.css';
+import PreviewVideo from './PreviewVideo.astro';
+import ResponsiveImage from './ResponsiveImage.astro';
+import RichText from './RichText.astro';
+
+interface Props {
+  settings: SiteSettingsView;
+  projects: ProjectView[];
+}
+
+const { settings, projects } = Astro.props;
+
+const curatedProjectSlugs: Record<string, readonly string[]> = {
+  oliver: [
+    'tour-de-france-x-toyota',
+    'humu-make-work-better-holly',
+    'mercury-an-unexpected-life',
+    'mercury-one-of-the-greats',
+    'olympics-toyota-in-due-time',
+  ],
+  michael: [
+    'native-cucumber-mint-stop-motion',
+    'arc',
+    'cradlewise',
+    'specialized-globe',
+    'brava',
+  ],
+  anjali: [
+    'adobe',
+    'stella-artois-daydream',
+    'rakuten',
+  ],
+};
+
+const motionFeatureSlugs: Record<string, readonly string[]> = {
+  oliver: ['tour-de-france-x-toyota'],
+  michael: ['native-cucumber-mint-stop-motion'],
+  anjali: ['adobe', 'rakuten'],
+};
+
+const profiles = settings.aboutPeople.map((person) => {
+  const ownerProjectPool = aboutProjectsForPerson(projects, person.projectOwner, projects.length);
+  const preferredSlugs = curatedProjectSlugs[person.projectOwner] ?? [];
+  const preferredProjects = preferredSlugs.flatMap((slug) => {
+    const project = ownerProjectPool.find((candidate) => candidate.slug === slug);
+    return project ? [project] : [];
+  });
+  const preferredProjectSet = new Set(preferredProjects.map((project) => project.slug));
+  const ownerProjects = [
+    ...preferredProjects,
+    ...ownerProjectPool.filter((project) => !preferredProjectSet.has(project.slug)),
+  ].slice(0, 5);
+  const motionFeatures = new Set(motionFeatureSlugs[person.projectOwner] ?? []);
+  const supplementalSelectedWork = person.selectedWork.filter((work) =>
+    !ownerProjects.some((project) =>
+      project.title.trim().toLowerCase() === work.title.trim().toLowerCase()
+      && (project.client ?? '').trim().toLowerCase() === (work.client ?? '').trim().toLowerCase()));
+  const portfolioItems = [
+    ...ownerProjects.map((project) => ({
+      kind: 'project' as const,
+      key: project.slug,
+      title: project.title,
+      clientLabel: project.client?.trim() || project.types[0] || (project.cover.mediaType === 'motion' ? 'Film' : 'Work'),
+      href: withBase(`/work/${project.slug}`),
+      image: project.cover.poster,
+      mobileImage: project.cover.mobilePoster,
+      transitionName: `project-${project.slug}-media`,
+      previewVideo: project.cover.previewVideo,
+      previewPoster: project.cover.previewPosterOverride?.src || project.cover.poster.src,
+      mobilePoster: project.cover.mobilePoster?.src,
+      showPreview: motionFeatures.has(project.slug)
+        && Boolean(project.cover.previewVideo)
+        && !project.cover.previewIsPlaceholder,
+      detailCrop: false,
+    })),
+    ...supplementalSelectedWork.map((work) => ({
+      kind: 'portfolio' as const,
+      key: work._key,
+      title: work.title,
+      clientLabel: work.client?.trim() || 'Portfolio',
+      href: work.href,
+      image: work.image,
+      showPreview: false,
+      detailCrop: false,
+    })),
+  ];
+  const minimumTiles = 4;
+  const alternateCrops = portfolioItems.length > 0 && portfolioItems.length < minimumTiles
+    ? Array.from({ length: minimumTiles - portfolioItems.length }, (_, index) => {
+        const sourceIndex = person.projectOwner === 'anjali'
+          ? portfolioItems.length - 1
+          : index % portfolioItems.length;
+        const source = portfolioItems[sourceIndex]!;
+        return {
+          ...source,
+          key: `${source.key}-alternate-crop-${index + 1}`,
+          detailCrop: true,
+          showPreview: false,
+        };
+      })
+    : [];
+  const galleryItems = [...portfolioItems, ...alternateCrops].slice(0, 5);
+
+  return {
+    person,
+    galleryItems,
+  };
+});
+---
+
+<div class="about-content" data-about-page>
+  <section class="about-intro" aria-labelledby="about-heading" data-about-intro>
+    <p class="eyebrow" data-motion-reveal="fade">New Work</p>
+    <h1 id="about-heading" data-motion-split="words">About</h1>
+
+    <div class="about-intro__lower">
+      {settings.about ? (
+        <div data-motion-reveal="up">
+          <RichText value={settings.about} class="about-intro__lead" />
+        </div>
+      ) : null}
+    </div>
+
+    {settings.aboutImage ? (
+      <figure class="about-intro__image" data-motion-reveal="clip">
+        <div data-motion-parallax="3">
+          <ResponsiveImage
+            image={settings.aboutImage}
+            sizes="(min-width: 1200px) 74vw, (min-width: 768px) 86vw, 100vw"
+          />
+        </div>
+      </figure>
+    ) : null}
+  </section>
+
+  {profiles.length ? (
+    <section class="about-people" aria-labelledby="about-people-heading" data-about-people>
+      <header class="about-section-heading">
+        <h2 id="about-people-heading">The Creatives</h2>
+        <p>Lorem ipsum<br />Dolor sit amet</p>
+      </header>
+
+      {profiles.map(({ person, galleryItems }) => {
+        const headingId = `about-person-${person.projectOwner}`;
+
+        return (
+          <article
+            class:list={['about-person', `about-person--${person.projectOwner}`]}
+            aria-labelledby={headingId}
+            data-about-person={person.projectOwner}
+          >
+            <div class="about-person__copy" data-about-person-copy data-motion-reveal="up">
+              <h3 id={headingId}>{person.name}</h3>
+              {person.roleLabel ? <p class="about-person__role">{person.roleLabel}</p> : null}
+              <RichText value={person.bio} class="about-person__bio" />
+            </div>
+
+            {galleryItems.length ? (
+              <div
+                class="about-person__media"
+                role="group"
+                aria-label={`${person.name} portfolio`}
+                data-about-person-media
+                data-about-mosaic
+                data-motion-reveal="clip"
+              >
+                {galleryItems.map((work, projectIndex) => {
+                  return (
+                    <a
+                      class:list={[
+                        'about-work',
+                        `about-work--${projectIndex + 1}`,
+                        work.showPreview && 'about-work--motion',
+                        work.kind === 'portfolio' && 'about-work--external',
+                        work.detailCrop && 'about-work--detail-crop',
+                      ]}
+                      href={work.href}
+                      rel={work.kind === 'portfolio' ? 'noreferrer' : undefined}
+                      data-about-work-item
+                      data-about-work-key={work.key}
+                      data-about-work-source={work.kind}
+                    >
+                      <span
+                        class="about-work__frame"
+                        transition:name={work.kind === 'project' ? work.transitionName : undefined}
+                        data-card-media
+                      >
+                        <span class="about-work__visual">
+                          <span
+                            class="about-work__parallax"
+                            data-motion-parallax={projectIndex === 0 ? '2' : projectIndex === 1 ? '-2' : '3'}
+                          >
+                            <ResponsiveImage
+                              image={work.image}
+                              mobileImage={work.kind === 'project' ? work.mobileImage : undefined}
+                              sizes="(min-width: 1200px) 66vw, (min-width: 768px) 62vw, 100vw"
+                            />
+                            {work.kind === 'project' && work.showPreview && work.previewVideo ? (
+                              <PreviewVideo
+                                source={work.previewVideo}
+                                poster={work.previewPoster}
+                                mobilePoster={work.mobilePoster}
+                                title={work.title}
+                              />
+                            ) : null}
+                          </span>
+                        </span>
+                      </span>
+                      <span class="about-work__caption">
+                        <span>
+                          <strong>{work.title}</strong>
+                        </span>
+                        <span>{work.clientLabel}</span>
+                      </span>
+                    </a>
+                  );
+                })}
+              </div>
+            ) : null}
+          </article>
+        );
+      })}
+    </section>
+  ) : null}
+
+  <section
+    class="about-close"
+    aria-labelledby="about-capabilities-heading"
+    data-about-capabilities
+  >
+    <div class="about-section-heading">
+      <h2 id="about-capabilities-heading">Expertise</h2>
+      <p>Lorem ipsum<br />Dolor sit amet</p>
+    </div>
+
+    {settings.capabilities.length ? (
+      <div class="capabilities" data-motion-reveal="up">
+        <ul>
+          {settings.capabilities.map((item) => (
+            <li>
+              <strong>{item}</strong>
+            </li>
+          ))}
+        </ul>
+      </div>
+    ) : null}
+
+    {settings.contactEmail ? (
+      <div class="about-contact" data-motion-reveal="up">
+        <p class="eyebrow">Contact</p>
+        <h2>Create with us.</h2>
+        <a href={`mailto:${settings.contactEmail}`}>{settings.contactEmail}</a>
+      </div>
+    ) : null}
+  </section>
+</div>

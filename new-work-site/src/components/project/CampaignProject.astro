@@ -1,0 +1,66 @@
+---
+import CreditsDisclosure from '../CreditsDisclosure.astro';
+import MediaStream from '../MediaStream.astro';
+import RelatedProjects from '../RelatedProjects.astro';
+import { projectPresentationStyle } from '../../lib/project-layout';
+import ProjectHeroMedia from './ProjectHeroMedia.astro';
+import ProjectPlaceholderMedia from './ProjectPlaceholderMedia.astro';
+import ProjectTemplateHeader from './ProjectTemplateHeader.astro';
+import type { ProjectTemplateProps } from './template-props';
+
+type Props = ProjectTemplateProps;
+const { project, mode, heroBlock, heroCaptions, blocks, presentation, previous, next } = Astro.props;
+const style = projectPresentationStyle(presentation);
+const deliverables = project.types.filter(Boolean);
+---
+
+<article
+  class="project-template project-template--campaign"
+  data-project-template="campaign"
+  data-project-theme={presentation.projectTheme}
+  data-title-treatment={presentation.titleTreatment}
+  data-hero-treatment={presentation.heroTreatment}
+  data-motion-intensity={presentation.motionIntensity}
+  style={style}
+  aria-labelledby="project-title"
+>
+  <ProjectTemplateHeader
+    project={project}
+    variant="campaign"
+    titleTreatment={presentation.titleTreatment}
+  >
+    <ProjectHeroMedia
+      slot="media"
+      block={heroBlock}
+      captions={heroCaptions}
+      mode={mode}
+      projectTitle={project.title}
+      projectSlug={project.slug}
+    />
+  </ProjectTemplateHeader>
+  {deliverables.length ? (
+    <aside class="project-deliverables" aria-label="Campaign deliverables">
+      <span class="project-deliverables__label">Deliverables</span>
+      <ul>{deliverables.map((deliverable, index) => (
+        <li><span aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>{deliverable}</li>
+      ))}</ul>
+    </aside>
+  ) : null}
+  {blocks.length ? (
+    <MediaStream
+      blocks={blocks}
+      mode={mode}
+      projectTitle={project.title}
+      maskSequence={['campaign-wide', 'campaign-inset', 'campaign-split']}
+      motionIntensity={presentation.motionIntensity}
+    />
+  ) : null}
+  <ProjectPlaceholderMedia
+    mode={mode}
+    projectTitle={project.title}
+    projectSlug={project.slug}
+    variant="campaign"
+  />
+  <CreditsDisclosure credits={project.credits} whatWeDid={project.whatWeDid} />
+  <RelatedProjects previous={previous} next={next} />
+</article>

@@ -1,0 +1,20 @@
+---
+import type { ProjectView } from '../lib/types';
+interface Props { project: ProjectView }
+const { project } = Astro.props;
+---
+<header class="project-header">
+  <div class="project-header__title">
+    <p class="eyebrow">Project</p>
+    <h1>{project.title}</h1>
+  </div>
+  <div class="project-header__context">
+    {project.client ? <p><span class="meta-label">Client</span>{project.client}</p> : null}
+    <p><span class="meta-label">Output</span>{project.types.join(', ')}</p>
+    {project.role ? <p><span class="meta-label">Role</span>{project.role}</p> : null}
+    {project.contributors.length ? (
+      <p><span class="meta-label">Contributors</span>{project.contributors.map((item) => `${item.name} — ${item.role}`).join(', ')}</p>
+    ) : null}
+  </div>
+  {project.shortDescription ? <p class="project-header__description">{project.shortDescription}</p> : null}
+</header>

@@ -1,0 +1,123 @@
+---
+import BrandLockup from './BrandLockup.astro';
+import type { BrandAssetView } from '../lib/types';
+import type { WordmarkTone } from './Wordmark.astro';
+import { withBase } from '../lib/base-path';
+
+export interface FooterLink {
+  href?: string;
+  url?: string;
+  label: string;
+}
+
+export interface Props {
+  siteName?: string;
+  contactEmail?: string;
+  contactLabel?: string;
+  links?: readonly FooterLink[];
+  people?: readonly FooterLink[];
+  wordmarkAsset?: BrandAssetView;
+  tone?: WordmarkTone;
+  showContact?: boolean;
+  showNotes?: boolean;
+  showYear?: boolean;
+  class?: string;
+}
+
+const {
+  siteName = 'New Work Agency',
+  contactEmail,
+  contactLabel,
+  links = [],
+  people = [],
+  wordmarkAsset,
+  tone = 'dark',
+  showContact = true,
+  showNotes = false,
+  showYear = true,
+  class: className,
+} = Astro.props;
+
+const year = new Date().getFullYear();
+const emailText = contactLabel ?? contactEmail;
+const resolvedLinks = links.flatMap((link) => {
+  const href = link.href ?? link.url;
+  return href ? [{ href, label: link.label }] : [];
+});
+const resolvedPeople = people.flatMap((link) => {
+  const href = link.href ?? link.url;
+  return href ? [{ href, label: link.label }] : [];
+});
+const exploreLinks = [
+  { href: withBase('/'), label: 'Work' },
+  { href: withBase('/about'), label: 'About' },
+  ...(showNotes ? [{ href: withBase('/notes'), label: 'Notes' }] : []),
+  { href: withBase('/contact'), label: 'Contact' },
+];
+const connectLinks = [
+  ...(showContact && contactEmail && emailText
+    ? [{ href: `mailto:${contactEmail}`, label: emailText }]
+    : []),
+  ...resolvedLinks,
+];
+---
+
+<footer class:list={['site-footer', className]} data-site-footer>
+  <div class="site-footer__inner">
+    <div class="site-footer__main">
+      <div class="site-footer__strapline">
+        <p><em>New Work</em> is film.</p>
+        <p><em>New Work</em> is photography.</p>
+        <p>We make <em>beautiful</em> work.</p>
+        <p>Come <em>create</em> with us.</p>
+      </div>
+
+      <nav class="site-footer__directory" aria-label="Footer">
+        {resolvedPeople.length ? (
+          <div class="site-footer__group site-footer__group--people">
+            <h2>People</h2>
+            <ul role="list">
+              {resolvedPeople.map((link) => <li><a href={link.href}>{link.label}</a></li>)}
+            </ul>
+          </div>
+        ) : null}
+
+        <div class="site-footer__group site-footer__group--explore">
+          <h2>Explore</h2>
+          <ul role="list">
+            {exploreLinks.map((link) => <li><a href={link.href}>{link.label}</a></li>)}
+          </ul>
+        </div>
+
+        {connectLinks.length ? (
+          <div class="site-footer__group site-footer__group--connect">
+            <h2>Connect</h2>
+            <ul role="list">
+              {connectLinks.map((link) => (
+                <li><a href={link.href} rel={/^https?:/u.test(link.href) ? 'noreferrer' : undefined}>{link.label}</a></li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+      </nav>
+    </div>
+
+    <div class="site-footer__bottom">
+      <a
+        class="site-footer__brand"
+        href={withBase('/')}
+        aria-label={siteName}
+      >
+        <BrandLockup
+          label={siteName}
+          variant="full"
+          tone={tone}
+          artworkSrc={wordmarkAsset?.src}
+          artworkWidth={wordmarkAsset?.width}
+          artworkHeight={wordmarkAsset?.height}
+        />
+      </a>
+      {showYear && <p class="site-footer__legal">© {year} {siteName}<br />All rights reserved.</p>}
+    </div>
+  </div>
+</footer>

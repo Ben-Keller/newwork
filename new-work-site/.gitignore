@@ -1,0 +1,88 @@
+# Dependencies and generated application output
+node_modules/
+dist/
+.astro/
+coverage/
+playwright-report/
+test-results/
+.lighthouseci/
+sanity/.sanity/
+.wrangler/
+.vercel/
+.netlify/
+*.log
+
+# Local credentials and deployment secrets
+.env
+.env.*
+!.env.example
+.dev.vars
+.dev.vars.*
+.npmrc
+.netrc
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Raw, incoming, or private media. Only reviewed `public/media/images` and
+# `public/media/video-previews` derivatives belong in the deployable repo.
+/assets/source/
+/assets/raw/
+/assets/incoming/
+/source-media/
+/private-media/
+/public/media/videos/
+
+# Private briefs and working-source documents, if copied into this repo.
+/references/source-brief/
+/references/creative-direction/
+/references/private/
+/BUILD_PROMPT.md
+/PRODUCT_SPEC.md
+/CONTENT_MODEL.md
+/pasted-text*.txt
+/*Private*Brief*.docx
+
+# Editable design/video masters and transfer archives
+*.aep
+*.aepx
+*.ai
+*.braw
+*.fig
+*.mxf
+*.prproj
+*.psb
+*.psd
+*.r3d
+*.sketch
+*.tif
+*.tiff
+*.wav
+*.aif
+*.aiff
+*.zip
+*.7z
+*.tar
+*.tar.gz
+
+# CMS exports and local database dumps
+*.ndjson
+*.sqlite
+*.sqlite3
+*.dump
+*.sql
+
+# Generated review captures; maintained Playwright baselines live in tests/.
+/artifacts/qa/
+
+# Generated during `media:responsive`; source WebP files remain canonical.
+public/media/images/**/*.avif
+
+# Operating-system and editor state
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo

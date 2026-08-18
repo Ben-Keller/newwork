@@ -1,0 +1,165 @@
+{
+  "name": "New Work sentence-case animation-ready letter kit \u2014 corrected o",
+  "source": "new-work-black-sentence-0.svg",
+  "master": "master/new-work-sentence-letters.svg",
+  "sprite": "sprite/new-work-sentence-letter-sprite.svg",
+  "wordmarkViewBox": "0 0 3935.48 785.25",
+  "letterSelector": "[data-nw-letter]",
+  "partSelector": "[data-nw-part]",
+  "letters": [
+    {
+      "index": 0,
+      "letter": "N",
+      "word": "new",
+      "masterId": "nw-sentence-letter-01-n",
+      "selector": "#nw-sentence-letter-01-n",
+      "dataSelector": "[data-letter-index=\"0\"]",
+      "partSelector": "#nw-sentence-letter-01-n [data-nw-part]",
+      "file": "letters/01-n-new.svg",
+      "viewBox": [
+        -12.0,
+        0.0,
+        648.36,
+        785.25
+      ],
+      "bounds": [
+        0.0,
+        -1.7,
+        624.36,
+        786.13
+      ]
+    },
+    {
+      "index": 1,
+      "letter": "e",
+      "word": "new",
+      "masterId": "nw-sentence-letter-02-e",
+      "selector": "#nw-sentence-letter-02-e",
+      "dataSelector": "[data-letter-index=\"1\"]",
+      "partSelector": "#nw-sentence-letter-02-e [data-nw-part]",
+      "file": "letters/02-e-new.svg",
+      "viewBox": [
+        559.36,
+        0.0,
+        487.86,
+        785.25
+      ],
+      "bounds": [
+        571.36,
+        169.07,
+        463.86,
+        616.25
+      ]
+    },
+    {
+      "index": 2,
+      "letter": "w",
+      "word": "new",
+      "masterId": "nw-sentence-letter-03-w",
+      "selector": "#nw-sentence-letter-03-w",
+      "dataSelector": "[data-letter-index=\"2\"]",
+      "partSelector": "#nw-sentence-letter-03-w [data-nw-part]",
+      "file": "letters/03-w-new.svg",
+      "viewBox": [
+        1038.44,
+        0.0,
+        656.23,
+        785.25
+      ],
+      "bounds": [
+        1050.44,
+        169.03,
+        632.23,
+        616.25
+      ]
+    },
+    {
+      "index": 3,
+      "letter": "W",
+      "word": "work",
+      "masterId": "nw-sentence-letter-04-w",
+      "selector": "#nw-sentence-letter-04-w",
+      "dataSelector": "[data-letter-index=\"3\"]",
+      "partSelector": "#nw-sentence-letter-04-w [data-nw-part]",
+      "file": "letters/04-w-work.svg",
+      "viewBox": [
+        1726.1,
+        0.0,
+        821.17,
+        785.25
+      ],
+      "bounds": [
+        1738.1,
+        -1.73,
+        797.17,
+        786.19
+      ]
+    },
+    {
+      "index": 4,
+      "letter": "o",
+      "word": "work",
+      "masterId": "nw-sentence-letter-05-o",
+      "selector": "#nw-sentence-letter-05-o",
+      "dataSelector": "[data-letter-index=\"4\"]",
+      "partSelector": "#nw-sentence-letter-05-o [data-nw-part]",
+      "file": "letters/05-o-work.svg",
+      "viewBox": [
+        2364.67,
+        0.0,
+        557.04,
+        785.25
+      ],
+      "bounds": [
+        2376.67,
+        184.6,
+        533.04,
+        602.27
+      ]
+    },
+    {
+      "index": 5,
+      "letter": "r",
+      "word": "work",
+      "masterId": "nw-sentence-letter-06-r",
+      "selector": "#nw-sentence-letter-06-r",
+      "dataSelector": "[data-letter-index=\"5\"]",
+      "partSelector": "#nw-sentence-letter-06-r [data-nw-part]",
+      "file": "letters/06-r-work.svg",
+      "viewBox": [
+        2894.15,
+        0.0,
+        546.34,
+        785.25
+      ],
+      "bounds": [
+        2906.15,
+        184.6,
+        522.34,
+        599.15
+      ]
+    },
+    {
+      "index": 6,
+      "letter": "k",
+      "word": "work",
+      "masterId": "nw-sentence-letter-07-k",
+      "selector": "#nw-sentence-letter-07-k",
+      "dataSelector": "[data-letter-index=\"6\"]",
+      "partSelector": "#nw-sentence-letter-07-k [data-nw-part]",
+      "file": "letters/07-k-work.svg",
+      "viewBox": [
+        3424.25,
+        0.0,
+        523.23,
+        785.25
+      ],
+      "bounds": [
+        3436.25,
+        169.1,
+        499.23,
+        616.15
+      ]
+    }
+  ]
+}

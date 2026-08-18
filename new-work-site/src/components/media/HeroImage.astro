@@ -1,0 +1,16 @@
+---
+import ResponsiveImage from '../ResponsiveImage.astro';
+import MediaCaption from './MediaCaption.astro';
+import type { HeroImageBlock } from '../../lib/types';
+interface Props { block: HeroImageBlock; eager?: boolean; sizes?: string }
+const { block, eager = false, sizes = '100vw' } = Astro.props;
+---
+<figure class:list={[
+  'media-block',
+  'media-block--hero',
+  `media-hero-width--${block.displayWidth || 'wide'}`,
+  block.displayWidth === 'fullBleed' && 'media-block--full',
+]}>
+  <ResponsiveImage image={block.image} sizes={sizes} eager={eager} projectPoster={eager} />
+  <MediaCaption caption={block.caption} credit={block.credit} />
+</figure>

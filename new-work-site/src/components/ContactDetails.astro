@@ -1,0 +1,18 @@
+---
+import type { SiteSettingsView } from '../lib/types';
+interface Props { settings: SiteSettingsView }
+const { settings } = Astro.props;
+---
+<section class="utility-content contact-content" aria-labelledby="contact-heading">
+  <p class="eyebrow" data-motion-reveal="fade">New Work</p>
+  <h1 id="contact-heading" data-motion-split="words">Contact</h1>
+  {settings.contactEmail ? (
+    <a class="contact-email" href={`mailto:${settings.contactEmail}`} data-motion-reveal="up">
+      <span>{settings.contactEmail}</span><span class="contact-email__arrow" aria-hidden="true">↗</span>
+    </a>
+  ) : null}
+  {settings.location ? <p data-motion-reveal="fade">{settings.location}</p> : null}
+  {settings.socialLinks.length ? (
+    <ul class="social-list" data-motion-reveal="up">{settings.socialLinks.map((item) => <li><a href={item.url} rel="noreferrer">{item.label}</a></li>)}</ul>
+  ) : null}
+</section>

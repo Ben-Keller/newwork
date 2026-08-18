@@ -1,0 +1,521 @@
+---
+import ResponsiveImage from './ResponsiveImage.astro';
+import { inferVideoMimeType } from './media/video-mime';
+import { withBase } from '../lib/base-path';
+import type { ImageView, ProjectView } from '../lib/types';
+import legacyTitleWordmark from '../assets/brand/new-work-letters.svg?raw';
+import legacyTitleManifest from '../assets/brand/new-work-letter-manifest.json';
+import sentenceTitleWordmark from '../assets/brand/new-work-sentence-letters.svg?raw';
+import sentenceTitleManifest from '../assets/brand/new-work-sentence-letter-manifest.json';
+import titleTitleWordmark from '../assets/brand/new-work-title-letters.svg?raw';
+import titleTitleManifest from '../assets/brand/new-work-title-letter-manifest.json';
+
+const TITLE_KITS = {
+  legacy: {
+    assetRoot: withBase('/media/brand/new-work-letter-kit'),
+    inlineScale: 1,
+    manifest: legacyTitleManifest,
+    maskFile: 'new-work-letters.svg',
+    sessionKey: 'new-work:logo-intro:v3',
+    source: 'new-work-letter-kit',
+    wordmark: legacyTitleWordmark,
+  },
+  'sentence-clean': {
+    assetRoot: withBase('/media/brand/new-work-sentence-clean-letter-kit'),
+    inlineScale: 1,
+    manifest: sentenceTitleManifest,
+    maskFile: 'new-work-sentence-letters.svg',
+    sessionKey: 'new-work:logo-intro:sentence-clean:v1',
+    source: 'new-work-sentence-clean-letter-kit',
+    wordmark: sentenceTitleWordmark,
+  },
+  title: {
+    assetRoot: withBase('/media/brand/new-work-title-letter-kit'),
+    inlineScale: 0.92,
+    manifest: titleTitleManifest,
+    maskFile: 'new-work-title-letters.svg',
+    sessionKey: 'new-work:logo-intro:title:v1',
+    source: 'new-work-title-letter-kit',
+    wordmark: titleTitleWordmark,
+  },
+} as const;
+
+// Switch this single value to `sentence-clean` or `legacy` to restore an earlier title kit.
+const ACTIVE_TITLE_KIT: keyof typeof TITLE_KITS = 'title';
+// Keep the authored five-second sequence available, but load directly into
+// the black wordmark while the current design is being reviewed.
+const TITLE_ENTRANCE_ENABLED = false;
+const titleKit = TITLE_KITS[ACTIVE_TITLE_KIT];
+
+export interface Props {
+  siteName?: string;
+  descriptor?: string;
+  projects?: ProjectView[];
+  duration?: number;
+  sessionKey?: string;
+  class?: string;
+}
+
+const {
+  descriptor = 'film + photo production agency',
+  projects = [],
+  duration = 5_000,
+  sessionKey = titleKit.sessionKey,
+  class: className,
+} = Astro.props;
+
+const boundedDuration = Math.min(5_200, Math.max(4_800, duration));
+const mediaProjects = projects.filter((project) => project.cover.poster).slice(0, 8);
+const motionProject = mediaProjects.find((project) => project.cover.previewVideo);
+const motionVideoSource = motionProject?.cover.previewVideo;
+const motionVideoPoster = motionProject?.cover.previewPosterOverride?.src || motionProject?.cover.poster.src;
+const cellCount = Math.min(4, mediaProjects.length);
+const cells = Array.from({ length: cellCount }, (_, index) => ({
+  primary: mediaProjects[index % mediaProjects.length],
+  alternate: mediaProjects[(index + cellCount) % mediaProjects.length],
+}));
+const decorative = (image: ImageView): ImageView => ({ ...image, alt: '' });
+const titleAssetRoot = titleKit.assetRoot;
+const titleManifest = titleKit.manifest;
+const [, , titleWidth = 1, titleHeight = 1] = titleManifest.wordmarkViewBox
+  .split(' ')
+  .map(Number);
+const introStyle = [
+  `--logo-intro-duration:${boundedDuration}ms`,
+  `--logo-title-aspect:${titleWidth} / ${titleHeight}`,
+  `--logo-title-inline-size:${titleKit.inlineScale * 100}%`,
+  `--logo-title-mask:url("${titleAssetRoot}/${titleKit.maskFile}")`,
+].join(';');
+const motionMime = motionVideoSource
+  ? inferVideoMimeType(motionVideoSource)
+  : undefined;
+const motionProjects = mediaProjects.filter((project) => project.cover.previewVideo);
+const letterMedia = mediaProjects.length ? titleManifest.letters.map((definition, index) => {
+  const fallback = mediaProjects[index % mediaProjects.length];
+  const videoProject = index % 3 === 0 && motionProjects.length
+    ? motionProjects[Math.floor(index / 3) % motionProjects.length]
+    : undefined;
+  const primary = videoProject || fallback;
+  const alternate = mediaProjects[(index + Math.max(1, Math.floor(mediaProjects.length / 2))) % mediaProjects.length]
+    || primary;
+  const videoSource = videoProject?.cover.previewVideo;
+  const [viewBoxX, , viewBoxWidth] = definition.viewBox;
+  const filename = definition.file.split('/').at(-1);
+  return {
+    index,
+    primary,
+    alternate,
+    videoSource,
+    videoPoster: videoProject?.cover.previewPosterOverride?.src || videoProject?.cover.poster.src,
+    videoMime: videoSource ? inferVideoMimeType(videoSource) : undefined,
+    mask: `${titleAssetRoot}/letters/${filename}`,
+    left: `${(viewBoxX! / titleWidth) * 100}%`,
+    width: `${(viewBoxWidth! / titleWidth) * 100}%`,
+  };
+}) : [];
+const titleWordmarkMarkup = titleKit.wordmark
+  .replace(/^<\?xml[^>]*>\s*/u, '')
+  // The inline source color would paint this SVG above the animated media.
+  // This copy is only the exact per-letter hover map; the solid layer below
+  // owns the resting black title.
+  .replace(/(<svg\b[^>]*?)\sstyle="[^"]*"/u, '$1');
+---
+
+<section
+  class:list={['logo-intro', className]}
+  style={introStyle}
+  data-logo-intro
+  data-state="pending"
+  data-duration={boundedDuration}
+  data-session-key={sessionKey}
+  data-title-layout="single-line"
+  data-title-source={titleKit.source}
+  data-entrance-enabled={TITLE_ENTRANCE_ENABLED ? 'true' : 'false'}
+>
+  <div class="logo-intro__stage" aria-hidden="true">
+    <div class="logo-intro__solid" data-intro-solid></div>
+    <div class="logo-intro__media" data-intro-media>
+      <div class="logo-intro__mosaic">
+        {cells.map(({ primary, alternate }, index) => (
+          <div class="logo-intro__cell" data-intro-cell>
+            <div class="logo-intro__face logo-intro__face--primary" data-intro-primary>
+              <ResponsiveImage
+                image={decorative(primary!.cover.poster)}
+                mobileImage={primary!.cover.mobilePoster ? decorative(primary!.cover.mobilePoster!) : undefined}
+                sizes="(min-width: 768px) 25vw, 50vw"
+                eager={index < 2}
+              />
+              {primary?.id === motionProject?.id && motionVideoSource ? (
+                <video
+                  muted
+                  loop
+                  playsinline
+                  preload="none"
+                  poster={motionVideoPoster}
+                  data-intro-video
+                >
+                  <source
+                    data-intro-video-source
+                    data-src={motionVideoSource}
+                    data-type={motionMime}
+                    type={motionMime}
+                  />
+                </video>
+              ) : null}
+            </div>
+            <div class="logo-intro__face logo-intro__face--alternate" data-intro-alternate>
+              <ResponsiveImage
+                image={decorative((alternate || primary)!.cover.poster)}
+                mobileImage={(alternate || primary)!.cover.mobilePoster
+                  ? decorative((alternate || primary)!.cover.mobilePoster!)
+                  : undefined}
+                sizes="(min-width: 768px) 25vw, 50vw"
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+    <div class="logo-intro__letter-media" data-intro-letter-media>
+      {letterMedia.map((letter) => (
+        <div
+          class="logo-intro__letter-layer"
+          style={`--logo-letter-mask:url("${letter.mask}");--logo-letter-left:${letter.left};--logo-letter-width:${letter.width}`}
+          data-intro-letter-layer
+          data-letter-index={letter.index}
+          data-letter-kind={letter.videoSource ? 'video' : 'flip'}
+        >
+          <div class="logo-intro__letter-face logo-intro__letter-face--primary" data-intro-letter-primary>
+            <ResponsiveImage
+              image={decorative(letter.primary!.cover.poster)}
+              mobileImage={letter.primary!.cover.mobilePoster ? decorative(letter.primary!.cover.mobilePoster!) : undefined}
+              sizes="100vw"
+            />
+            {letter.videoSource ? (
+              <video
+                muted
+                loop
+                playsinline
+                preload="none"
+                poster={letter.videoPoster}
+                data-intro-letter-video
+              >
+                <source
+                  data-intro-letter-video-source
+                  data-src={letter.videoSource}
+                  data-type={letter.videoMime}
+                  type={letter.videoMime}
+                />
+              </video>
+            ) : null}
+          </div>
+          <div class="logo-intro__letter-face logo-intro__letter-face--alternate" data-intro-letter-alternate>
+            <ResponsiveImage
+              image={decorative(letter.alternate!.cover.poster)}
+              mobileImage={letter.alternate!.cover.mobilePoster ? decorative(letter.alternate!.cover.mobilePoster!) : undefined}
+              sizes="100vw"
+            />
+          </div>
+        </div>
+      ))}
+    </div>
+    <div
+      class="logo-intro__letter-triggers"
+      data-intro-letter-triggers
+      aria-hidden="true"
+      set:html={titleWordmarkMarkup}
+    ></div>
+  </div>
+  {descriptor ? <p class="logo-intro__descriptor" data-logo-descriptor>{descriptor}</p> : null}
+  <noscript><style>.logo-intro__media{display:none!important}</style></noscript>
+</section>
+
+<script>
+  import { prefersReducedData } from '../lib/motion/reduced-data';
+
+  let logoIntroRouteController = new AbortController();
+
+  const disposeLogoIntroRoute = (): void => {
+    logoIntroRouteController.abort();
+    logoIntroRouteController = new AbortController();
+  };
+
+  document.addEventListener('astro:before-swap', disposeLogoIntroRoute);
+
+  const settleIntro = (intro: HTMLElement): void => {
+    intro.dataset.state = 'settled';
+    intro.querySelectorAll<HTMLVideoElement>('[data-intro-video]').forEach((video) => {
+      video.pause();
+      const source = video.querySelector<HTMLSourceElement>('[data-intro-video-source]');
+      source?.removeAttribute('src');
+      video.removeAttribute('src');
+      video.load();
+    });
+  };
+
+  const markIntroSettled = (): void => {
+    document.documentElement.removeAttribute('data-logo-intro-playing');
+  };
+
+  const initializeLogoIntros = (): void => {
+    const intros = document.querySelectorAll<HTMLElement>('[data-logo-intro]:not([data-intro-ready])');
+
+    intros.forEach((intro) => {
+      intro.dataset.introReady = 'true';
+      const duration = Number.parseInt(intro.dataset.duration ?? '5000', 10);
+      const boundedDuration = Number.isFinite(duration) ? Math.min(5_200, Math.max(4_800, duration)) : 5_000;
+      const sessionKey = intro.dataset.sessionKey ?? 'new-work:logo-intro:v3';
+      const playEntrance = intro.dataset.entranceEnabled === 'true';
+      const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const saveData = prefersReducedData();
+      const routeSignal = logoIntroRouteController.signal;
+      if (routeSignal.aborted) return;
+
+      let skipIntro = false;
+      try {
+        // A dedicated sentinel keeps automated visual checks fast without
+        // allowing a stale value from an earlier prototype to suppress the
+        // title mask or its post-intro letter interactions for real visitors.
+        skipIntro = window.sessionStorage.getItem(sessionKey) === 'test-skip';
+      } catch {
+        // Storage can be unavailable in privacy modes; the animation remains safe.
+      }
+      const shouldPlayEntrance = playEntrance && !skipIntro;
+
+      if (reducedMotion || saveData) {
+        markIntroSettled();
+        settleIntro(intro);
+        return;
+      }
+
+      if (shouldPlayEntrance) document.documentElement.dataset.logoIntroPlaying = sessionKey;
+
+      let animationFrameId = 0;
+      let cleanupStartedIntro: (() => void) | null = null;
+      const disposeIntro = (): void => {
+        if (animationFrameId) window.cancelAnimationFrame(animationFrameId);
+        animationFrameId = 0;
+        cleanupStartedIntro?.();
+        cleanupStartedIntro = null;
+        if (
+          intro.dataset.state !== 'settled'
+          && document.documentElement.dataset.logoIntroPlaying === sessionKey
+        ) {
+          document.documentElement.removeAttribute('data-logo-intro-playing');
+        }
+      };
+
+      routeSignal.addEventListener('abort', disposeIntro, { once: true });
+      animationFrameId = window.requestAnimationFrame(() => {
+        animationFrameId = 0;
+        if (routeSignal.aborted || !intro.isConnected) return;
+        void import('../lib/motion/logo-intro')
+          .then(({ startLogoIntro }) => {
+            if (routeSignal.aborted || !intro.isConnected) return;
+            cleanupStartedIntro = startLogoIntro({
+              intro,
+              duration: boundedDuration,
+              playEntrance: shouldPlayEntrance,
+              onSettle: markIntroSettled,
+            });
+          })
+          .catch(() => {
+            if (!routeSignal.aborted) {
+              document.documentElement.removeAttribute('data-logo-intro-playing');
+              settleIntro(intro);
+            }
+          });
+      });
+    });
+  };
+
+  initializeLogoIntros();
+  document.addEventListener('astro:page-load', initializeLogoIntros);
+</script>
+
+<style>
+  .logo-intro {
+    position: relative;
+    /* The gallery intentionally rises behind the lower edge of the wordmark.
+       Keep the title's painted letters and their exact SVG hit areas above it. */
+    z-index: 5;
+    isolation: isolate;
+    overflow: clip;
+    max-width: 1800px;
+    margin-inline: auto;
+    padding: clamp(3.5rem, 9vh, 7rem) var(--page-gutter) clamp(.75rem, 1.8vw, 2rem);
+    background: transparent;
+    pointer-events: none;
+  }
+
+  .logo-intro__stage {
+    position: relative;
+    overflow: clip;
+    width: var(--logo-title-inline-size, 100%);
+    height: auto;
+    aspect-ratio: var(--logo-title-aspect);
+    margin-inline: auto;
+  }
+
+  .logo-intro__descriptor {
+    width: var(--logo-title-inline-size, 100%);
+    margin: clamp(.55rem, 1vw, .9rem) auto 0;
+    font-family: var(--font-body);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    letter-spacing: .065em;
+    line-height: 1;
+    text-transform: none;
+  }
+
+  .logo-intro__solid,
+  .logo-intro__media,
+  .logo-intro__letter-media {
+    position: absolute;
+    inset: 0;
+  }
+
+  .logo-intro__solid,
+  .logo-intro__media {
+    -webkit-mask-image: var(--logo-title-mask);
+    mask-image: var(--logo-title-mask);
+    -webkit-mask-position: center;
+    mask-position: center;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-size: 100% auto;
+    mask-size: 100% auto;
+  }
+
+  .logo-intro__solid { z-index: 1; background: var(--color-ink, #101010); }
+  .logo-intro__media {
+    z-index: 2;
+    overflow: hidden;
+    background: var(--color-ink, #101010);
+    transform-origin: center;
+  }
+
+  .logo-intro__letter-media {
+    z-index: 3;
+    pointer-events: none;
+  }
+
+  .logo-intro__letter-layer {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: var(--logo-letter-left);
+    width: var(--logo-letter-width);
+    visibility: hidden;
+    overflow: hidden;
+    opacity: 0;
+    -webkit-mask-image: var(--logo-letter-mask);
+    mask-image: var(--logo-letter-mask);
+    -webkit-mask-position: center;
+    mask-position: center;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-size: 100% auto;
+    mask-size: 100% auto;
+  }
+
+  .logo-intro__letter-face {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    backface-visibility: hidden;
+    transform-origin: center;
+  }
+
+  .logo-intro__letter-face--alternate { opacity: 0; transform: rotateY(90deg); }
+
+  .logo-intro__letter-triggers {
+    position: absolute;
+    z-index: 4;
+    inset: 50% 0 auto;
+    width: 100%;
+    height: auto;
+    aspect-ratio: var(--logo-title-aspect);
+    overflow: visible;
+    color: transparent;
+    pointer-events: none;
+    transform: translateY(-50%);
+  }
+
+  .logo-intro__letter-triggers :global(svg) {
+    display: block;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+    color: transparent;
+  }
+
+  .logo-intro__letter-triggers :global([data-nw-letter]) {
+    transform-box: fill-box;
+    transform-origin: center;
+    pointer-events: none;
+  }
+
+  .logo-intro:is([data-state="ready"], [data-state="settled"]) .logo-intro__letter-triggers :global([data-nw-letter]) {
+    cursor: crosshair;
+    pointer-events: all;
+  }
+
+  .logo-intro__mosaic {
+    display: grid;
+    width: 100%;
+    height: 100%;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: clamp(.2rem, .55vw, .65rem);
+    perspective: 1100px;
+  }
+
+  .logo-intro__cell {
+    position: relative;
+    min-width: 0;
+    overflow: hidden;
+    background: var(--color-ink, #101010);
+    transform-style: preserve-3d;
+  }
+
+  .logo-intro__face {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    backface-visibility: hidden;
+    transform-origin: center;
+  }
+
+  .logo-intro__face--alternate { opacity: 0; transform: rotateY(90deg); }
+  .logo-intro :global(.responsive-image),
+  .logo-intro :global(.responsive-image picture),
+  .logo-intro :global(.responsive-image img),
+  .logo-intro video,
+  .logo-intro__letter-layer :global(.responsive-image),
+  .logo-intro__letter-layer :global(.responsive-image picture),
+  .logo-intro__letter-layer :global(.responsive-image img) { width: 100%; height: 100%; }
+  .logo-intro :global(.responsive-image img),
+  .logo-intro video,
+  .logo-intro__letter-layer :global(.responsive-image img) { object-fit: cover; }
+  .logo-intro video { position: absolute; z-index: 2; inset: 0; }
+
+  .logo-intro[data-state="pending"] .logo-intro__media { visibility: hidden; opacity: 0; }
+  .logo-intro[data-state="settled"] .logo-intro__media { visibility: hidden; opacity: 0; }
+
+  @media (max-width: 767px) {
+    .logo-intro {
+      padding-block: clamp(2.25rem, 7vh, 3.75rem) .5rem;
+    }
+    .logo-intro__mosaic { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .logo-intro__cell:nth-child(n + 3) { display: none; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .logo-intro__media { display: none; }
+    .logo-intro__letter-face { transform: none !important; }
+  }
+
+  @media (forced-colors: active) {
+    .logo-intro__solid { background: CanvasText; }
+    .logo-intro__media, .logo-intro__letter-media, .logo-intro__letter-triggers { display: none; }
+  }
+</style>

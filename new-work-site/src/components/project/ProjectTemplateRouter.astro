@@ -1,0 +1,43 @@
+---
+import type { ContentMode, ProjectView } from '../../lib/types';
+import {
+  renderableProjectBlocks,
+  resolveProjectPresentation,
+  splitProjectContent,
+} from '../../lib/project-layout';
+import CampaignProject from './CampaignProject.astro';
+import CinematicProject from './CinematicProject.astro';
+import ExperimentalProject from './ExperimentalProject.astro';
+import PhotoEssayProject from './PhotoEssayProject.astro';
+import '../../styles/project-templates.css';
+
+interface Props {
+  project: ProjectView;
+  mode: ContentMode;
+  previous?: ProjectView;
+  next?: ProjectView;
+}
+
+const { project, mode, previous, next } = Astro.props;
+const presentation = resolveProjectPresentation(project);
+const blocks = renderableProjectBlocks(project.contentBlocks);
+const { heroBlock, heroCaptions, bodyBlocks } = splitProjectContent(project, blocks);
+const templates = {
+  cinematic: CinematicProject,
+  photoEssay: PhotoEssayProject,
+  campaign: CampaignProject,
+  experimental: ExperimentalProject,
+};
+const Template = templates[presentation.layoutVariant];
+---
+
+<Template
+  project={project}
+  mode={mode}
+  heroBlock={heroBlock}
+  heroCaptions={heroCaptions}
+  blocks={bodyBlocks}
+  presentation={presentation}
+  previous={previous}
+  next={next}
+/>

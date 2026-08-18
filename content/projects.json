@@ -1,0 +1,1466 @@
+[
+  {
+    "_id": "project.oliver.mercury-helen-mayer",
+    "_type": "project",
+    "title": "Mercury — An Unexpected Life",
+    "slug": "mercury-an-unexpected-life",
+    "owner": "oliver",
+    "client": "Mercury",
+    "types": [
+      "Film",
+      "Photography"
+    ],
+    "role": "Director, Producer",
+    "shortDescription": "A profile of Mercury founder Helen Mayer and how unexpected parenthood shaped her leadership.",
+    "whatWeDid": ["Lorem ipsum", "Dolor sit amet", "Consectetur adipiscing"],
+    "credits": [
+      {"label": "Lorem ipsum", "value": "Dolor sit amet"},
+      {"label": "Consectetur", "value": "Adipiscing elit"}
+    ],
+    "sourcePage": "https://oliverhamilton.com/project/mercury-helen-mayer/",
+    "visible": false,
+    "needsReview": true,
+    "featuredOnHome": false,
+    "homeOrder": 20,
+    "homeCardSize": "standard",
+    "homeColumn": 2,
+    "homeOffset": 112,
+    "homeTreatment": "masked",
+    "projectTheme": "warm",
+    "accentColor": "#B65A4A",
+    "titleTreatment": "stacked",
+    "heroTreatment": "fullViewport",
+    "layoutVariant": "cinematic",
+    "motionIntensity": "medium",
+    "cover": {
+      "poster": "assets/web-ready/images/oliver/mercury-helen-mayer/featured-frame-13.webp",
+      "alt": "Draft: Helen Mayer in a documentary frame.",
+      "previewVideo": "assets/web-ready/video-previews/oliver/mercury-helen-mayer/gallery-cut-08s.mp4",
+      "mediaType": "motion",
+      "cardRatio": "portrait",
+      "previewIsPlaceholder": false,
+      "focalPoint": {
+        "x": 0.5,
+        "y": 0.5,
+        "needsReview": true
+      }
+    },
+    "contentBlocks": [
+      {
+        "_type": "textNote",
+        "_key": "mercury-an-unexpected-life-prototype-copy-01",
+        "body": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+        "alignment": "left",
+        "maxWidth": "medium",
+        "needsReview": true,
+        "prototypeOnly": true
+      },
+      {
+        "_type": "imageGrid",
+        "images": [
+          "assets/web-ready/images/oliver/mercury-helen-mayer/still-frame-43.webp",
+          "assets/web-ready/images/oliver/mercury-helen-mayer/still-frame-44.webp",
+          "assets/web-ready/images/oliver/mercury-helen-mayer/still-frame-46.webp"
+        ],
+        "altNeedsReview": true,
+        "_key": "mercury-an-unexpected-life-block-02"
+      },
+      {
+        "_type": "heroVideo",
+        "vimeoId": "867257158",
+        "externalUrl": "https://vimeo.com/867257158",
+        "poster": "assets/web-ready/images/oliver/mercury-helen-mayer/featured-frame-13.webp",
+        "durationSeconds": 190,
+        "needsApprovedEmbed": true,
+        "_key": "mercury-an-unexpected-life-block-01"
+      },
+      {
+        "_type": "textNote",
+        "_key": "mercury-an-unexpected-life-prototype-copy-02",
+        "body": "Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+        "alignment": "center",
+        "maxWidth": "narrow",
+        "needsReview": true,
+        "prototypeOnly": true
+      }
+    ]
+  },
+  {
+    "_id": "project.oliver.tour-de-france",
+    "_type": "project",
+    "title": "Tour De France x Toyota",
+    "slug": "tour-de-france-x-toyota",
+    "owner": "oliver",
+    "client": "Toyota",
+    "types": [
+      "Film",
+      "Photography"
+    ],
+    "role": "Director",
+    "shortDescription": "A gritty, high-velocity Toyota Tacoma spot with cyclist Nate Mesmer in the Marin Headlands.",
+    "whatWeDid": ["Lorem ipsum", "Dolor sit amet", "Consectetur adipiscing"],
+    "credits": [
+      {"label": "Lorem ipsum", "value": "Dolor sit amet"},
+      {"label": "Consectetur", "value": "Adipiscing elit"}
+    ],
+    "sourcePage": "https://oliverhamilton.com/project/tour-de-france/",
+    "visible": false,
+    "needsReview": true,
+    "featuredOnHome": false,
+    "homeOrder": 40,
+    "homeCardSize": "large",
+    "homeColumn": 4,
+    "homeOffset": 148,
+    "homeTreatment": "poster",
+    "projectTheme": "dark",
+    "accentColor": "#55624C",
+    "titleTreatment": "oversized",
+    "heroTreatment": "split",
+    "layoutVariant": "campaign",
+    "motionIntensity": "high",
+    "cover": {
+      "poster": "assets/web-ready/images/oliver/tour-de-france/featured-frame-5.webp",
+      "alt": "Draft: a cyclist and Toyota Tacoma in the Marin Headlands.",
+      "previewVideo": "assets/web-ready/video-previews/oliver/tour-de-france/gallery-cut-08s.mp4",
+      "mediaType": "motion",
+      "cardRatio": "portrait",
+      "previewIsPlaceholder": false,
+      "focalPoint": {
+        "x": 0.62,
+        "y": 0.5,
+        "needsReview": true
+      }
+    },
+    "contentBlocks": [
+      {
+        "_type": "textNote",
+        "_key": "tour-de-france-x-toyota-prototype-copy-01",
+        "body": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+        "alignment": "left",
+        "maxWidth": "medium",
+        "needsReview": true,
+        "prototypeOnly": true
+      },
+      {
+        "_type": "imageGrid",
+        "images": [
+          "assets/web-ready/images/oliver/tour-de-france/gallery-frame-5-1.webp",
+          "assets/web-ready/images/oliver/tour-de-france/still-frame-60.webp",
+          "assets/web-ready/images/oliver/tour-de-france/still-frame-61.webp",
+          "assets/web-ready/images/oliver/tour-de-france/still-frame-62.webp",
+          "assets/web-ready/images/oliver/tour-de-france/still-frame-63.webp"
+        ],
+        "altNeedsReview": true,
+        "_key": "tour-de-france-x-toyota-block-02"
+      },
+      {
+        "_type": "heroVideo",
+        "vimeoId": "758886121",
+        "externalUrl": "https://vimeo.com/758886121",
+        "poster": "assets/web-ready/images/oliver/tour-de-france/featured-frame-5.webp",
+        "durationSeconds": 30,
+        "needsApprovedEmbed": true,
+        "_key": "tour-de-france-x-toyota-block-01"
+      },
+      {
+        "_type": "textNote",
+        "_key": "tour-de-france-x-toyota-prototype-copy-02",
+        "body": "Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+        "alignment": "center",
+        "maxWidth": "narrow",
+        "needsReview": true,
+        "prototypeOnly": true
+      }
+    ]
+  },
+  {
+    "_id": "project.oliver.humu-meet-holly",
+    "_type": "project",
+    "title": "Humu — Make Work Better, Holly",
+    "slug": "humu-make-work-better-holly",
+    "owner": "oliver",
+    "client": "Humu",
+    "types": [
+      "Film",
+      "Animation",
+      "Photography"
+    ],
+    "role": "Lorem ipsum",
+    "shortDescription": "A friendly product explainer translating Humu's data-driven workplace nudges into an approachable story.",
+    "whatWeDid": ["Lorem ipsum", "Dolor sit amet", "Consectetur adipiscing"],
+    "credits": [
+      {"label": "Lorem ipsum", "value": "Dolor sit amet"},
+      {"label": "Consectetur", "value": "Adipiscing elit"}
+    ],
+    "sourcePage": "https://oliverhamilton.com/project/humu-meet-holly/",
+    "visible": false,
+    "needsReview": true,
+    "featuredOnHome": false,
+    "homeOrder": 60,
+    "homeCardSize": "tall",
+    "homeColumn": 2,
+    "homeOffset": 20,
+    "homeTreatment": "framed",
+    "projectTheme": "accent",
+    "accentColor": "#9C83B8",
+    "titleTreatment": "split",
+    "heroTreatment": "split",
+    "layoutVariant": "campaign",
+    "motionIntensity": "medium",
+    "cover": {
+      "poster": "assets/web-ready/images/oliver/humu-meet-holly/featured-frame-15.webp",
+      "alt": "Draft: Holly in a frame from the Humu workplace film.",
+      "previewVideo": "assets/web-ready/video-previews/oliver/humu-meet-holly/gallery-cut-08s.mp4",
+      "mediaType": "motion",
+      "cardRatio": "portrait",
+      "previewIsPlaceholder": false,
+      "focalPoint": {
+        "x": 0.38,
+        "y": 0.48,
+        "needsReview": true
+      }
+    },
+    "contentBlocks": [
+      {
+        "_type": "textNote",
+        "_key": "humu-make-work-better-holly-prototype-copy-01",
+        "body": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+        "alignment": "left",
+        "maxWidth": "medium",
+        "needsReview": true,
+        "prototypeOnly": true
+      },
+      {
+        "_type": "imageGrid",
+        "images": [
+          "assets/web-ready/images/oliver/humu-meet-holly/still-frame-35.webp",
+          "assets/web-ready/images/oliver/humu-meet-holly/still-frame-36.webp",
+          "assets/web-ready/images/oliver/humu-meet-holly/still-frame-37.webp",
+          "assets/web-ready/images/oliver/humu-meet-holly/still-frame-38.webp"
+        ],
+        "altNeedsReview": true,
+        "_key": "humu-make-work-better-holly-block-02"
+      },
+      {
+        "_type": "heroVideo",
+        "vimeoId": "790211466",
+        "externalUrl": "https://vimeo.com/790211466",
+        "poster": "assets/web-ready/images/oliver/humu-meet-holly/featured-frame-15.webp",
+        "durationSeconds": 55,
+        "needsApprovedEmbed": true,
+        "_key": "humu-make-work-better-holly-block-01"
+      },
+      {
+        "_type": "textNote",
+        "_key": "humu-make-work-better-holly-prototype-copy-02",
+        "body": "Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+        "alignment": "center",
+        "maxWidth": "narrow",
+        "needsReview": true,
+        "prototypeOnly": true
+      }
+    ]
+  },
+  {
+    "_id": "project.oliver.olympics-toyota",
+    "_type": "project",
+    "title": "Olympics & Toyota — In Due Time",
+    "slug": "olympics-toyota-in-due-time",
+    "owner": "oliver",
+    "client": "Toyota",
+    "types": [
+      "Film",
+      "Photography"
+    ],
+    "role": "Director, DP, Editor",
+    "shortDescription": "Toyota athlete Alex Massialas trains while the postponed Tokyo Olympics remain uncertain during COVID-19.",
+    "whatWeDid": ["Lorem ipsum", "Dolor sit amet", "Consectetur adipiscing"],
+    "credits": [
+      {"label": "Lorem ipsum", "value": "Dolor sit amet"},
+      {"label": "Consectetur", "value": "Adipiscing elit"}
+    ],
+    "sourcePage": "https://oliverhamilton.com/project/olympics-toyota-alex-massailas/",
+    "visible": false,
+    "needsReview": true,
+    "featuredOnHome": false,
+    "homeOrder": 80,
+    "homeCardSize": "standard",
+    "homeColumn": 4,
+    "homeOffset": 44,
+    "homeTreatment": "masked",
+    "projectTheme": "dark",
+    "accentColor": "#7A2D2D",
+    "titleTreatment": "stacked",
+    "heroTreatment": "fullViewport",
+    "layoutVariant": "cinematic",
+    "motionIntensity": "high",
+    "cover": {
+      "poster": "assets/web-ready/images/oliver/olympics-toyota-alex-massailas/featured-frame-6.webp",
+      "alt": "Draft: Olympic fencer Alex Massialas training.",
+      "previewVideo": "assets/web-ready/video-previews/oliver/olympics-toyota-alex-massailas/gallery-cut-08s.mp4",
+      "mediaType": "motion",
+      "cardRatio": "portrait",
+      "previewIsPlaceholder": false,
+      "focalPoint": {
+        "x": 0.5,
+        "y": 0.52,
+        "needsReview": true
+      }
+    },
+    "contentBlocks": [
+      {
+        "_type": "textNote",
+        "_key": "olympics-toyota-in-due-time-prototype-copy-01",
+        "body": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+        "alignment": "left",
+        "maxWidth": "medium",
+        "needsReview": true,
+        "prototypeOnly": true
+      },
+      {
+        "_type": "imageGrid",
+        "images": [
+          "assets/web-ready/images/oliver/olympics-toyota-alex-massailas/still-frame-39.webp",
+          "assets/web-ready/images/oliver/olympics-toyota-alex-massailas/still-frame-40.webp",
+          "assets/web-ready/images/oliver/olympics-toyota-alex-massailas/still-frame-41.webp",
+          "assets/web-ready/images/oliver/olympics-toyota-alex-massailas/still-frame-42.webp"
+        ],
+        "altNeedsReview": true,
+        "_key": "olympics-toyota-in-due-time-block-02"
+      },
+      {
+        "_type": "heroVideo",
+        "vimeoId": "477261846",
+        "externalUrl": "https://vimeo.com/477261846",
+        "poster": "assets/web-ready/images/oliver/olympics-toyota-alex-massailas/featured-frame-6.webp",
+        "durationSeconds": 129,
+        "aspectRatio": "2.39:1",
+        "needsApprovedEmbed": true,
+        "_key": "olympics-toyota-in-due-time-block-01"
+      },
+      {
+        "_type": "textNote",
+        "_key": "olympics-toyota-in-due-time-prototype-copy-02",
+        "body": "Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+        "alignment": "center",
+        "maxWidth": "narrow",
+        "needsReview": true,
+        "prototypeOnly": true
+      }
+    ]
+  },
+  {
+    "_id": "project.oliver.mercury-josh-fabian",
+    "_type": "project",
+    "title": "Mercury — One of the Greats",
+    "slug": "mercury-one-of-the-greats",
+    "owner": "oliver",
+    "client": "Mercury",
+    "types": [
+      "Film",
+      "Photography"
+    ],
+    "role": "Director, Producer",
+    "shortDescription": "A profile of Josh Fabian, competitive gaming, and his ambition for Metafy and gaming communities.",
+    "whatWeDid": ["Lorem ipsum", "Dolor sit amet", "Consectetur adipiscing"],
+    "credits": [
+      {"label": "Lorem ipsum", "value": "Dolor sit amet"},
+      {"label": "Consectetur", "value": "Adipiscing elit"}
+    ],
+    "sourcePage": "https://oliverhamilton.com/project/mercury-josh-fabian/",
+    "visible": false,
+    "needsReview": true,
+    "featuredOnHome": false,
+    "homeOrder": 100,
+    "homeCardSize": "large",
+    "homeColumn": 2,
+    "homeOffset": 156,
+    "homeTreatment": "poster",
+    "projectTheme": "dark",
+    "accentColor": "#32485C",
+    "titleTreatment": "oversized",
+    "heroTreatment": "fullViewport",
+    "layoutVariant": "cinematic",
+    "motionIntensity": "medium",
+    "cover": {
+      "poster": "assets/web-ready/images/oliver/mercury-josh-fabian/featured-frame-11.webp",
+      "alt": "Draft: Josh Fabian in a frame from the Mercury profile.",
+      "previewVideo": "assets/web-ready/video-previews/oliver/mercury-josh-fabian/gallery-cut-08s.mp4",
+      "mediaType": "motion",
+      "cardRatio": "portrait",
+      "previewIsPlaceholder": false,
+      "focalPoint": {
+        "x": 0.52,
+        "y": 0.5,
+        "needsReview": true
+      }
+    },
+    "contentBlocks": [
+      {
+        "_type": "textNote",
+        "_key": "mercury-one-of-the-greats-prototype-copy-01",
+        "body": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+        "alignment": "left",
+        "maxWidth": "medium",
+        "needsReview": true,
+        "prototypeOnly": true
+      },
+      {
+        "_type": "imageGrid",
+        "images": [
+          "assets/web-ready/images/oliver/mercury-josh-fabian/still-frame-47.webp",
+          "assets/web-ready/images/oliver/mercury-josh-fabian/still-frame-48.webp",
+          "assets/web-ready/images/oliver/mercury-josh-fabian/still-frame-49.webp",
+          "assets/web-ready/images/oliver/mercury-josh-fabian/still-frame-50.webp",
+          "assets/web-ready/images/oliver/mercury-josh-fabian/still-frame-51.webp",
+          "assets/web-ready/images/oliver/mercury-josh-fabian/still-frame-52.webp"
+        ],
+        "altNeedsReview": true,
+        "_key": "mercury-one-of-the-greats-block-02"
+      },
+      {
+        "_type": "heroVideo",
+        "vimeoId": "867257700",
+        "externalUrl": "https://vimeo.com/867257700",
+        "poster": "assets/web-ready/images/oliver/mercury-josh-fabian/featured-frame-11.webp",
+        "durationSeconds": 154,
+        "needsApprovedEmbed": true,
+        "_key": "mercury-one-of-the-greats-block-01"
+      },
+      {
+        "_type": "textNote",
+        "_key": "mercury-one-of-the-greats-prototype-copy-02",
+        "body": "Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+        "alignment": "center",
+        "maxWidth": "narrow",
+        "needsReview": true,
+        "prototypeOnly": true
+      }
+    ]
+  },
+  {
+    "_id": "project.michael.native",
+    "_type": "project",
+    "title": "Native — Cucumber Mint / Stop Motion",
+    "slug": "native-cucumber-mint-stop-motion",
+    "owner": "michael",
+    "client": "Native",
+    "types": [
+      "Photography",
+      "Animation"
+    ],
+    "role": "Lorem ipsum",
+    "shortDescription": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+    "whatWeDid": ["Lorem ipsum", "Dolor sit amet", "Consectetur adipiscing"],
+    "credits": [
+      {"label": "Lorem ipsum", "value": "Dolor sit amet"},
+      {"label": "Consectetur", "value": "Adipiscing elit"}
+    ],
+    "sourcePage": "https://newwork.agency/",
+    "visible": false,
+    "needsReview": true,
+    "featuredOnHome": false,
+    "homeOrder": 30,
+    "homeCardSize": "tall",
+    "homeColumn": 3,
+    "homeOffset": 36,
+    "homeTreatment": "framed",
+    "projectTheme": "accent",
+    "accentColor": "#9A46A7",
+    "titleTreatment": "split",
+    "heroTreatment": "masked",
+    "layoutVariant": "experimental",
+    "motionIntensity": "high",
+    "cover": {
+      "poster": "assets/web-ready/images/michael/michael_native_cucumber_mint_pride.webp",
+      "alt": "Draft: Native Cucumber Mint product composition.",
+      "previewVideo": "assets/web-ready/video-previews/michael/michael_native_stop_motion_clip.mp4",
+      "mediaType": "motion",
+      "cardRatio": "portrait",
+      "focalPoint": {
+        "x": 0.5,
+        "y": 0.5,
+        "needsReview": true
+      }
+    },
+    "contentBlocks": [
+      {
+        "_type": "containedImage",
+        "image": "assets/web-ready/images/michael/michael_native_cucumber_mint_pride.webp",
+        "altNeedsReview": true,
+        "_key": "native-cucumber-mint-stop-motion-block-01"
+      },
+      {
+        "_type": "shortLoop",
+        "source": "assets/web-ready/video-previews/michael/michael_native_stop_motion_clip.mp4",
+        "poster": "assets/web-ready/images/michael/michael_native_stop_motion-poster.webp",
+        "prototypeOnly": true,
+        "_key": "native-cucumber-mint-stop-motion-block-02"
+      },
+      {
+        "_type": "textNote",
+        "_key": "native-cucumber-mint-stop-motion-prototype-copy-01",
+        "body": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+        "alignment": "left",
+        "maxWidth": "medium",
+        "needsReview": true,
+        "prototypeOnly": true
+      },
+      {
+        "_type": "textNote",
+        "_key": "native-cucumber-mint-stop-motion-prototype-copy-02",
+        "body": "Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+        "alignment": "center",
+        "maxWidth": "narrow",
+        "needsReview": true,
+        "prototypeOnly": true
+      }
+    ]
+  },
+  {
+    "_id": "project.michael.cradlewise",
+    "_type": "project",
+    "title": "Cradlewise",
+    "slug": "cradlewise",
+    "owner": "michael",
+    "client": "",
+    "types": [
+      "Photography"
+    ],
+    "role": "Lorem ipsum",
+    "shortDescription": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+    "whatWeDid": ["Lorem ipsum", "Dolor sit amet", "Consectetur adipiscing"],
+    "credits": [
+      {"label": "Lorem ipsum", "value": "Dolor sit amet"},
+      {"label": "Consectetur", "value": "Adipiscing elit"}
+    ],
+    "sourcePage": "https://newwork.agency/",
+    "visible": false,
+    "needsReview": true,
+    "featuredOnHome": false,
+    "homeOrder": 50,
+    "homeCardSize": "standard",
+    "homeColumn": 1,
+    "homeOffset": 60,
+    "homeTreatment": "framed",
+    "projectTheme": "warm",
+    "accentColor": "#A77C68",
+    "titleTreatment": "standard",
+    "heroTreatment": "contained",
+    "layoutVariant": "photoEssay",
+    "motionIntensity": "low",
+    "cover": {
+      "poster": "assets/web-ready/images/michael/michael_cradlewise_desktop.webp",
+      "alt": "Draft: Cradlewise campaign image.",
+      "mediaType": "still",
+      "cardRatio": "portrait",
+      "focalPoint": {
+        "x": 0.5,
+        "y": 0.5,
+        "needsReview": true
+      }
+    },
+    "contentBlocks": [
+      {
+        "_type": "containedImage",
+        "image": "assets/web-ready/images/michael/michael_cradlewise_desktop.webp",
+        "altNeedsReview": true,
+        "_key": "cradlewise-block-01"
+      },
+      {
+        "_type": "textNote",
+        "_key": "cradlewise-prototype-copy-01",
+        "body": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+        "alignment": "left",
+        "maxWidth": "medium",
+        "needsReview": true,
+        "prototypeOnly": true
+      },
+      {
+        "_type": "textNote",
+        "_key": "cradlewise-prototype-copy-02",
+        "body": "Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+        "alignment": "center",
+        "maxWidth": "narrow",
+        "needsReview": true,
+        "prototypeOnly": true
+      }
+    ]
+  },
+  {
+    "_id": "project.michael.specialized-globe",
+    "_type": "project",
+    "title": "Specialized Globe",
+    "slug": "specialized-globe",
+    "owner": "michael",
+    "client": "",
+    "types": [
+      "Animation"
+    ],
+    "role": "Lorem ipsum",
+    "shortDescription": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+    "whatWeDid": ["Lorem ipsum", "Dolor sit amet", "Consectetur adipiscing"],
+    "credits": [
+      {"label": "Lorem ipsum", "value": "Dolor sit amet"},
+      {"label": "Consectetur", "value": "Adipiscing elit"}
+    ],
+    "sourcePage": "https://newwork.agency/",
+    "visible": false,
+    "needsReview": true,
+    "featuredOnHome": false,
+    "homeOrder": 120,
+    "homeCardSize": "tall",
+    "homeColumn": 4,
+    "homeOffset": 124,
+    "homeTreatment": "framed",
+    "projectTheme": "accent",
+    "accentColor": "#D9AC35",
+    "titleTreatment": "split",
+    "heroTreatment": "masked",
+    "layoutVariant": "experimental",
+    "motionIntensity": "high",
+    "cover": {
+      "poster": "assets/web-ready/images/michael/michael_specialized_globe-poster.webp",
+      "alt": "Draft: Specialized Globe motion frame.",
+      "previewVideo": "assets/web-ready/video-previews/michael/michael_specialized_globe_clip.mp4",
+      "mediaType": "motion",
+      "cardRatio": "portrait",
+      "focalPoint": {
+        "x": 0.5,
+        "y": 0.5,
+        "needsReview": true
+      }
+    },
+    "contentBlocks": [
+      {
+        "_type": "shortLoop",
+        "source": "assets/web-ready/video-previews/michael/michael_specialized_globe_clip.mp4",
+        "poster": "assets/web-ready/images/michael/michael_specialized_globe-poster.webp",
+        "prototypeOnly": true,
+        "_key": "specialized-globe-block-01"
+      },
+      {
+        "_type": "textNote",
+        "_key": "specialized-globe-prototype-copy-01",
+        "body": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+        "alignment": "left",
+        "maxWidth": "medium",
+        "needsReview": true,
+        "prototypeOnly": true
+      },
+      {
+        "_type": "textNote",
+        "_key": "specialized-globe-prototype-copy-02",
+        "body": "Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+        "alignment": "center",
+        "maxWidth": "narrow",
+        "needsReview": true,
+        "prototypeOnly": true
+      }
+    ]
+  },
+  {
+    "_id": "project.michael.arc",
+    "_type": "project",
+    "title": "Arc",
+    "slug": "arc",
+    "owner": "michael",
+    "client": "",
+    "types": [
+      "Photography"
+    ],
+    "role": "Lorem ipsum",
+    "shortDescription": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+    "whatWeDid": ["Lorem ipsum", "Dolor sit amet", "Consectetur adipiscing"],
+    "credits": [
+      {"label": "Lorem ipsum", "value": "Dolor sit amet"},
+      {"label": "Consectetur", "value": "Adipiscing elit"}
+    ],
+    "sourcePage": "https://newwork.agency/",
+    "visible": false,
+    "needsReview": true,
+    "featuredOnHome": false,
+    "homeOrder": 10,
+    "homeCardSize": "large",
+    "homeColumn": 1,
+    "homeOffset": 0,
+    "homeTreatment": "poster",
+    "projectTheme": "light",
+    "accentColor": "#C7B6A3",
+    "titleTreatment": "standard",
+    "heroTreatment": "contained",
+    "layoutVariant": "photoEssay",
+    "motionIntensity": "low",
+    "cover": {
+      "poster": "assets/web-ready/images/michael/michael_arc_product.webp",
+      "alt": "Draft: paired corded product on a two-color background.",
+      "mediaType": "still",
+      "cardRatio": "portrait",
+      "focalPoint": {
+        "x": 0.5,
+        "y": 0.5,
+        "needsReview": true
+      }
+    },
+    "contentBlocks": [
+      {
+        "_type": "containedImage",
+        "image": "assets/web-ready/images/michael/michael_arc_product.webp",
+        "altNeedsReview": true,
+        "_key": "arc-block-01"
+      },
+      {
+        "_type": "textNote",
+        "_key": "arc-prototype-copy-01",
+        "body": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+        "alignment": "left",
+        "maxWidth": "medium",
+        "needsReview": true,
+        "prototypeOnly": true
+      },
+      {
+        "_type": "textNote",
+        "_key": "arc-prototype-copy-02",
+        "body": "Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+        "alignment": "center",
+        "maxWidth": "narrow",
+        "needsReview": true,
+        "prototypeOnly": true
+      }
+    ]
+  },
+  {
+    "_id": "project.michael.brava",
+    "_type": "project",
+    "title": "Brava",
+    "slug": "brava",
+    "owner": "michael",
+    "client": "",
+    "types": [
+      "Animation"
+    ],
+    "role": "Lorem ipsum",
+    "shortDescription": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+    "whatWeDid": ["Lorem ipsum", "Dolor sit amet", "Consectetur adipiscing"],
+    "credits": [
+      {"label": "Lorem ipsum", "value": "Dolor sit amet"},
+      {"label": "Consectetur", "value": "Adipiscing elit"}
+    ],
+    "sourcePage": "https://newwork.agency/",
+    "visible": false,
+    "needsReview": true,
+    "featuredOnHome": false,
+    "homeOrder": 110,
+    "homeCardSize": "standard",
+    "homeColumn": 3,
+    "homeOffset": 68,
+    "homeTreatment": "masked",
+    "projectTheme": "accent",
+    "accentColor": "#D4523D",
+    "titleTreatment": "split",
+    "heroTreatment": "masked",
+    "layoutVariant": "experimental",
+    "motionIntensity": "high",
+    "cover": {
+      "poster": "assets/web-ready/images/michael/michael_brava-poster.webp",
+      "alt": "Draft: Brava motion frame.",
+      "previewVideo": "assets/web-ready/video-previews/michael/michael_brava_clip.mp4",
+      "mediaType": "motion",
+      "cardRatio": "portrait",
+      "focalPoint": {
+        "x": 0.5,
+        "y": 0.5,
+        "needsReview": true
+      }
+    },
+    "contentBlocks": [
+      {
+        "_type": "shortLoop",
+        "source": "assets/web-ready/video-previews/michael/michael_brava_clip.mp4",
+        "poster": "assets/web-ready/images/michael/michael_brava-poster.webp",
+        "prototypeOnly": true,
+        "_key": "brava-block-01"
+      },
+      {
+        "_type": "textNote",
+        "_key": "brava-prototype-copy-01",
+        "body": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+        "alignment": "left",
+        "maxWidth": "medium",
+        "needsReview": true,
+        "prototypeOnly": true
+      },
+      {
+        "_type": "textNote",
+        "_key": "brava-prototype-copy-02",
+        "body": "Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+        "alignment": "center",
+        "maxWidth": "narrow",
+        "needsReview": true,
+        "prototypeOnly": true
+      }
+    ]
+  },
+  {
+    "_id": "project.michael.chanel-test",
+    "_type": "project",
+    "title": "Chanel Test",
+    "slug": "chanel-test",
+    "owner": "michael",
+    "client": "",
+    "types": [
+      "Photography"
+    ],
+    "role": "Lorem ipsum",
+    "shortDescription": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+    "whatWeDid": ["Lorem ipsum", "Dolor sit amet", "Consectetur adipiscing"],
+    "credits": [
+      {"label": "Lorem ipsum", "value": "Dolor sit amet"},
+      {"label": "Consectetur", "value": "Adipiscing elit"}
+    ],
+    "sourcePage": "https://newwork.agency/",
+    "visible": false,
+    "needsReview": true,
+    "doNotPublishWithoutExplicitApproval": true,
+    "featuredOnHome": false,
+    "homeOrder": 150,
+    "homeCardSize": "standard",
+    "homeColumn": 3,
+    "homeOffset": 140,
+    "homeTreatment": "masked",
+    "projectTheme": "dark",
+    "accentColor": "#C2A9A0",
+    "titleTreatment": "oversized",
+    "heroTreatment": "masked",
+    "layoutVariant": "experimental",
+    "motionIntensity": "high",
+    "cover": {
+      "poster": "assets/web-ready/images/michael/michael_chanel_test.webp",
+      "alt": "Draft: test image; subject description requires review.",
+      "mediaType": "still",
+      "cardRatio": "portrait",
+      "focalPoint": {
+        "x": 0.62,
+        "y": 0.5,
+        "needsReview": true
+      }
+    },
+    "contentBlocks": [
+      {
+        "_type": "containedImage",
+        "image": "assets/web-ready/images/michael/michael_chanel_test.webp",
+        "altNeedsReview": true,
+        "_key": "chanel-test-block-01"
+      },
+      {
+        "_type": "textNote",
+        "_key": "chanel-test-prototype-copy-01",
+        "body": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+        "alignment": "left",
+        "maxWidth": "medium",
+        "needsReview": true,
+        "prototypeOnly": true
+      },
+      {
+        "_type": "textNote",
+        "_key": "chanel-test-prototype-copy-02",
+        "body": "Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+        "alignment": "center",
+        "maxWidth": "narrow",
+        "needsReview": true,
+        "prototypeOnly": true
+      }
+    ]
+  },
+  {
+    "_id": "project.michael.fellow",
+    "_type": "project",
+    "title": "Fellow",
+    "slug": "fellow",
+    "owner": "michael",
+    "client": "",
+    "types": [
+      "Photography"
+    ],
+    "role": "Lorem ipsum",
+    "shortDescription": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+    "whatWeDid": ["Lorem ipsum", "Dolor sit amet", "Consectetur adipiscing"],
+    "credits": [
+      {"label": "Lorem ipsum", "value": "Dolor sit amet"},
+      {"label": "Consectetur", "value": "Adipiscing elit"}
+    ],
+    "sourcePage": "https://newwork.agency/",
+    "visible": false,
+    "needsReview": true,
+    "featuredOnHome": false,
+    "homeOrder": 90,
+    "homeCardSize": "tall",
+    "homeColumn": 1,
+    "homeOffset": 104,
+    "homeTreatment": "framed",
+    "projectTheme": "warm",
+    "accentColor": "#8A735A",
+    "titleTreatment": "standard",
+    "heroTreatment": "contained",
+    "layoutVariant": "photoEssay",
+    "motionIntensity": "low",
+    "cover": {
+      "poster": "assets/web-ready/images/michael/michael_fellow.webp",
+      "alt": "Draft: Fellow product image.",
+      "mediaType": "still",
+      "cardRatio": "portrait",
+      "focalPoint": {
+        "x": 0.5,
+        "y": 0.5,
+        "needsReview": true
+      }
+    },
+    "contentBlocks": [
+      {
+        "_type": "containedImage",
+        "image": "assets/web-ready/images/michael/michael_fellow.webp",
+        "altNeedsReview": true,
+        "_key": "fellow-block-01"
+      },
+      {
+        "_type": "textNote",
+        "_key": "fellow-prototype-copy-01",
+        "body": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+        "alignment": "left",
+        "maxWidth": "medium",
+        "needsReview": true,
+        "prototypeOnly": true
+      },
+      {
+        "_type": "textNote",
+        "_key": "fellow-prototype-copy-02",
+        "body": "Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+        "alignment": "center",
+        "maxWidth": "narrow",
+        "needsReview": true,
+        "prototypeOnly": true
+      }
+    ]
+  },
+  {
+    "_id": "project.michael.miss-jones",
+    "_type": "project",
+    "title": "Miss Jones — Pancake",
+    "slug": "miss-jones-pancake",
+    "owner": "michael",
+    "client": "",
+    "types": [
+      "Photography"
+    ],
+    "role": "Lorem ipsum",
+    "shortDescription": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+    "whatWeDid": ["Lorem ipsum", "Dolor sit amet", "Consectetur adipiscing"],
+    "credits": [
+      {"label": "Lorem ipsum", "value": "Dolor sit amet"},
+      {"label": "Consectetur", "value": "Adipiscing elit"}
+    ],
+    "sourcePage": "https://newwork.agency/",
+    "visible": false,
+    "needsReview": true,
+    "featuredOnHome": false,
+    "homeOrder": 140,
+    "homeCardSize": "large",
+    "homeColumn": 2,
+    "homeOffset": 92,
+    "homeTreatment": "framed",
+    "projectTheme": "warm",
+    "accentColor": "#D49959",
+    "titleTreatment": "stacked",
+    "heroTreatment": "split",
+    "layoutVariant": "photoEssay",
+    "motionIntensity": "low",
+    "cover": {
+      "poster": "assets/web-ready/images/michael/michael_miss_jones_pancake.webp",
+      "alt": "Draft: pancake food photograph.",
+      "mediaType": "still",
+      "cardRatio": "portrait",
+      "focalPoint": {
+        "x": 0.5,
+        "y": 0.5,
+        "needsReview": true
+      }
+    },
+    "contentBlocks": [
+      {
+        "_type": "containedImage",
+        "image": "assets/web-ready/images/michael/michael_miss_jones_pancake.webp",
+        "altNeedsReview": true,
+        "_key": "miss-jones-pancake-block-01"
+      },
+      {
+        "_type": "textNote",
+        "_key": "miss-jones-pancake-prototype-copy-01",
+        "body": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+        "alignment": "left",
+        "maxWidth": "medium",
+        "needsReview": true,
+        "prototypeOnly": true
+      },
+      {
+        "_type": "textNote",
+        "_key": "miss-jones-pancake-prototype-copy-02",
+        "body": "Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+        "alignment": "center",
+        "maxWidth": "narrow",
+        "needsReview": true,
+        "prototypeOnly": true
+      }
+    ]
+  },
+  {
+    "_id": "project.michael.dune-tansy",
+    "_type": "project",
+    "title": "Dune / Tansy — Title to Confirm",
+    "slug": "dune-tansy",
+    "owner": "michael",
+    "client": "",
+    "types": [
+      "Photography"
+    ],
+    "role": "Lorem ipsum",
+    "shortDescription": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+    "whatWeDid": ["Lorem ipsum", "Dolor sit amet", "Consectetur adipiscing"],
+    "credits": [
+      {"label": "Lorem ipsum", "value": "Dolor sit amet"},
+      {"label": "Consectetur", "value": "Adipiscing elit"}
+    ],
+    "sourcePage": "https://newwork.agency/",
+    "visible": false,
+    "needsReview": true,
+    "featuredOnHome": false,
+    "homeOrder": 70,
+    "homeCardSize": "large",
+    "homeColumn": 3,
+    "homeOffset": 128,
+    "homeTreatment": "poster",
+    "projectTheme": "accent",
+    "accentColor": "#B95642",
+    "titleTreatment": "oversized",
+    "heroTreatment": "masked",
+    "layoutVariant": "experimental",
+    "motionIntensity": "high",
+    "cover": {
+      "poster": "assets/web-ready/images/michael/michael_dune_tansy.webp",
+      "alt": "Draft: Dune/Tansy filename-derived campaign image.",
+      "mediaType": "still",
+      "cardRatio": "portrait",
+      "focalPoint": {
+        "x": 0.48,
+        "y": 0.5,
+        "needsReview": true
+      }
+    },
+    "contentBlocks": [
+      {
+        "_type": "containedImage",
+        "image": "assets/web-ready/images/michael/michael_dune_tansy.webp",
+        "altNeedsReview": true,
+        "_key": "dune-tansy-block-01"
+      },
+      {
+        "_type": "textNote",
+        "_key": "dune-tansy-prototype-copy-01",
+        "body": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+        "alignment": "left",
+        "maxWidth": "medium",
+        "needsReview": true,
+        "prototypeOnly": true
+      },
+      {
+        "_type": "textNote",
+        "_key": "dune-tansy-prototype-copy-02",
+        "body": "Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+        "alignment": "center",
+        "maxWidth": "narrow",
+        "needsReview": true,
+        "prototypeOnly": true
+      }
+    ]
+  },
+  {
+    "_id": "project.michael.molekule",
+    "_type": "project",
+    "title": "Molekule — In Office",
+    "slug": "molekule-in-office",
+    "owner": "michael",
+    "client": "",
+    "types": [
+      "Photography"
+    ],
+    "role": "Lorem ipsum",
+    "shortDescription": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+    "whatWeDid": ["Lorem ipsum", "Dolor sit amet", "Consectetur adipiscing"],
+    "credits": [
+      {"label": "Lorem ipsum", "value": "Dolor sit amet"},
+      {"label": "Consectetur", "value": "Adipiscing elit"}
+    ],
+    "sourcePage": "https://newwork.agency/",
+    "visible": false,
+    "needsReview": true,
+    "featuredOnHome": false,
+    "homeOrder": 130,
+    "homeCardSize": "standard",
+    "homeColumn": 1,
+    "homeOffset": 32,
+    "homeTreatment": "poster",
+    "projectTheme": "light",
+    "accentColor": "#8DA6B0",
+    "titleTreatment": "standard",
+    "heroTreatment": "contained",
+    "layoutVariant": "photoEssay",
+    "motionIntensity": "low",
+    "cover": {
+      "poster": "assets/web-ready/images/michael/michael_molekule_office.webp",
+      "alt": "Draft: Molekule product in an office setting.",
+      "mediaType": "still",
+      "cardRatio": "portrait",
+      "focalPoint": {
+        "x": 0.5,
+        "y": 0.5,
+        "needsReview": true
+      }
+    },
+    "contentBlocks": [
+      {
+        "_type": "containedImage",
+        "image": "assets/web-ready/images/michael/michael_molekule_office.webp",
+        "altNeedsReview": true,
+        "_key": "molekule-in-office-block-01"
+      },
+      {
+        "_type": "textNote",
+        "_key": "molekule-in-office-prototype-copy-01",
+        "body": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+        "alignment": "left",
+        "maxWidth": "medium",
+        "needsReview": true,
+        "prototypeOnly": true
+      },
+      {
+        "_type": "textNote",
+        "_key": "molekule-in-office-prototype-copy-02",
+        "body": "Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+        "alignment": "center",
+        "maxWidth": "narrow",
+        "needsReview": true,
+        "prototypeOnly": true
+      }
+    ]
+  },
+  {
+    "_id": "project.michael.untitled-native-video",
+    "_type": "project",
+    "title": "Untitled Portfolio Film — Identify Before Use",
+    "slug": "untitled-portfolio-film",
+    "owner": "michael",
+    "client": "",
+    "types": [
+      "Film"
+    ],
+    "role": "Lorem ipsum",
+    "shortDescription": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+    "whatWeDid": ["Lorem ipsum", "Dolor sit amet", "Consectetur adipiscing"],
+    "credits": [
+      {"label": "Lorem ipsum", "value": "Dolor sit amet"},
+      {"label": "Consectetur", "value": "Adipiscing elit"}
+    ],
+    "sourcePage": "https://newwork.agency/",
+    "visible": false,
+    "needsReview": true,
+    "featuredOnHome": false,
+    "homeOrder": 160,
+    "homeCardSize": "tall",
+    "homeColumn": 4,
+    "homeOffset": 56,
+    "homeTreatment": "poster",
+    "projectTheme": "dark",
+    "accentColor": "#4C5C68",
+    "titleTreatment": "oversized",
+    "heroTreatment": "fullViewport",
+    "layoutVariant": "cinematic",
+    "motionIntensity": "high",
+    "cover": {
+      "poster": "assets/web-ready/images/michael/michael_native_portfolio_video-poster.webp",
+      "alt": "Draft: abstract close-up from an unidentified portfolio film.",
+      "previewVideo": "assets/web-ready/video-previews/michael/michael_native_portfolio_video_clip.mp4",
+      "mediaType": "motion",
+      "cardRatio": "portrait",
+      "focalPoint": {
+        "x": 0.72,
+        "y": 0.5,
+        "needsReview": true
+      }
+    },
+    "contentBlocks": [
+      {
+        "_type": "video",
+        "source": "assets/web-ready/video-previews/michael/michael_native_portfolio_video_clip.mp4",
+        "prototypeOnly": true,
+        "sourceDurationSeconds": 88.5885,
+        "_key": "untitled-portfolio-film-block-01",
+        "poster": "assets/web-ready/images/michael/michael_native_portfolio_video-poster.webp",
+        "altNeedsReview": true
+      },
+      {
+        "_type": "textNote",
+        "_key": "untitled-portfolio-film-prototype-copy-01",
+        "body": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+        "alignment": "left",
+        "maxWidth": "medium",
+        "needsReview": true,
+        "prototypeOnly": true
+      },
+      {
+        "_type": "textNote",
+        "_key": "untitled-portfolio-film-prototype-copy-02",
+        "body": "Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+        "alignment": "center",
+        "maxWidth": "narrow",
+        "needsReview": true,
+        "prototypeOnly": true
+      }
+    ]
+  },
+  {
+    "_id": "project.anjali.adobe",
+    "_type": "project",
+    "title": "Adobe",
+    "slug": "adobe",
+    "owner": "anjali",
+    "client": "Adobe",
+    "types": ["Campaign", "Photography"],
+    "role": "Creative Director / Art Direction",
+    "shortDescription": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+    "whatWeDid": ["Lorem ipsum", "Dolor sit amet", "Consectetur adipiscing"],
+    "credits": [
+      {"label": "Lorem ipsum", "value": "Dolor sit amet"},
+      {"label": "Consectetur", "value": "Adipiscing elit"}
+    ],
+    "sourcePage": "https://arao.squarespace.com/new-page-10/",
+    "visible": false,
+    "needsReview": true,
+    "featuredOnHome": false,
+    "homeOrder": 170,
+    "homeCardSize": "tall",
+    "homeColumn": 1,
+    "homeOffset": 4,
+    "homeTreatment": "masked",
+    "projectTheme": "light",
+    "accentColor": "#6B4F8A",
+    "titleTreatment": "split",
+    "heroTreatment": "masked",
+    "layoutVariant": "photoEssay",
+    "motionIntensity": "medium",
+    "doNotPublishWithoutExplicitApproval": true,
+  "cover": {
+    "poster": "assets/web-ready/images/anjali/anjali-adobe-portrait.webp",
+    "alt": "",
+    "altNeedsReview": true,
+    "previewVideo": "assets/web-ready/video-previews/anjali/adobe-what-whack-wears-gallery-cut-08s.mp4",
+    "mediaType": "motion",
+      "cardRatio": "portrait",
+      "focalPoint": {"x": 0.5, "y": 0.48, "needsReview": true}
+    },
+    "contentBlocks": [
+      {
+        "_type": "containedImage",
+        "_key": "adobe-block-01",
+      "image": "assets/web-ready/images/anjali/anjali-adobe-portrait.webp",
+      "altNeedsReview": true
+    },
+    {
+      "_type": "video",
+      "_key": "adobe-video-01",
+      "vimeoId": "720040595",
+      "externalUrl": "https://vimeo.com/720040595",
+      "poster": "assets/web-ready/images/anjali/anjali-adobe-portrait.webp",
+      "aspectRatio": "16:9",
+      "sourceDurationSeconds": 93.845,
+      "accessibleDescription": "Adobe and Tierra Whack case study film.",
+      "altNeedsReview": true,
+      "prototypeOnly": true
+    },
+      {
+        "_type": "textNote",
+        "_key": "adobe-prototype-copy-01",
+        "body": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+        "alignment": "left",
+        "maxWidth": "medium",
+        "needsReview": true,
+        "prototypeOnly": true
+      },
+      {
+        "_type": "textNote",
+        "_key": "adobe-prototype-copy-02",
+        "body": "Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+        "alignment": "center",
+        "maxWidth": "narrow",
+        "needsReview": true,
+        "prototypeOnly": true
+      }
+    ]
+  },
+  {
+    "_id": "project.anjali.stella-artois-daydream",
+    "_type": "project",
+    "title": "Daydream",
+    "slug": "stella-artois-daydream",
+    "owner": "anjali",
+    "client": "Stella Artois",
+    "types": ["Film", "Campaign"],
+    "role": "Creative Director / Art Direction",
+    "shortDescription": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+    "whatWeDid": ["Lorem ipsum", "Dolor sit amet", "Consectetur adipiscing"],
+    "credits": [
+      {"label": "Lorem ipsum", "value": "Dolor sit amet"},
+      {"label": "Consectetur", "value": "Adipiscing elit"}
+    ],
+    "sourcePage": "https://arao.squarespace.com/stella-produced/",
+    "visible": false,
+    "needsReview": true,
+    "featuredOnHome": false,
+    "homeOrder": 180,
+    "homeCardSize": "large",
+    "homeColumn": 2,
+    "homeOffset": 12,
+    "homeTreatment": "poster",
+    "projectTheme": "warm",
+    "accentColor": "#8B6A4A",
+    "titleTreatment": "oversized",
+    "heroTreatment": "split",
+    "layoutVariant": "campaign",
+    "motionIntensity": "medium",
+    "doNotPublishWithoutExplicitApproval": true,
+  "cover": {
+    "poster": "assets/web-ready/images/anjali/anjali-stella-artois.webp",
+    "alt": "",
+    "altNeedsReview": true,
+    "previewVideo": "assets/web-ready/video-previews/anjali/stella-artois-daydream-gallery-cut-06s.mp4",
+    "mediaType": "motion",
+      "cardRatio": "portrait",
+      "focalPoint": {"x": 0.5, "y": 0.5, "needsReview": true}
+    },
+    "contentBlocks": [
+      {
+        "_type": "containedImage",
+        "_key": "stella-artois-daydream-block-01",
+      "image": "assets/web-ready/images/anjali/anjali-stella-artois.webp",
+      "altNeedsReview": true
+    },
+    {
+      "_type": "video",
+      "_key": "stella-artois-daydream-video-01",
+      "vimeoId": "439413250",
+      "externalUrl": "https://vimeo.com/439413250",
+      "poster": "assets/web-ready/images/anjali/anjali-stella-artois.webp",
+      "aspectRatio": "16:9",
+      "sourceDurationSeconds": 6.015,
+      "accessibleDescription": "Stella Artois Daydream film.",
+      "altNeedsReview": true,
+      "prototypeOnly": true
+    },
+      {
+        "_type": "textNote",
+        "_key": "stella-artois-daydream-prototype-copy-01",
+        "body": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+        "alignment": "left",
+        "maxWidth": "medium",
+        "needsReview": true,
+        "prototypeOnly": true
+      },
+      {
+        "_type": "textNote",
+        "_key": "stella-artois-daydream-prototype-copy-02",
+        "body": "Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+        "alignment": "center",
+        "maxWidth": "narrow",
+        "needsReview": true,
+        "prototypeOnly": true
+      }
+    ]
+  },
+  {
+    "_id": "project.anjali.rakuten",
+    "_type": "project",
+    "title": "Rakuten",
+    "slug": "rakuten",
+    "owner": "anjali",
+    "client": "Rakuten",
+    "types": ["Animation", "Campaign"],
+    "role": "Creative Director / Art Direction",
+    "shortDescription": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+    "whatWeDid": ["Lorem ipsum", "Dolor sit amet", "Consectetur adipiscing"],
+    "credits": [
+      {"label": "Lorem ipsum", "value": "Dolor sit amet"},
+      {"label": "Consectetur", "value": "Adipiscing elit"}
+    ],
+    "sourcePage": "https://arao.squarespace.com/rakuten-produced/",
+    "visible": false,
+    "needsReview": true,
+    "featuredOnHome": false,
+    "homeOrder": 190,
+    "homeCardSize": "standard",
+    "homeColumn": 3,
+    "homeOffset": 7,
+    "homeTreatment": "framed",
+    "projectTheme": "dark",
+    "accentColor": "#532B63",
+    "titleTreatment": "stacked",
+    "heroTreatment": "contained",
+    "layoutVariant": "experimental",
+    "motionIntensity": "low",
+    "doNotPublishWithoutExplicitApproval": true,
+  "cover": {
+    "poster": "assets/web-ready/images/anjali/anjali-rakuten.webp",
+    "alt": "",
+    "altNeedsReview": true,
+    "previewVideo": "assets/web-ready/video-previews/anjali/rakuten-duet-gallery-cut-08s.mp4",
+    "mediaType": "motion",
+      "cardRatio": "portrait",
+      "focalPoint": {"x": 0.52, "y": 0.5, "needsReview": true}
+    },
+    "contentBlocks": [
+      {
+        "_type": "containedImage",
+        "_key": "rakuten-block-01",
+      "image": "assets/web-ready/images/anjali/anjali-rakuten.webp",
+      "altNeedsReview": true
+    },
+    {
+      "_type": "video",
+      "_key": "rakuten-video-01",
+      "vimeoId": "479336941",
+      "externalUrl": "https://vimeo.com/479336941",
+      "poster": "assets/web-ready/images/anjali/anjali-rakuten.webp",
+      "aspectRatio": "16:9",
+      "sourceDurationSeconds": 30.036667,
+      "accessibleDescription": "Rakuten Duet film.",
+      "altNeedsReview": true,
+      "prototypeOnly": true
+    },
+      {
+        "_type": "textNote",
+        "_key": "rakuten-prototype-copy-01",
+        "body": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+        "alignment": "left",
+        "maxWidth": "medium",
+        "needsReview": true,
+        "prototypeOnly": true
+      },
+      {
+        "_type": "textNote",
+        "_key": "rakuten-prototype-copy-02",
+        "body": "Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+        "alignment": "center",
+        "maxWidth": "narrow",
+        "needsReview": true,
+        "prototypeOnly": true
+      }
+    ]
+  }
+]

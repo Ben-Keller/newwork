@@ -1,0 +1,169 @@
+---
+import { ClientRouter, fade } from 'astro:transitions';
+import Analytics from '../components/Analytics.astro';
+import MotionRuntime from '../components/MotionRuntime.astro';
+import SeoHead from '../components/SeoHead.astro';
+import SiteFooter from '../components/SiteFooter.astro';
+import SiteHeader from '../components/SiteHeader.astro';
+import SkipLink from '../components/SkipLink.astro';
+import { buildResponsiveSrcset } from '../lib/responsive-images';
+import { withBase, withoutBase } from '../lib/base-path';
+import type { BrandAssetView, ImageView, ProjectTheme, SeoFields, SiteContent } from '../lib/types';
+import '../styles/brand.css';
+import '../styles/global.css';
+
+interface Props {
+  content: SiteContent;
+  title?: string;
+  description?: string;
+  seo?: SeoFields;
+  kind?: 'website' | 'project' | 'article';
+  pageClass?: string;
+  structuredData?: Record<string, unknown>;
+  pageTheme?: ProjectTheme;
+  pageAccent?: string;
+  preloadImage?: ImageView;
+  preloadMobileImage?: ImageView;
+  preloadImageSizes?: string;
+}
+
+const {
+  content,
+  title,
+  description,
+  seo,
+  kind = 'website',
+  pageClass = '',
+  structuredData,
+  pageTheme,
+  pageAccent,
+  preloadImage,
+  preloadMobileImage,
+  preloadImageSizes = '100vw',
+} = Astro.props;
+const { mode, settings, notes } = content;
+const headerSiteName = 'New Work Agency';
+const suppliedBrandAsset: BrandAssetView = {
+  src: withBase('/media/brand/new-black.svg'),
+  width: 1641,
+  height: 824,
+};
+const wordmarkAsset = settings.wordmark ?? suppliedBrandAsset;
+const compactMarkAsset = settings.compactMark ?? wordmarkAsset;
+const brandTone = pageTheme === 'dark' ? 'light' : 'dark';
+const showNotes = settings.notesEnabled && notes.length > 0;
+const galleryOrderToolsEnabled = false;
+const routePath = withoutBase(Astro.url.pathname).replace(/\/+$/u, '') || '/';
+const showFooterContact = routePath !== '/contact';
+const footerPeople = settings.aboutPeople.map((person) => ({
+  href: withBase(`/about#about-person-${person.projectOwner}`),
+  label: person.name,
+}));
+const routeTransition = fade({ duration: 160 });
+const safePageAccent = pageAccent && /^#[\da-f]{6}$/iu.test(pageAccent) ? pageAccent : undefined;
+const pageStyle = safePageAccent ? `--project-page-accent:${safePageAccent}` : undefined;
+const themeColor = pageClass.includes('project-page')
+  ? pageTheme === 'dark'
+    ? '#171716'
+    : safePageAccent || '#e8e8e4'
+  : '#f7f6f2';
+const preloadSrcset = preloadImage ? buildResponsiveSrcset(preloadImage) : undefined;
+const preloadMobileSrcset = preloadMobileImage ? buildResponsiveSrcset(preloadMobileImage) : undefined;
+---
+<!doctype html>
+<html lang="en" transition:animate={routeTransition}>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content={themeColor} />
+    <link rel="icon" type="image/svg+xml" href={withBase('/favicon.svg')} />
+    <link rel="apple-touch-icon" href={withBase('/apple-touch-icon.png')} />
+    <link rel="mask-icon" href={withBase('/media/brand/new-black.svg')} color="#1a1a1a" />
+    <script is:inline>
+      (() => {
+        const navigation = performance.getEntriesByType('navigation')[0];
+        const isReload = navigation?.type === 'reload';
+        if (!isReload) return;
+
+        history.scrollRestoration = 'manual';
+        sessionStorage.removeItem('new-work-restore-requested');
+        const resetToTop = () => window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+        resetToTop();
+        window.addEventListener('pageshow', () => {
+          resetToTop();
+          requestAnimationFrame(() => requestAnimationFrame(() => {
+            resetToTop();
+            history.scrollRestoration = 'auto';
+          }));
+        }, { once: true });
+      })();
+    </script>
+    {preloadImage ? (
+      <>
+        {preloadMobileImage ? (
+          <link
+            rel="preload"
+            as="image"
+            href={preloadMobileImage.src}
+            imagesrcset={preloadMobileSrcset}
+            imagesizes={preloadImageSizes}
+            media="(max-width: 767px)"
+            fetchpriority="high"
+          />
+        ) : null}
+        <link
+          rel="preload"
+          as="image"
+          href={preloadImage.src}
+          imagesrcset={preloadSrcset}
+          imagesizes={preloadImageSizes}
+          media={preloadMobileImage ? '(min-width: 768px)' : undefined}
+          fetchpriority="high"
+        />
+      </>
+    ) : null}
+    <ClientRouter fallback="animate" />
+    <SeoHead
+      siteName={headerSiteName}
+      title={title}
+      description={description}
+      pathname={Astro.url.pathname}
+      mode={mode}
+      seo={seo}
+      defaultSeo={settings.defaultSeo}
+      kind={kind}
+      structuredData={structuredData}
+    />
+  </head>
+  <body
+    class:list={[pageClass, mode !== 'production' && 'prototype-mode', `content-mode-${mode}`]}
+    data-page-theme={pageTheme}
+    style={pageStyle}
+  >
+    <SkipLink />
+    <SiteHeader
+      currentPath={routePath}
+      showNotes={showNotes}
+      siteName={headerSiteName}
+      wordmarkAsset={wordmarkAsset}
+      compactMarkAsset={compactMarkAsset}
+      tone={brandTone}
+      galleryEditing={galleryOrderToolsEnabled && mode !== 'production'}
+    />
+    <main id="main-content" tabindex="-1" data-motion-root>
+      <slot />
+    </main>
+    <SiteFooter
+      siteName={headerSiteName}
+      contactEmail={settings.contactEmail}
+      links={settings.socialLinks}
+      people={footerPeople}
+      wordmarkAsset={wordmarkAsset}
+      tone={brandTone}
+      showContact={showFooterContact}
+      showNotes={showNotes}
+    />
+    <Analytics mode={mode} enabled={settings.analyticsEnabled} />
+    <MotionRuntime />
+  </body>
+</html>

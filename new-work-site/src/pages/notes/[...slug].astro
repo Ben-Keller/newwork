@@ -1,0 +1,59 @@
+---
+import NoteMedia from '../../components/NoteMedia.astro';
+import RichText from '../../components/RichText.astro';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getSiteContent } from '../../lib/content';
+import { withBase } from '../../lib/base-path';
+import type { NoteView, SiteContent } from '../../lib/types';
+
+export async function getStaticPaths() {
+  const content = await getSiteContent();
+  if (!content.settings.notesEnabled || !content.notes.length) return [];
+  return [
+    { params: { slug: undefined }, props: { content } },
+    ...content.notes.map((note) => ({ params: { slug: note.slug }, props: { content, note } })),
+  ];
+}
+
+interface Props { content: SiteContent; note?: NoteView }
+const { content, note } = Astro.props;
+const dateFormatter = new Intl.DateTimeFormat('en', {dateStyle: 'medium', timeZone: 'UTC'});
+const formatDate = (value: string) => {
+  const date = new Date(`${value}T00:00:00Z`);
+  return Number.isNaN(date.valueOf()) ? value : dateFormatter.format(date);
+};
+---
+<BaseLayout
+  content={content}
+  title={note?.title || 'Notes'}
+  description={note?.summary}
+  seo={note?.seo}
+  kind={note ? 'article' : 'website'}
+  pageClass="utility-page"
+>
+  {note ? (
+    <article class="note-detail utility-content">
+      <p class="eyebrow"><time datetime={note.date}>{formatDate(note.date)}</time></p>
+      <h1>{note.title}</h1>
+      <p class="utility-content__lead">{note.summary}</p>
+      <NoteMedia media={note.media} title={note.title} mode={content.mode} />
+      {note.body ? <RichText value={note.body} class="note-detail__body" /> : null}
+    </article>
+  ) : (
+    <section class="utility-content notes-index">
+      <p class="eyebrow">Behind the work</p><h1>Notes</h1>
+      <div>{content.notes.map((item) => (
+        <article>
+          <a href={withBase(`/notes/${item.slug}`)}>
+            <span class="notes-index__media">
+              <NoteMedia media={item.media} title={item.title} mode={content.mode} sizes="(min-width: 768px) 18vw, 100vw" compact />
+            </span>
+            <time datetime={item.date}>{formatDate(item.date)}</time>
+            <h2>{item.title}</h2>
+            <p>{item.summary}</p>
+          </a>
+        </article>
+      ))}</div>
+    </section>
+  )}
+</BaseLayout>

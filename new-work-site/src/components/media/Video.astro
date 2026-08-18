@@ -1,0 +1,62 @@
+---
+import ErrorMedia from '../ErrorMedia.astro';
+import LazyVideoEmbed from '../LazyVideoEmbed.astro';
+import MediaAccessibility from './MediaAccessibility.astro';
+import MediaCaption from './MediaCaption.astro';
+import { inferVideoMimeType } from './video-mime';
+import type { ContentMode, VideoBlock } from '../../lib/types';
+interface Props { block: VideoBlock; mode: ContentMode; projectTitle: string; eager?: boolean; sizes?: string }
+const { block, mode, projectTitle, eager = false, sizes = '100vw' } = Astro.props;
+const displayRatio = block.video.aspectRatio || (block.video.poster
+  ? `${block.video.poster.width} / ${block.video.poster.height}`
+  : '16 / 9');
+const sourceMime = inferVideoMimeType(block.video.src, block.video.mimeType);
+---
+<figure class="media-block media-block--video">
+  {block.video.provider ? (
+    <LazyVideoEmbed video={block.video} title={projectTitle} mode={mode} eagerPoster={eager} sizes={sizes} />
+  ) : block.video.src ? (
+    <div class="hosted-video" data-media-frame style={`--video-ratio:${displayRatio}`}>
+      <video
+        controls
+        playsinline
+        preload={eager ? 'metadata' : 'none'}
+        poster={block.video.poster?.src}
+        width={block.video.width}
+        height={block.video.height}
+        crossorigin={block.video.captionsFile ? 'anonymous' : undefined}
+        aria-label={block.video.accessibleDescription || projectTitle}
+        data-error-managed-video
+      >
+        <source src={block.video.src} type={sourceMime} />
+        {block.video.captionsFile ? <track kind="captions" src={block.video.captionsFile} srclang={block.video.captionsLanguage || 'en'} label={block.video.captionsLabel || 'English'} default /> : null}
+      </video>
+      <ErrorMedia message={`Film unavailable for ${projectTitle}`} />
+    </div>
+  ) : block.video.poster || block.video.externalUrl ? (
+    <LazyVideoEmbed video={block.video} title={projectTitle} mode={mode} eagerPoster={eager} sizes={sizes} />
+  ) : (
+    <div class="media-placeholder"><span>{projectTitle}</span><small>Film unavailable</small></div>
+  )}
+  {!block.video.provider ? (
+    <MediaAccessibility transcript={block.video.transcript} captionsFile={block.video.captionsFile} />
+  ) : null}
+  <MediaCaption caption={block.caption} credit={block.credit} />
+</figure>
+
+<script>
+  const setupHostedVideoErrors = (): void => {
+    document.querySelectorAll<HTMLVideoElement>('video[data-error-managed-video]:not([data-ready])').forEach((video) => {
+      video.dataset.ready = 'true';
+      video.addEventListener('error', () => {
+        video.pause();
+        video.controls = false;
+        const error = video.parentElement?.querySelector<HTMLElement>('[data-error-media]');
+        if (error) error.hidden = false;
+      }, { once: true });
+    });
+  };
+
+  setupHostedVideoErrors();
+  document.addEventListener('astro:page-load', setupHostedVideoErrors);
+</script>

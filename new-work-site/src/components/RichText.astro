@@ -1,0 +1,53 @@
+---
+import RichTextSpan from './RichTextSpan.astro';
+import type { RichTextBlockView, RichTextView } from '../lib/types';
+
+interface Props {
+  value?: RichTextView;
+  class?: string;
+}
+
+interface BlockGroup { kind: 'block'; block: RichTextBlockView }
+interface ListGroup { kind: 'list'; ordered: boolean; level: number; items: RichTextBlockView[] }
+
+const { value = [], class: className } = Astro.props;
+const groups: Array<BlockGroup | ListGroup> = [];
+for (const block of value) {
+  if (!block.listItem) {
+    groups.push({ kind: 'block', block });
+    continue;
+  }
+  const ordered = block.listItem === 'number';
+  const previous = groups.at(-1);
+  if (previous?.kind === 'list' && previous.ordered === ordered && previous.level === block.level) {
+    previous.items.push(block);
+  } else {
+    groups.push({ kind: 'list', ordered, level: block.level, items: [block] });
+  }
+}
+---
+
+{groups.length ? (
+  <div class:list={['rich-text', className]}>
+    {groups.map((group) => {
+      if (group.kind === 'list') {
+        const List = group.ordered ? 'ol' : 'ul';
+        return (
+          <List data-list-level={group.level}>
+            {group.items.map((item) => (
+              <li>{item.spans.map((span) => <RichTextSpan span={span} />)}</li>
+            ))}
+          </List>
+        );
+      }
+      const Tag = group.block.style === 'h2'
+        ? 'h2'
+        : group.block.style === 'h3'
+          ? 'h3'
+          : group.block.style === 'blockquote'
+            ? 'blockquote'
+            : 'p';
+      return <Tag>{group.block.spans.map((span) => <RichTextSpan span={span} />)}</Tag>;
+    })}
+  </div>
+) : null}

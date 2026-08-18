@@ -1,0 +1,17 @@
+---
+interface Props {
+  text?: string;
+}
+const { text } = Astro.props;
+---
+
+{text ? (
+  <section class="manifesto" aria-label="Manifesto" data-manifesto>
+    <p class="sr-only">{text}</p>
+    <p
+      aria-hidden="true"
+      data-motion-split="scroll-letters"
+      data-motion-split-aria="none"
+    >{text}</p>
+  </section>
+) : null}

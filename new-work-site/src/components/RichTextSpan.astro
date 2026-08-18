@@ -1,0 +1,21 @@
+---
+import type { RichTextSpanView } from '../lib/types';
+
+interface Props {
+  span: RichTextSpanView;
+}
+
+const { span } = Astro.props;
+const strong = span.marks.includes('strong');
+const emphasis = span.marks.includes('em');
+---
+
+{span.link ? (
+  <a
+    href={span.link.href}
+    target={span.link.openInNewTab ? '_blank' : undefined}
+    rel={span.link.openInNewTab ? 'noreferrer' : undefined}
+  >
+    {strong && emphasis ? <strong><em>{span.text}</em></strong> : strong ? <strong>{span.text}</strong> : emphasis ? <em>{span.text}</em> : span.text}
+  </a>
+) : strong && emphasis ? <strong><em>{span.text}</em></strong> : strong ? <strong>{span.text}</strong> : emphasis ? <em>{span.text}</em> : span.text}

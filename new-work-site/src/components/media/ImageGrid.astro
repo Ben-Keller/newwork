@@ -1,0 +1,28 @@
+---
+import ResponsiveImage from '../ResponsiveImage.astro';
+import MediaCaption from './MediaCaption.astro';
+import type { ImageGridBlock } from '../../lib/types';
+interface Props { block: ImageGridBlock; eager?: boolean; sizes?: string }
+const { block, eager = false, sizes = '(min-width: 768px) 34vw, 100vw' } = Astro.props;
+---
+<figure class="media-block media-block--grid">
+  <div class:list={['media-image-grid', `media-image-grid--${block.columns || 3}`]}>
+    {block.images.map((image, index) => (
+      <div class="media-item">
+        <ResponsiveImage
+          image={image}
+          sizes={sizes}
+          eager={eager && index === 0}
+          projectPoster={eager && index === 0}
+        />
+        {image.caption || image.credit ? (
+          <p class="media-item__meta">
+            {image.caption ? <span>{image.caption}</span> : null}
+            {image.credit ? <span class="media-credit">{image.credit}</span> : null}
+          </p>
+        ) : null}
+      </div>
+    ))}
+  </div>
+  <MediaCaption caption={block.caption} credit={block.credit} />
+</figure>

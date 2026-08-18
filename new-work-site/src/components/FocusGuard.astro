@@ -1,0 +1,17 @@
+---
+export type FocusGuardEdge = 'start' | 'end';
+
+export interface Props {
+  edge: FocusGuardEdge;
+  class?: string;
+}
+
+const { edge, class: className } = Astro.props;
+---
+
+<span
+  class:list={['focus-guard', className]}
+  data-focus-guard={edge}
+  tabindex="-1"
+  role="presentation"
+></span>

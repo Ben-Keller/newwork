@@ -1,0 +1,9 @@
+---
+import ContactDetails from '../components/ContactDetails.astro';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { getSiteContent } from '../lib/content';
+const content = await getSiteContent();
+---
+<BaseLayout content={content} title="Contact" seo={content.settings.contactSeo} pageClass="utility-page">
+  <ContactDetails settings={content.settings} />
+</BaseLayout>

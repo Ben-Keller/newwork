@@ -1,0 +1,51 @@
+---
+import type { ContentMode, ProjectLayoutVariant } from '../../lib/types';
+
+interface Props {
+  mode: ContentMode;
+  projectTitle: string;
+  projectSlug: string;
+  variant: ProjectLayoutVariant;
+}
+
+const { mode, projectTitle, projectSlug, variant } = Astro.props;
+const variation = [...projectSlug].reduce((total, character) => total + character.charCodeAt(0), 0) % 4;
+---
+
+{mode !== 'production' ? (
+  <section
+    class="project-placeholder-content"
+    aria-label={`${projectTitle} additional project studies`}
+    data-project-placeholder-content
+    data-placeholder-variation={variation}
+    data-placeholder-variant={variant}
+  >
+    <figure class="project-placeholder-figure project-placeholder-figure--wide" data-placeholder-visual>
+      <div
+        class="project-placeholder-canvas project-placeholder-canvas--wide"
+        role="img"
+        aria-label={`Abstract editorial study for ${projectTitle}`}
+      >
+        <span class="project-placeholder-index" aria-hidden="true">01</span>
+        <span class="project-placeholder-shape project-placeholder-shape--a" aria-hidden="true"></span>
+        <span class="project-placeholder-shape project-placeholder-shape--b" aria-hidden="true"></span>
+        <span class="project-placeholder-word" aria-hidden="true">Lorem</span>
+      </div>
+      <figcaption><span>Lorem ipsum dolor sit amet</span><span>Consectetur adipiscing elit</span></figcaption>
+    </figure>
+
+    <figure class="project-placeholder-figure project-placeholder-figure--inset" data-placeholder-visual>
+      <div
+        class="project-placeholder-canvas project-placeholder-canvas--inset"
+        role="img"
+        aria-label={`Abstract detail study for ${projectTitle}`}
+      >
+        <span class="project-placeholder-index" aria-hidden="true">02</span>
+        <span class="project-placeholder-shape project-placeholder-shape--c" aria-hidden="true"></span>
+        <span class="project-placeholder-shape project-placeholder-shape--d" aria-hidden="true"></span>
+        <span class="project-placeholder-word" aria-hidden="true">Ipsum</span>
+      </div>
+      <figcaption><span>Sed do eiusmod tempor incididunt</span><span>Ut labore et dolore magna aliqua</span></figcaption>
+    </figure>
+  </section>
+) : null}

@@ -1,0 +1,47 @@
+---
+import Wordmark from './Wordmark.astro';
+import type { WordmarkPath, WordmarkTone, WordmarkVariant } from './Wordmark.astro';
+
+export interface Props {
+  label?: string;
+  variant?: WordmarkVariant;
+  tone?: WordmarkTone;
+  paths?: readonly (string | WordmarkPath)[];
+  viewBox?: string;
+  artworkSrc?: string;
+  artworkWidth?: number;
+  artworkHeight?: number;
+  class?: string;
+}
+
+const {
+  label = 'New Work Agency',
+  variant = 'full',
+  tone = 'dark',
+  paths = [],
+  viewBox,
+  artworkSrc,
+  artworkWidth,
+  artworkHeight,
+  class: className,
+} = Astro.props;
+---
+
+<span
+  class:list={['brand-lockup', `brand-lockup--${variant}`, `brand-lockup--${tone}`, className]}
+  data-brand-lockup
+  aria-hidden="true"
+>
+  <Wordmark
+    class="brand-lockup__mark"
+    label={label}
+    variant={variant}
+    tone={tone}
+    paths={paths}
+    viewBox={viewBox}
+    artworkSrc={artworkSrc}
+    artworkWidth={artworkWidth}
+    artworkHeight={artworkHeight}
+    decorative
+  />
+</span>

@@ -1,0 +1,74 @@
+---
+import type { ContentBlockView, ContentMode, MotionIntensity } from '../lib/types';
+import { isProjectMediaBlock } from '../lib/project-layout';
+import ProjectContentBlock from './project/ProjectContentBlock.astro';
+
+interface Props {
+  blocks: ContentBlockView[];
+  mode: ContentMode;
+  projectTitle: string;
+  maskSequence?: string[];
+  motionIntensity?: MotionIntensity;
+}
+
+const {
+  blocks,
+  mode,
+  projectTitle,
+  maskSequence = [],
+  motionIntensity = 'medium',
+} = Astro.props;
+const safeKey = (key: string) => key.replace(/[^A-Za-z0-9_-]/gu, '-');
+const blockId = (block: ContentBlockView) => `media-block-${safeKey(block._key)}`;
+const captionId = (block: ContentBlockView) => `media-caption-${safeKey(block._key)}`;
+const mediaBlocks = blocks.filter(isProjectMediaBlock);
+const mediaIndexes = new Map(mediaBlocks.map((block, index) => [block._key, index + 1]));
+const masks = new Map(mediaBlocks.map((block, index) => [
+  block._key,
+  maskSequence.length ? safeKey(maskSequence[index % maskSequence.length] || 'plain') : 'plain',
+]));
+const parallaxAmount = motionIntensity === 'high' ? 5 : motionIntensity === 'medium' ? 3 : 0;
+const parallaxes = new Map(mediaBlocks.map((block, index) => [
+  block._key,
+  parallaxAmount ? String(index % 2 === 0 ? parallaxAmount : parallaxAmount * -1) : undefined,
+]));
+const captionAssociations = new Map<number, string[]>();
+
+blocks.forEach((block, index) => {
+  if (block._type !== 'caption') return;
+  const direction = block.association === 'next' ? 1 : -1;
+  let candidate = index + direction;
+  while (candidate >= 0 && candidate < blocks.length && !isProjectMediaBlock(blocks[candidate]!)) {
+    candidate += direction;
+  }
+  if (candidate < 0 || candidate >= blocks.length) return;
+  captionAssociations.set(candidate, [
+    ...(captionAssociations.get(candidate) || []),
+    captionId(block),
+  ]);
+});
+---
+
+<section class="media-stream" aria-label={`${projectTitle} project content`}>
+  {blocks.map((block, index) => (
+    <div
+      class:list={['media-stream__item', `media-stream__item--${block._type}`]}
+      id={blockId(block)}
+      aria-describedby={captionAssociations.get(index)?.join(' ')}
+      data-project-block={block._type}
+      data-project-media={isProjectMediaBlock(block) ? 'true' : undefined}
+      data-media-index={mediaIndexes.get(block._key)}
+      data-media-mask={masks.get(block._key)}
+      data-motion-reveal={isProjectMediaBlock(block) ? 'clip' : undefined}
+      data-motion-delay={isProjectMediaBlock(block) ? '0.04' : undefined}
+      data-motion-parallax={parallaxes.get(block._key)}
+    >
+      <ProjectContentBlock
+        block={block}
+        mode={mode}
+        projectTitle={projectTitle}
+        captionId={captionId(block)}
+      />
+    </div>
+  ))}
+</section>

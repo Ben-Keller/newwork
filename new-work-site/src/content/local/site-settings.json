@@ -1,0 +1,143 @@
+{
+  "_id": "siteSettings",
+  "_type": "siteSettings",
+  "siteName": "New Work Agency",
+  "wordmark": {
+    "format": "file",
+    "file": "assets/web-ready/brand/new-black.svg",
+    "width": 1641,
+    "height": 824
+  },
+  "compactMark": {
+    "format": "file",
+    "file": "assets/web-ready/brand/new-black.svg",
+    "width": 1641,
+    "height": 824
+  },
+  "manifesto": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.",
+  "manifestoNeedsReview": true,
+  "about": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+  "aboutPeople": [
+    {
+      "_key": "about-person-michael",
+      "name": "Michael",
+      "projectOwner": "michael",
+      "roleLabel": "Consectetur / Adipiscing elit",
+      "bio": "Sed posuere consectetur est at lobortis. Aenean lacinia bibendum nulla sed consectetur. Cras mattis consectetur purus sit amet fermentum. Integer posuere erat a ante venenatis dapibus posuere velit aliquet, donec id elit non mi porta gravida at eget metus.",
+      "needsReview": true,
+      "prototypeOnly": true,
+      "doNotPublishWithoutExplicitApproval": false
+    },
+    {
+      "_key": "about-person-oliver",
+      "name": "Oliver",
+      "projectOwner": "oliver",
+      "roleLabel": "Lorem ipsum / Dolor sit amet",
+      "bio": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Praesent commodo cursus magna, vel scelerisque nisl consectetur et. Donec ullamcorper nulla non metus auctor fringilla. Maecenas faucibus mollis interdum, sed posuere consectetur est at lobortis.",
+      "needsReview": true,
+      "prototypeOnly": true,
+      "doNotPublishWithoutExplicitApproval": false
+    },
+    {
+      "_key": "about-person-anjali",
+      "name": "Anjali Rao",
+      "projectOwner": "anjali",
+      "roleLabel": "Creative Director / Art Direction",
+      "bio": "Anjali Rao is a Creative Director and art director whose practice spans Adobe, Stella Artois and Rakuten. Her portfolio brings together image-led campaigns, film and playful conceptual work.",
+      "selectedWork": [
+        {
+          "_key": "about-work-anjali-adobe",
+          "title": "Adobe",
+          "client": "Adobe",
+          "url": "https://arao.squarespace.com/new-page-10/",
+          "image": "assets/web-ready/images/anjali/anjali-adobe-portrait.webp",
+          "alt": "",
+          "needsReview": true,
+          "prototypeOnly": true,
+          "doNotPublishWithoutExplicitApproval": true
+        },
+        {
+          "_key": "about-work-anjali-stella-artois",
+          "title": "Daydream",
+          "client": "Stella Artois",
+          "url": "https://arao.squarespace.com/stella-produced/",
+          "image": "assets/web-ready/images/anjali/anjali-stella-artois.webp",
+          "alt": "",
+          "needsReview": true,
+          "prototypeOnly": true,
+          "doNotPublishWithoutExplicitApproval": true
+        },
+        {
+          "_key": "about-work-anjali-rakuten",
+          "title": "Rakuten",
+          "client": "Rakuten",
+          "url": "https://arao.squarespace.com/rakuten-produced/",
+          "image": "assets/web-ready/images/anjali/anjali-rakuten.webp",
+          "alt": "",
+          "needsReview": true,
+          "prototypeOnly": true,
+          "doNotPublishWithoutExplicitApproval": true
+        },
+        {
+          "_key": "about-work-anjali-rakuten-duet-frame",
+          "title": "Duet",
+          "client": "Rakuten",
+          "url": "https://arao.squarespace.com/rakuten-produced/",
+          "image": "assets/web-ready/images/anjali/anjali-rakuten-duet-frame.webp",
+          "alt": "",
+          "needsReview": true,
+          "prototypeOnly": true,
+          "doNotPublishWithoutExplicitApproval": true
+        }
+      ],
+      "needsReview": true,
+      "prototypeOnly": true,
+      "doNotPublishWithoutExplicitApproval": true
+    }
+  ],
+  "capabilities": [
+    "Lorem ipsum",
+    "Dolor sit amet",
+    "Consectetur adipiscing",
+    "Eiusmod tempor"
+  ],
+  "contactEmail": "hello@lorem.ipsum",
+  "location": "Lorem ipsum · Dolor sit amet",
+  "socialLinks": [
+    {
+      "label": "Lorem ipsum",
+      "url": "https://example.invalid/lorem"
+    },
+    {
+      "label": "Dolor sit amet",
+      "url": "https://example.invalid/ipsum"
+    }
+  ],
+  "reel": {
+    "enabled": false,
+    "poster": null,
+    "desktopSource": null,
+    "mobileSource": null,
+    "caption": ""
+  },
+  "notesEnabled": false,
+  "analyticsEnabled": false,
+  "aboutSeo": {
+    "metaTitle": "About — New Work Agency",
+    "metaDescription": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+    "shareImage": null,
+    "noIndex": true
+  },
+  "contactSeo": {
+    "metaTitle": "Contact — New Work Agency",
+    "metaDescription": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+    "shareImage": null,
+    "noIndex": true
+  },
+  "defaultSeo": {
+    "metaTitle": "New Work Agency",
+    "metaDescription": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+    "shareImage": null,
+    "noIndex": true
+  }
+}

@@ -1,0 +1,81 @@
+---
+import type {
+  ProjectLayoutVariant,
+  ProjectView,
+  TitleTreatment,
+} from '../../lib/types';
+
+interface Props {
+  project: ProjectView;
+  variant: ProjectLayoutVariant;
+  titleTreatment: TitleTreatment;
+}
+
+const { project, variant, titleTreatment } = Astro.props;
+const titleWords = project.title.trim().split(/\s+/u).filter(Boolean);
+const outputs = project.types.filter(Boolean);
+const contributors = project.contributors.filter((contributor) => (
+  contributor.name.trim().length > 0 && contributor.role.trim().length > 0
+));
+---
+
+<header
+  class:list={[
+    'project-header',
+    'project-template__header',
+    `project-template__header--${variant}`,
+    `project-title-treatment--${titleTreatment}`,
+  ]}
+  data-project-header
+>
+  <div class="project-header__copy" data-project-hero-copy>
+    <div class="project-header__title">
+      <p class="eyebrow">Project / {variant === 'photoEssay' ? 'Photo essay' : variant}</p>
+      <h1 id="project-title" aria-label={project.title} data-project-title data-split-text>
+        <span class="project-title__words" aria-hidden="true">
+          {titleWords.map((word, index) => (
+            <span
+              class="project-title__mask"
+              data-project-title-line
+            >
+              <span
+                class="project-title__word"
+                data-motion-reveal="up"
+                data-motion-delay={(0.18 + index * 0.035).toFixed(3)}
+              >{word}</span>
+            </span>
+          ))}
+        </span>
+      </h1>
+    </div>
+
+    {project.shortDescription ? (
+      <p
+        class="project-header__description"
+        data-project-copy
+        data-motion-reveal="up"
+        data-motion-delay="0.28"
+      >{project.shortDescription}</p>
+    ) : null}
+
+    <div
+      class="project-header__context"
+      aria-label="Project metadata"
+      data-motion-reveal="up"
+      data-motion-delay="0.32"
+    >
+      {project.client ? <p><span class="meta-label">Client</span><span>{project.client}</span></p> : null}
+      {outputs.length ? <p><span class="meta-label">Output</span><span>{outputs.join(', ')}</span></p> : null}
+      {project.role ? <p><span class="meta-label">Role</span><span>{project.role}</span></p> : null}
+      {project.year ? <p><span class="meta-label">Year</span><span>{project.year}</span></p> : null}
+      {contributors.length ? (
+        <p>
+          <span class="meta-label">Contributors</span>
+          <span>{contributors.map((item) => `${item.name} — ${item.role}`).join(', ')}</span>
+        </p>
+      ) : null}
+    </div>
+  </div>
+
+  <div class="project-header__media"><slot name="media" /></div>
+</header>

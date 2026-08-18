@@ -1,0 +1,22 @@
+---
+import type { ContentMode } from '../lib/types';
+
+interface Props {
+  mode: ContentMode;
+  enabled: boolean;
+}
+
+const { mode, enabled } = Astro.props;
+const token = import.meta.env.PUBLIC_CLOUDFLARE_ANALYTICS_TOKEN?.trim();
+const shouldLoad = mode === 'production' && enabled && Boolean(token);
+---
+
+{shouldLoad ? (
+  <script
+    is:inline
+    defer
+    src="https://static.cloudflareinsights.com/beacon.min.js"
+    data-cf-beacon={JSON.stringify({ token })}
+    data-cloudflare-analytics
+  ></script>
+) : null}

@@ -1,0 +1,180 @@
+---
+import DesktopNav from './DesktopNav.astro';
+import type { NavItem } from './DesktopNav.astro';
+import MobileMenu from './MobileMenu.astro';
+import BrandLockup from './BrandLockup.astro';
+import type { WordmarkPath, WordmarkTone, WordmarkVariant } from './Wordmark.astro';
+import type { BrandAssetView } from '../lib/types';
+import { withBase, withoutBase } from '../lib/base-path';
+
+export interface Props {
+  currentPath?: string;
+  showNotes?: boolean;
+  siteName?: string;
+  navItems?: readonly NavItem[];
+  logoVariant?: WordmarkVariant;
+  tone?: WordmarkTone;
+  wordmarkPaths?: readonly (string | WordmarkPath)[];
+  wordmarkViewBox?: string;
+  wordmarkAsset?: BrandAssetView;
+  compactMarkAsset?: BrandAssetView;
+  galleryEditing?: boolean;
+  sticky?: boolean;
+  id?: string;
+  class?: string;
+}
+
+const {
+  currentPath = withoutBase(Astro.url.pathname),
+  showNotes = false,
+  siteName = 'New Work Agency',
+  navItems,
+  logoVariant = 'full',
+  tone = 'dark',
+  wordmarkPaths = [],
+  wordmarkViewBox,
+  wordmarkAsset,
+  compactMarkAsset,
+  galleryEditing = false,
+  sticky = false,
+  id = 'site-header',
+  class: className,
+} = Astro.props;
+
+const defaultItems: NavItem[] = [
+  { href: withBase('/'), label: 'Work', match: 'section' },
+  { href: withBase('/about'), label: 'About', match: 'section' },
+  ...(showNotes ? [{ href: withBase('/notes'), label: 'Notes', match: 'section' as const }] : []),
+  { href: withBase('/contact'), label: 'Contact', match: 'section' },
+];
+const items = navItems ?? defaultItems;
+const showGalleryTools = galleryEditing && currentPath === '/';
+---
+
+<header
+  class:list={['site-header', { 'site-header--sticky': sticky }, className]}
+  id={id}
+  data-site-header
+>
+  <div class="site-header__inner">
+    <a
+      href={withBase('/')}
+      class:list={['site-header__brand', compactMarkAsset && 'site-header__brand--has-compact']}
+      aria-label={siteName}
+      transition:persist="site-wordmark"
+    >
+      <BrandLockup
+        class="site-header__full-mark"
+        label={siteName}
+        variant={logoVariant}
+        tone={tone}
+        paths={wordmarkPaths}
+        viewBox={wordmarkViewBox}
+        artworkSrc={wordmarkAsset?.src}
+        artworkWidth={wordmarkAsset?.width}
+        artworkHeight={wordmarkAsset?.height}
+      />
+      {compactMarkAsset ? (
+        <BrandLockup
+          class="site-header__compact-mark"
+          label={siteName}
+          variant="compact"
+          tone={tone}
+          artworkSrc={compactMarkAsset.src}
+          artworkWidth={compactMarkAsset.width}
+          artworkHeight={compactMarkAsset.height}
+        />
+      ) : null}
+    </a>
+
+    <div class="site-header__actions">
+      {showGalleryTools ? (
+        <div class="gallery-order-tools" data-gallery-order-tools hidden>
+          <button type="button" data-gallery-shuffle aria-label="Shuffle gallery order">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M16 3h5v5M4 6h3.5c4.5 0 4.5 12 9 12H21M16 21h5v-5M4 18h3.5c1.5 0 2.6-1.3 3.6-3M13 9c1-1.7 2-3 3.5-3H21" />
+            </svg>
+            <span>Shuffle</span>
+          </button>
+          <button type="button" data-gallery-save aria-label="Save gallery order">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M5 3h12l2 2v16H5zM8 3v6h8V3M8 21v-7h8v7" />
+            </svg>
+            <span data-gallery-save-label>Save</span>
+          </button>
+          <button type="button" data-gallery-restore hidden aria-label="Restore removed gallery items">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 8V3m0 0h5M4 3l4 4a8 8 0 1 1-2 8" />
+            </svg>
+            <span>Restore</span>
+          </button>
+          <span class="sr-only" aria-live="polite" data-gallery-order-status></span>
+        </div>
+      ) : null}
+      <DesktopNav items={items} currentPath={currentPath} />
+      <MobileMenu
+        items={items}
+        currentPath={currentPath}
+        instanceId={`${id}-mobile-navigation`}
+      />
+    </div>
+  </div>
+</header>
+
+<script>
+  declare global {
+    interface Window {
+      __newWorkGalleryToolsFeedbackCleanup?: () => void;
+    }
+  }
+
+  const setupGalleryOrderTools = (): void => {
+    const tools = document.querySelector<HTMLElement>('[data-gallery-order-tools]');
+    if (!tools || !document.querySelector('[data-project-grid]')) return;
+    tools.hidden = false;
+    if (tools.dataset.orderToolsReady === 'true') return;
+    tools.dataset.orderToolsReady = 'true';
+
+    const saveLabel = tools.querySelector<HTMLElement>('[data-gallery-save-label]');
+    const restore = tools.querySelector<HTMLButtonElement>('[data-gallery-restore]');
+    const status = tools.querySelector<HTMLElement>('[data-gallery-order-status]');
+    tools.querySelector<HTMLButtonElement>('[data-gallery-shuffle]')?.addEventListener('click', () => {
+      document.dispatchEvent(new CustomEvent('new-work:gallery-shuffle'));
+      if (saveLabel) saveLabel.textContent = 'Save';
+      tools.dataset.orderState = 'unsaved';
+    });
+    tools.querySelector<HTMLButtonElement>('[data-gallery-save]')?.addEventListener('click', () => {
+      document.dispatchEvent(new CustomEvent('new-work:gallery-save'));
+    });
+    restore?.addEventListener('click', () => {
+      document.dispatchEvent(new CustomEvent('new-work:gallery-restore-all'));
+    });
+    window.__newWorkGalleryToolsFeedbackCleanup?.();
+    const onGalleryOrderFeedback = ((event: CustomEvent<{ action: string }>) => {
+      if (event.detail.action === 'saved') {
+        if (saveLabel) saveLabel.textContent = 'Saved';
+        if (status) status.textContent = 'Gallery order saved.';
+        tools.dataset.orderState = 'saved';
+        window.setTimeout(() => {
+          if (saveLabel) saveLabel.textContent = 'Save';
+        }, 1_500);
+      } else if (event.detail.action === 'shuffled') {
+        if (status) status.textContent = 'Gallery shuffled. Save this order if you like it.';
+      } else if (event.detail.action === 'removed') {
+        if (restore) restore.hidden = false;
+        if (status) status.textContent = 'Gallery item removed. Use Restore to bring removed items back.';
+      } else if (event.detail.action === 'error') {
+        if (status) status.textContent = 'This gallery order could not be saved.';
+      }
+    }) as EventListener;
+    document.addEventListener('new-work:gallery-order-feedback', onGalleryOrderFeedback);
+    window.__newWorkGalleryToolsFeedbackCleanup = () => {
+      document.removeEventListener('new-work:gallery-order-feedback', onGalleryOrderFeedback);
+      delete window.__newWorkGalleryToolsFeedbackCleanup;
+    };
+  };
+
+  setupGalleryOrderTools();
+  document.addEventListener('astro:page-load', setupGalleryOrderTools);
+  document.addEventListener('astro:before-swap', () => window.__newWorkGalleryToolsFeedbackCleanup?.());
+</script>

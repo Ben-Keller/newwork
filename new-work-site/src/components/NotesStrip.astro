@@ -1,0 +1,25 @@
+---
+import NoteMedia from './NoteMedia.astro';
+import type { ContentMode, NoteView } from '../lib/types';
+import { withBase } from '../lib/base-path';
+interface Props { notes: NoteView[]; mode: ContentMode }
+const { notes, mode } = Astro.props;
+const visibleNotes = notes.slice(0, 3);
+---
+{visibleNotes.length ? (
+  <section class="notes-strip" aria-labelledby="notes-heading" data-notes-strip>
+    <header><h2 id="notes-heading">Notes</h2><a href={withBase('/notes')}>View all</a></header>
+    <div class="notes-strip__grid">
+      {visibleNotes.map((note) => (
+        <article>
+          <a href={withBase(`/notes/${note.slug}`)}>
+            <NoteMedia media={note.media} title={note.title} mode={mode} sizes="33vw" compact />
+            <p><time datetime={note.date}>{note.date}</time></p>
+            <h3>{note.title}</h3>
+            <p>{note.summary}</p>
+          </a>
+        </article>
+      ))}
+    </div>
+  </section>
+) : null}

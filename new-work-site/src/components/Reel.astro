@@ -1,0 +1,114 @@
+---
+import ResponsiveImage from './ResponsiveImage.astro';
+import VideoControls from './VideoControls.astro';
+import ErrorMedia from './ErrorMedia.astro';
+import { inferVideoMimeType } from './media/video-mime';
+import type { ReelView } from '../lib/types';
+
+interface Props {
+  reel: ReelView;
+}
+const { reel } = Astro.props;
+const ready = reel.enabled && reel.poster && reel.desktopSource;
+const id = 'new-work-reel';
+const desktopMime = inferVideoMimeType(reel.desktopSource);
+const mobileMime = inferVideoMimeType(reel.mobileSource || reel.desktopSource);
+---
+
+{ready ? (
+  <section class="reel" aria-labelledby="reel-heading">
+    <div class="section-kicker"><h2 id="reel-heading">Reel</h2></div>
+    <div class="reel__frame" data-reel-shell data-media-frame style={`aspect-ratio:${reel.aspectRatio || '16 / 9'}`}>
+      <ResponsiveImage image={reel.poster!} sizes="100vw" />
+      <video
+        id={id}
+        muted
+        playsinline
+        preload="none"
+        poster={reel.poster!.src}
+        aria-labelledby="reel-heading"
+        data-reel-video
+      >
+        <source
+          data-deferred-source
+          data-desktop-src={reel.desktopSource}
+          data-mobile-src={reel.mobileSource}
+          data-desktop-type={desktopMime}
+          data-mobile-type={mobileMime}
+          type={desktopMime}
+        />
+      </video>
+      <VideoControls targetId={id} />
+      <ErrorMedia message="Reel unavailable" />
+    </div>
+    {reel.caption ? <p class="reel__caption">{reel.caption}</p> : null}
+    {reel.credits ? <p class="reel__credits">{reel.credits}</p> : null}
+    {reel.ctaLabel && reel.ctaUrl ? <a href={reel.ctaUrl}>{reel.ctaLabel}</a> : null}
+  </section>
+) : null}
+
+<script>
+  import { registerMediaController } from '../lib/motion/media-controller';
+  import { selectDeferredVideoSource } from './media/video-mime';
+
+  let disposeReels = (): void => undefined;
+
+  const setupReels = (): void => {
+    disposeReels();
+    const videos = Array.from(document.querySelectorAll<HTMLVideoElement>('[data-reel-video]'));
+    const observers: IntersectionObserver[] = [];
+    const unregisterControllers: Array<() => void> = [];
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const saveData = Boolean((navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData);
+
+    videos.forEach((video) => {
+      if (video.dataset.reelReady !== 'true') {
+        video.dataset.reelReady = 'true';
+        video.addEventListener('error', () => {
+          video.hidden = true;
+          const controls = video.parentElement?.querySelector<HTMLElement>('[data-video-controls]');
+          if (controls) controls.hidden = true;
+          const error = video.parentElement?.querySelector<HTMLElement>('[data-error-media]');
+          if (error) error.hidden = false;
+        }, { once: true });
+      }
+      const attach = (): void => {
+        const source = video.querySelector<HTMLSourceElement>('source[data-deferred-source]');
+        if (!source || source.hasAttribute('src')) return;
+        const narrow = window.matchMedia('(max-width: 767px)').matches;
+        const { sourceUrl, sourceType } = selectDeferredVideoSource(source.dataset, narrow);
+        if (!sourceUrl) return;
+        source.src = sourceUrl;
+        if (sourceType) source.type = sourceType;
+        video.load();
+      };
+      const observer = !reduced && !saveData
+        ? new IntersectionObserver(async ([entry]) => {
+            if (entry && entry.intersectionRatio >= 0.6 && video.dataset.userPaused !== 'true') {
+              attach();
+              try { await video.play(); } catch { /* controls remain */ }
+            } else video.pause();
+          }, { threshold: [0, 0.6, 1] })
+        : undefined;
+      observer?.observe(video);
+      if (observer) observers.push(observer);
+
+      unregisterControllers.push(registerMediaController({
+        destroy: () => observer?.disconnect(),
+        pause: () => video.pause(),
+        refresh: () => observer?.takeRecords(),
+      }));
+    });
+
+    disposeReels = () => {
+      observers.forEach((observer) => observer.disconnect());
+      unregisterControllers.forEach((unregister) => unregister());
+      videos.forEach((video) => video.pause());
+      disposeReels = () => undefined;
+    };
+  };
+
+  setupReels();
+  document.addEventListener('astro:page-load', setupReels);
+  document.addEventListener('astro:before-swap', () => disposeReels());
+</script>

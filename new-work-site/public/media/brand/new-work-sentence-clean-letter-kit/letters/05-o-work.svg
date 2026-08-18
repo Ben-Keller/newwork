@@ -1,0 +1,22 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="2364.67 0.0 557.04 785.25" style="color:#1a1a1a" role="img" aria-label="o">
+  <defs>
+    <style>
+      .st0, .cls-1 { fill-rule: evenodd; }
+      .st0, .st1, .cls-1, .cls-2 { fill: currentColor; }
+      .nw-letter {
+        transform-box: fill-box;
+        transform-origin: center;
+        will-change: transform, opacity;
+      }
+      .nw-letter__part {
+        transform-box: fill-box;
+        transform-origin: center;
+      }
+    </style>
+  </defs>
+  <g id="nw-sentence-letter-05-o" class="nw-letter nw-letter--o nw-letter--work" data-nw-letter="o" data-letter="o" data-letter-index="4" data-word="work" data-word-index="1" aria-label="o">
+    <path class="cls-1 nw-letter__part" d="M2553.96,786.13c15.05-.35,30.12-.74,45.18-1.13-74.3-28.47-116.72-138.97-116.72-297.3s46.12-278.2,126.42-300.5c-13.87-.75-27.73-1.64-41.58-2.6-16.85,1.11-33.7,2.07-50.57,2.72-90.5,48.93-140.02,155.59-140.02,300.38s48.7,249.7,137.78,299.17c13.17-.18,26.34-.44,39.5-.74Z" id="nw-sentence-letter-05-o__part-1" data-nw-part="1" />
+    <path class="cls-1 nw-letter__part" d="M2771.51,188.3c-6.43.11-12.87.12-19.27.39-25.01,1.05-50.04,1.35-75.06.98,75.52,27.26,118.68,138.3,118.68,298.03s-40.84,264.67-112.57,295.61c30.96-.3,61.91-.09,92.84,1.15,86.41-50.45,133.58-155.45,133.58-296.76s-48.85-250.03-138.2-299.4Z" id="nw-sentence-letter-05-o__part-2" data-nw-part="2" />
+  </g>
+</svg>

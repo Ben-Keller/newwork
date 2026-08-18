@@ -1,0 +1,19 @@
+---
+interface Props {
+  name: 'play' | 'pause';
+}
+
+const { name } = Astro.props;
+---
+
+<span class={`media-control-icon media-control-icon--${name}`} data-media-control-icon={name} aria-hidden="true">
+  {name === 'play' ? (
+    <svg viewBox="0 0 24 24" focusable="false">
+      <path d="M7.5 4.75 19 12 7.5 19.25Z" fill="currentColor" />
+    </svg>
+  ) : (
+    <svg viewBox="0 0 24 24" focusable="false">
+      <path d="M6.75 5h4v14h-4zM13.25 5h4v14h-4z" fill="currentColor" />
+    </svg>
+  )}
+</span>
