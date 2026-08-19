@@ -127,7 +127,7 @@
     max-width: 37rem;
   }
 
-  .about-person--michael .about-person__copy {
+  :is(.about-person--michael, .about-person--anjali) .about-person__copy {
     grid-column: 9 / -1;
   }
 
@@ -178,7 +178,7 @@
     background: #fff;
   }
 
-  .about-person--michael .about-person__media {
+  :is(.about-person--michael, .about-person--anjali) .about-person__media {
     grid-column: 1 / span 8;
   }
 
@@ -445,11 +445,11 @@
     grid-column: 5 / -1;
   }
 
-  .about-person--michael .about-person__copy {
+  :is(.about-person--michael, .about-person--anjali) .about-person__copy {
     grid-column: 7 / -1;
   }
 
-  .about-person--michael .about-person__media {
+  :is(.about-person--michael, .about-person--anjali) .about-person__media {
     grid-column: 1 / span 6;
   }
 

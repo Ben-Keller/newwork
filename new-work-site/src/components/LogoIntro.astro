@@ -855,6 +855,16 @@ const titleWordmarkMarkup = titleKit.wordmark
       font-size: clamp(6.1rem, 31vw, 11rem);
       line-height: .68;
     }
+    /* The outlined word is assembled from independently interactive letters.
+       Negative tracking makes their strokes cross one another on narrow
+       screens, which reads as stray lines inside the hollow glyphs. Keep the
+       desktop overlap, but let the mobile outline meet cleanly edge-to-edge. */
+    .logo-intro__type-line--outline {
+      letter-spacing: 0;
+    }
+    [data-type-title-line="new"] [data-type-letter="2"] {
+      margin-inline-start: 0;
+    }
     .logo-intro__mosaic { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .logo-intro__cell:nth-child(n + 3) { display: none; }
   }

@@ -666,7 +666,7 @@ async function expectAboutLayout(page: Page, width: number, height: number) {
       expect(profile.media.width).toBeGreaterThanOrEqual(width >= 1200 ? 500 : 400);
       if (profile.owner === 'oliver') expect(profile.copy.left).toBeLessThan(profile.media.left);
       if (profile.owner === 'michael') expect(profile.media.left).toBeLessThan(profile.copy.left);
-      if (profile.owner === 'anjali') expect(profile.copy.left).toBeLessThan(profile.media.left);
+      if (profile.owner === 'anjali') expect(profile.media.left).toBeLessThan(profile.copy.left);
     } else {
       expect(profile.copy.bottom).toBeLessThanOrEqual(profile.media.top + 1);
       const internalGap = profile.media.top - profile.copy.bottom;
