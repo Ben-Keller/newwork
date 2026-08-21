@@ -855,12 +855,29 @@ const titleWordmarkMarkup = titleKit.wordmark
       font-size: clamp(6.1rem, 31vw, 11rem);
       line-height: .68;
     }
-    /* The outlined word is assembled from independently interactive letters.
-       Negative tracking makes their strokes cross one another on narrow
-       screens, which reads as stray lines inside the hollow glyphs. Keep the
-       desktop overlap, but let the mobile outline meet cleanly edge-to-edge. */
+    /* Desktop keeps independently interactive letter masks. On mobile, paint
+       one continuous resting word instead: separate stroked glyphs expose
+       their shared boundaries as lines inside the hollow title. The original
+       letter boxes remain in flow so sizing stays identical. */
     .logo-intro__type-line--outline {
+      position: relative;
+      color: transparent;
       letter-spacing: 0;
+      -webkit-text-stroke-width: 0;
+    }
+    .logo-intro__type-line--outline::before {
+      position: absolute;
+      z-index: 1;
+      inset: 0 auto auto 0;
+      color: transparent;
+      content: 'new';
+      letter-spacing: 0;
+      -webkit-text-stroke: clamp(1.5px, .17vw, 3px) var(--color-ink, #101010);
+      paint-order: stroke fill;
+      pointer-events: none;
+    }
+    .logo-intro__type-line--outline .logo-intro__type-letter-rest {
+      opacity: 0;
     }
     [data-type-title-line="new"] [data-type-letter="2"] {
       margin-inline-start: 0;
