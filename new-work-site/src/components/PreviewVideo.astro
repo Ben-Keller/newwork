@@ -94,8 +94,47 @@ const { source, poster, mobilePoster, title, placeholder = false } = Astro.props
     if (poster && video.poster !== new URL(poster, window.location.href).href) video.poster = poster;
   };
 
+  const previewPosterImage = (video: HTMLVideoElement) => video.closest<HTMLElement>('[data-card-media]')
+    ?.querySelector<HTMLImageElement>('img[data-gallery-image]');
+
+  const posterIsStable = (video: HTMLVideoElement) => {
+    const image = previewPosterImage(video);
+    return !image || (
+      image.dataset.galleryImageReady === 'true'
+      && image.complete
+      && image.naturalWidth > 0
+    );
+  };
+
+  const waitForStablePoster = async (video: HTMLVideoElement) => {
+    const image = previewPosterImage(video);
+    if (!image || posterIsStable(video)) return true;
+    if (!image.complete) {
+      await new Promise<void>((resolve) => {
+        const settle = () => {
+          image.removeEventListener('load', settle);
+          image.removeEventListener('error', settle);
+          resolve();
+        };
+        image.addEventListener('load', settle, { once: true });
+        image.addEventListener('error', settle, { once: true });
+      });
+    }
+    if (image.naturalWidth <= 0) return false;
+    try {
+      await image.decode();
+    } catch {
+      // naturalWidth confirms the browser still has a usable decoded image.
+    }
+    if (image.naturalWidth <= 0) return false;
+    image.dataset.galleryImageReady = 'true';
+    image.closest<HTMLElement>('[data-media-frame]')?.setAttribute('data-media-ready', 'true');
+    refreshPoster(video);
+    return true;
+  };
+
   const attachSource = (video: HTMLVideoElement) => {
-    if (video.hasAttribute('src') || reducedMotion.matches || saveData) return false;
+    if (video.hasAttribute('src') || reducedMotion.matches || saveData || !posterIsStable(video)) return false;
     const source = video.dataset.source;
     if (!source) return false;
     refreshPoster(video);
@@ -145,9 +184,12 @@ const { source, poster, mobilePoster, title, placeholder = false } = Astro.props
       || video.dataset.previewFramePending === 'true'
       || (video.dataset.playing === 'true' && !video.paused)
     ) return;
-    attachSource(video);
     video.dataset.previewStarting = 'true';
     try {
+      if (!await waitForStablePoster(video)) return;
+      if (!state.active.includes(video) || !video.isConnected || document.hidden) return;
+      attachSource(video);
+      if (!video.hasAttribute('src')) return;
       await video.play();
       if (!state.active.includes(video)) {
         video.pause();
@@ -251,6 +293,7 @@ const { source, poster, mobilePoster, title, placeholder = false } = Astro.props
     requestPreviewRefresh();
     requestSettledRefreshes();
   }, { passive: true });
+  document.addEventListener('new-work:gallery-image-ready', requestPreviewRefresh);
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) state.active.slice().forEach(pause);
     else setupPreviews();

@@ -173,6 +173,11 @@
   .project-card .responsive-image, .project-card .responsive-image picture,
   .project-card .responsive-image img { width: 100%; height: 100%; }
   .project-card img { object-fit: cover; }
+  .project-card img[data-gallery-image] {
+    opacity: 0;
+    transition: opacity 360ms cubic-bezier(.22, 1, .36, 1);
+  }
+  .project-card img[data-gallery-image][data-gallery-image-ready="true"] { opacity: 1; }
   .project-card a:focus-visible { --card-scale: 1.018; }
   .project-card__label {
     display: block;
@@ -653,6 +658,7 @@
   :is(.all-work-link, .text-link, .social-list a):focus-visible::after { opacity: 1; }
   .manifesto p { opacity: 1; }
   .preview-video { display: none; }
+  .project-card img[data-gallery-image] { transition: none; }
 }
 
 [data-motion-column][data-motion-ready="static"] { transform: none !important; }

@@ -178,6 +178,9 @@ const titleWordmarkMarkup = titleKit.wordmark
             ]}
             data-type-title-line={word}
           >
+            {wordIndex === 0 ? (
+              <span class="logo-intro__mobile-outline-word" aria-hidden="true">new</span>
+            ) : null}
             {letters.map(({ glyph, index, position, poster, style, videoMime, videoSource }) => (
               <span
                 class="logo-intro__type-letter"
@@ -586,6 +589,8 @@ const titleWordmarkMarkup = titleKit.wordmark
     white-space: nowrap;
   }
 
+  .logo-intro__mobile-outline-word { display: none; }
+
   .logo-intro__type-letter {
     position: relative;
     display: inline-block;
@@ -855,33 +860,24 @@ const titleWordmarkMarkup = titleKit.wordmark
       font-size: clamp(6.1rem, 31vw, 11rem);
       line-height: .68;
     }
-    /* Desktop keeps independently interactive letter masks. On mobile, paint
-       one continuous resting word instead: separate stroked glyphs expose
-       their shared boundaries as lines inside the hollow title. The original
-       letter boxes remain in flow so sizing stays identical. */
+    /* Desktop keeps independently interactive letter masks. Android Chrome
+       can expose hidden per-letter stroke/canvas geometry when another
+       whole-word outline sits above it. Mobile therefore gets one dedicated
+       resting word and removes every interactive letter layer from layout. */
     .logo-intro__type-line--outline {
-      position: relative;
       color: transparent;
       letter-spacing: 0;
       -webkit-text-stroke-width: 0;
     }
-    .logo-intro__type-line--outline::before {
-      position: absolute;
-      z-index: 1;
-      inset: 0 auto auto 0;
+    .logo-intro__mobile-outline-word {
+      display: block;
       color: transparent;
-      content: 'new';
       letter-spacing: 0;
       -webkit-text-stroke: clamp(1.5px, .17vw, 3px) var(--color-ink, #101010);
       paint-order: stroke fill;
       pointer-events: none;
     }
-    .logo-intro__type-line--outline .logo-intro__type-letter-rest {
-      opacity: 0;
-    }
-    [data-type-title-line="new"] [data-type-letter="2"] {
-      margin-inline-start: 0;
-    }
+    .logo-intro__type-line--outline .logo-intro__type-letter { display: none; }
     .logo-intro__mosaic { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .logo-intro__cell:nth-child(n + 3) { display: none; }
   }

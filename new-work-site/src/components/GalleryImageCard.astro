@@ -23,6 +23,7 @@ const {
   tabletColumnStart = false,
   editable = false,
 } = Astro.props;
+const eager = desktopColumnStart || tabletColumnStart;
 ---
 
 <article
@@ -48,6 +49,8 @@ const {
         <ResponsiveImage
           image={item.image}
           sizes="(min-width: 1200px) 25vw, (min-width: 768px) 50vw, 100vw"
+          eager={eager}
+          priority={false}
           galleryPreload
         />
       </div>

@@ -24,7 +24,10 @@ const {
   tabletColumnStart = false,
   editable = false,
 } = Astro.props;
-const eager = index === 0;
+// The first tile in every responsive lane is immediately visible during the
+// opening zoom. Load those posters eagerly, while reserving high fetch priority
+// for the single LCP candidate.
+const eager = index === 0 || desktopColumnStart || tabletColumnStart;
 const homeCardSize = project.homeCardSize || 'standard';
 const homeTreatment = project.homeTreatment || 'standard';
 const requestedOffset = Number.isFinite(project.homeOffset) ? project.homeOffset : 0;
@@ -71,6 +74,7 @@ const tabletColumnResponse = tabletColumn ? COLUMN_SCROLL_RESPONSES[tabletColumn
           mobileImage={project.cover.mobilePoster}
           sizes="(min-width: 1200px) 25vw, (min-width: 768px) 50vw, 100vw"
           eager={eager}
+          priority={index === 0}
           galleryPreload
         />
         {project.cover.previewVideo ? (
