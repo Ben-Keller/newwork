@@ -871,13 +871,12 @@ const titleWordmarkMarkup = titleKit.wordmark
   @media (max-width: 767px), (hover: none) and (pointer: coarse) {
     .logo-intro__type-line--outline {
       color: transparent;
-      letter-spacing: 0;
       -webkit-text-stroke-width: 0;
     }
     .logo-intro__mobile-outline-word {
       display: block;
       color: transparent;
-      letter-spacing: 0;
+      letter-spacing: inherit;
       -webkit-text-stroke: clamp(1.5px, .17vw, 3px) var(--color-ink, #101010);
       paint-order: stroke fill;
       pointer-events: none;
