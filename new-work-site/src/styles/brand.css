@@ -11,7 +11,10 @@
 
 @font-face {
   font-family: "New Work Sans";
-  src: local("PP Neue Montreal Thin"), local("PPNeueMontreal-Thin");
+  src:
+    url("../assets/fonts/pp-neue-montreal-thin.woff2") format("woff2"),
+    local("PP Neue Montreal Thin"),
+    local("PPNeueMontreal-Thin");
   font-style: normal;
   font-weight: 100 300;
   font-display: swap;
@@ -19,7 +22,11 @@
 
 @font-face {
   font-family: "New Work Sans";
-  src: local("PP Neue Montreal Book"), local("PPNeueMontreal-Book"), local("PP Neue Montreal");
+  src:
+    url("../assets/fonts/pp-neue-montreal-book.woff2") format("woff2"),
+    local("PP Neue Montreal Book"),
+    local("PPNeueMontreal-Book"),
+    local("PP Neue Montreal");
   font-style: normal;
   font-weight: 400;
   font-display: swap;
@@ -27,7 +34,10 @@
 
 @font-face {
   font-family: "New Work Sans";
-  src: local("PP Neue Montreal Medium"), local("PPNeueMontreal-Medium");
+  src:
+    url("../assets/fonts/pp-neue-montreal-medium.woff2") format("woff2"),
+    local("PP Neue Montreal Medium"),
+    local("PPNeueMontreal-Medium");
   font-style: normal;
   font-weight: 500 600;
   font-display: swap;
@@ -35,7 +45,10 @@
 
 @font-face {
   font-family: "New Work Sans";
-  src: local("PP Neue Montreal Bold"), local("PPNeueMontreal-Bold");
+  src:
+    url("../assets/fonts/pp-neue-montreal-bold.woff2") format("woff2"),
+    local("PP Neue Montreal Bold"),
+    local("PPNeueMontreal-Bold");
   font-style: normal;
   font-weight: 700 900;
   font-display: swap;
@@ -43,7 +56,10 @@
 
 @font-face {
   font-family: "New Work Sans";
-  src: local("PP Neue Montreal Italic"), local("PPNeueMontreal-Italic");
+  src:
+    url("../assets/fonts/pp-neue-montreal-italic.woff2") format("woff2"),
+    local("PP Neue Montreal Italic"),
+    local("PPNeueMontreal-Italic");
   font-style: italic;
   font-weight: 400;
   font-display: swap;
@@ -51,7 +67,10 @@
 
 @font-face {
   font-family: "New Work Sans";
-  src: local("PP Neue Montreal SemiBold Italic"), local("PPNeueMontreal-SemiBoldItalic");
+  src:
+    url("../assets/fonts/pp-neue-montreal-semibold-italic.woff2") format("woff2"),
+    local("PP Neue Montreal SemiBold Italic"),
+    local("PPNeueMontreal-SemiBoldItalic");
   font-style: italic;
   font-weight: 500 900;
   font-display: swap;
@@ -59,15 +78,36 @@
 
 @font-face {
   font-family: "New Work Display";
-  src: local("Futura Medium"), local("Futura-Medium"), local("Futura"), local("Futura PT Medium");
+  src:
+    url("../assets/fonts/futura-book.woff2") format("woff2"),
+    local("Futura Book"),
+    local("Futura-Book"),
+    local("Futura"),
+    local("Futura PT Book");
   font-style: normal;
-  font-weight: 400 600;
+  font-weight: 400;
   font-display: swap;
 }
 
 @font-face {
   font-family: "New Work Display";
-  src: local("Futura Bold"), local("Futura-Bold"), local("Futura PT Bold");
+  src:
+    url("../assets/fonts/futura-medium.woff2") format("woff2"),
+    local("Futura Medium"),
+    local("Futura-Medium"),
+    local("Futura PT Medium");
+  font-style: normal;
+  font-weight: 500 600;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "New Work Display";
+  src:
+    url("../assets/fonts/futura-bold.woff2") format("woff2"),
+    local("Futura Bold"),
+    local("Futura-Bold"),
+    local("Futura PT Bold");
   font-style: normal;
   font-weight: 700 900;
   font-display: swap;
