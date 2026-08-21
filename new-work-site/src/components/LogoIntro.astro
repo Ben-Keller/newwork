@@ -860,10 +860,15 @@ const titleWordmarkMarkup = titleKit.wordmark
       font-size: clamp(6.1rem, 31vw, 11rem);
       line-height: .68;
     }
-    /* Desktop keeps independently interactive letter masks. Android Chrome
-       can expose hidden per-letter stroke/canvas geometry when another
-       whole-word outline sits above it. Mobile therefore gets one dedicated
-       resting word and removes every interactive letter layer from layout. */
+    .logo-intro__mosaic { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .logo-intro__cell:nth-child(n + 3) { display: none; }
+  }
+
+  /* This is a device/rendering distinction, not only a viewport distinction.
+     Android Chrome remains a coarse, non-hovering pointer when "Desktop site"
+     gives it a wide viewport. In both phone layouts and that mode, paint one
+     resting word and remove the independently composited hover-letter layers. */
+  @media (max-width: 767px), (hover: none) and (pointer: coarse) {
     .logo-intro__type-line--outline {
       color: transparent;
       letter-spacing: 0;
@@ -878,8 +883,6 @@ const titleWordmarkMarkup = titleKit.wordmark
       pointer-events: none;
     }
     .logo-intro__type-line--outline .logo-intro__type-letter { display: none; }
-    .logo-intro__mosaic { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .logo-intro__cell:nth-child(n + 3) { display: none; }
   }
 
   @media (prefers-reduced-motion: reduce) {
