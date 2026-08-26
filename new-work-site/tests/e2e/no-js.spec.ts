@@ -8,10 +8,12 @@ test('the work index and film fallback remain useful without JavaScript', async 
   expect(homeResponse?.status()).toBe(200);
   await expect(page.locator('[data-logo-intro]')).toBeVisible();
   await expect(page.locator('[data-type-title]')).toBeVisible();
-  await expect(page.locator('[data-type-title-line]')).toHaveText(['new', 'work']);
+  expect(await page.locator('[data-type-title-line]').evaluateAll((lines) =>
+    lines.map((line) => (line as HTMLElement).dataset.typeTitleLine),
+  )).toEqual(['new', 'work']);
   await expect(page.locator('[data-svg-title]')).toHaveCount(0);
   await expect(page.getByRole('heading', { level: 1, name: 'Selected work' })).toBeAttached();
-  await expect(page.locator('[data-project-card]')).toHaveCount(32);
+  await expect(page.locator('[data-project-card]')).toHaveCount(28);
   await expect(page.locator('[data-gallery-remove]')).toHaveCount(0);
   await expect(page.getByRole('link', { name: /Arc/u })).toBeVisible();
   await expect(page.locator('[data-project-grid]')).not.toHaveAttribute('data-masonry-ready');
@@ -71,6 +73,10 @@ test('the work index and film fallback remain useful without JavaScript', async 
   await expect(page.locator('.lazy-embed__poster img')).toBeVisible();
   await expect(page.getByText('Film playback is unavailable. The poster remains visible.')).toBeVisible();
   await expect(page.getByRole('link', { name: 'Open film reference in a new tab' })).toBeVisible();
+  await expect(page.locator('[data-project-overlay-panel]')).toBeVisible();
+  await expect(page.locator('[data-project-overlay-return]')).toBeVisible();
+  await expect(page.locator('[data-project-overlay-return]')).toHaveAttribute('href', /\/$/u);
+  await expect(page.locator('[data-project-overlay-fallback] img')).not.toHaveCount(0);
   await expect(page.locator('.lazy-embed iframe')).toHaveCount(0);
 });
 
@@ -85,21 +91,18 @@ test('the About profiles remain complete, readable, and ordered without JavaScri
   await expect(about).toBeVisible();
   await expect(page.getByRole('heading', { level: 1, name: 'About', exact: true })).toBeVisible();
   await expect(people.getByRole('heading', { level: 2, name: 'The Creatives', exact: true })).toBeVisible();
-  await expect(profiles).toHaveCount(3);
+  await expect(profiles).toHaveCount(2);
   await expect(profiles.nth(0)).toHaveAttribute('data-about-person', 'michael');
   await expect(profiles.nth(1)).toHaveAttribute('data-about-person', 'oliver');
-  await expect(profiles.nth(2)).toHaveAttribute('data-about-person', 'anjali');
   await expect(profiles.nth(0).getByRole('heading', { level: 3, name: 'Michael', exact: true })).toBeVisible();
   await expect(profiles.nth(1).getByRole('heading', { level: 3, name: 'Oliver', exact: true })).toBeVisible();
-  await expect(profiles.nth(2).getByRole('heading', { level: 3, name: 'Anjali Rao', exact: true })).toBeVisible();
   await expect(about.locator('[data-about-capabilities]')).toBeVisible();
 
   for (const profile of await profiles.all()) {
     const copy = profile.locator('[data-about-person-copy]');
     const media = profile.locator('[data-about-person-media]');
     const links = media.locator('[data-about-work-item]');
-    const owner = await profile.getAttribute('data-about-person');
-    const expectedItems = owner === 'anjali' ? 4 : 5;
+    const expectedItems = 5;
     await expect(copy).toBeVisible();
     await expect(copy.locator('p')).not.toHaveCount(0);
     await expect(media).toBeVisible();
@@ -128,7 +131,7 @@ test('the About profiles remain complete, readable, and ordered without JavaScri
   expect(staticVisibility).toEqual({ hidden: 0, overflow: 0 });
 
   await page.setViewportSize({ width: 320, height: 700 });
-  await page.locator('[data-about-person="anjali"]').scrollIntoViewIfNeeded();
+  await page.locator('[data-about-person="oliver"]').scrollIntoViewIfNeeded();
   const mobileLayout = await profiles.evaluateAll((items) => ({
     overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
     profiles: items.map((profile) => {

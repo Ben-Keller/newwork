@@ -1,6 +1,12 @@
 import { expect, test, type Page } from '@playwright/test';
 
 test.beforeEach(async ({ page }, testInfo) => {
+  if (!testInfo.title.includes('opening gallery')) {
+    await page.addInitScript(() => {
+      window.sessionStorage.setItem('new-work-restore-requested', 'true');
+    });
+  }
+
   if (
     testInfo.title.includes('reduced motion')
     || testInfo.title.includes('first-session')
@@ -26,7 +32,9 @@ test('the landing loads directly into the stacked typographic title while its en
   await expect(intro).toHaveAttribute('data-state', 'settled');
   await expect(intro).not.toHaveAttribute('data-intro-started-at');
   await expect(intro).toHaveAttribute('data-title-treatment', 'type');
-  await expect(intro.locator('[data-type-title-line]')).toHaveText(['new', 'work']);
+  expect(await intro.locator('[data-type-title-line]').evaluateAll((lines) =>
+    lines.map((line) => (line as HTMLElement).dataset.typeTitleLine),
+  )).toEqual(['new', 'work']);
   await expect(intro.locator('[data-svg-title]')).toHaveCount(0);
   expect(await page.evaluate(() => sessionStorage.getItem('new-work:logo-intro:title:v1'))).toBeNull();
 
@@ -111,7 +119,7 @@ test('the header keeps the full title and default logo without preview sliders',
 
 test('the gallery order toolbar stays hidden from the review UI', async ({ page }) => {
   await page.goto('/');
-  await expect(page.locator('[data-project-card]')).toHaveCount(32);
+  await expect(page.locator('[data-project-card]')).toHaveCount(28);
   await expect(page.locator('[data-gallery-order-tools]')).toHaveCount(0);
   await expect(page.getByRole('button', { name: /shuffle gallery|save gallery|restore removed/iu }))
     .toHaveCount(0);
@@ -125,11 +133,10 @@ test('the footer closes every route with a studio statement, directory, and over
   await expect(footer.getByRole('heading', { level: 2, name: 'People' })).toBeVisible();
   await expect(footer.getByRole('heading', { level: 2, name: 'Explore' })).toBeVisible();
   await expect(footer.getByRole('heading', { level: 2, name: 'Connect' })).toBeVisible();
-  await expect(footer.locator('.site-footer__group--people a')).toHaveCount(3);
+  await expect(footer.locator('.site-footer__group--people a')).toHaveCount(2);
   await expect(footer.locator('.site-footer__group--people a')).toHaveText([
     'Michael',
     'Oliver',
-    'Anjali Rao',
   ]);
   await expect(footer.getByRole('link', { name: 'hello@lorem.ipsum' })).toHaveCount(1);
   await expect(footer.locator('.site-footer__legal')).toContainText('New Work Agency');
@@ -250,7 +257,7 @@ test('the type title reveals animated imagery one letter at a time on hover', as
   await expect(firstLetter.locator('.logo-intro__type-letter-rest')).toHaveCSS('opacity', '0');
   expect(await nextLetter.evaluate((element) => getComputedStyle(element, '::before').opacity)).toBe('0');
   await expect(firstLetter.locator('[data-type-letter-video-source]'))
-    .toHaveAttribute('data-src', /stella-artois-daydream/u);
+    .toHaveAttribute('data-src', /mercury-helen-mayer/u);
   await expect(firstLetter).toHaveAttribute('data-type-media-ready', 'true');
   await expect(firstLetter.locator('[data-type-letter-canvas]')).toHaveCSS('opacity', '1');
   expect(await firstLetter.evaluate((element) => getComputedStyle(element, '::before').opacity)).toBe('0');
@@ -506,13 +513,11 @@ async function expectAboutLayout(page: Page, width: number, height: number) {
   await expect(about).toBeVisible();
   await expect(page.getByRole('heading', { level: 1, name: 'About', exact: true })).toHaveCount(1);
   await expect(people.getByRole('heading', { level: 2, name: 'The Creatives', exact: true })).toHaveCount(1);
-  await expect(profiles).toHaveCount(3);
+  await expect(profiles).toHaveCount(2);
   await expect(profiles.nth(0)).toHaveAttribute('data-about-person', 'michael');
   await expect(profiles.nth(1)).toHaveAttribute('data-about-person', 'oliver');
-  await expect(profiles.nth(2)).toHaveAttribute('data-about-person', 'anjali');
   await expect(profiles.nth(0).getByRole('heading', { level: 3, name: 'Michael', exact: true })).toHaveCount(1);
   await expect(profiles.nth(1).getByRole('heading', { level: 3, name: 'Oliver', exact: true })).toHaveCount(1);
-  await expect(profiles.nth(2).getByRole('heading', { level: 3, name: 'Anjali Rao', exact: true })).toHaveCount(1);
   await expect(capabilities.getByRole('heading', { level: 2, name: 'Expertise', exact: true }))
     .toHaveCount(1);
   await expect(capabilities.locator('li')).toHaveCount(4);
@@ -530,10 +535,9 @@ async function expectAboutLayout(page: Page, width: number, height: number) {
   const peopleIndex = headingOrder.findIndex(({ level, text }) => level === 'H2' && text === 'The Creatives');
   const oliverIndex = headingOrder.findIndex(({ level, text }) => level === 'H3' && text === 'Oliver');
   const michaelIndex = headingOrder.findIndex(({ level, text }) => level === 'H3' && text === 'Michael');
-  const anjaliIndex = headingOrder.findIndex(({ level, text }) => level === 'H3' && text === 'Anjali Rao');
   const capabilitiesIndex = headingOrder.findIndex(({ level, text }) => level === 'H2' && text === 'Expertise');
-  expect([aboutIndex, peopleIndex, michaelIndex, oliverIndex, anjaliIndex, capabilitiesIndex])
-    .toEqual([...([aboutIndex, peopleIndex, michaelIndex, oliverIndex, anjaliIndex, capabilitiesIndex])]
+  expect([aboutIndex, peopleIndex, michaelIndex, oliverIndex, capabilitiesIndex])
+    .toEqual([...([aboutIndex, peopleIndex, michaelIndex, oliverIndex, capabilitiesIndex])]
       .sort((left, right) => left - right));
   expect(aboutIndex).toBeGreaterThanOrEqual(0);
 
@@ -543,7 +547,7 @@ async function expectAboutLayout(page: Page, width: number, height: number) {
     const links = media.locator('[data-about-work-item]');
     const images = links.locator('img');
     const owner = await profile.getAttribute('data-about-person');
-    const expectedItems = owner === 'anjali' ? 4 : 5;
+    const expectedItems = 5;
 
     await expect(copy).toHaveCount(1);
     expect((await copy.innerText()).trim().length).toBeGreaterThan(80);
@@ -570,16 +574,6 @@ async function expectAboutLayout(page: Page, width: number, height: number) {
         'specialized-globe',
         'brava',
       ]);
-    } else {
-      expect(workKeys).toEqual([
-        'adobe',
-        'stella-artois-daydream',
-        'rakuten',
-        'about-work-anjali-rakuten-duet-frame',
-      ]);
-      await expect(media.locator('[data-preview-video]')).toHaveCount(2);
-      expect(await media.locator('[data-preview-video]').evaluateAll((videos) =>
-        new Set(videos.map((video) => (video as HTMLVideoElement).dataset.source)).size)).toBe(2);
     }
     expect(await links.evaluateAll((items) => items.every((item) =>
       getComputedStyle(item).clipPath === 'none'))).toBe(true);
@@ -634,7 +628,7 @@ async function expectAboutLayout(page: Page, width: number, height: number) {
   });
 
   expect(layout.overflow).toBeLessThanOrEqual(1);
-  expect(layout.profiles).toHaveLength(3);
+  expect(layout.profiles).toHaveLength(2);
   expect(layout.peopleHeading).not.toBeNull();
   expect(layout.capabilitiesHeading).not.toBeNull();
 
@@ -666,7 +660,6 @@ async function expectAboutLayout(page: Page, width: number, height: number) {
       expect(profile.media.width).toBeGreaterThanOrEqual(width >= 1200 ? 500 : 400);
       if (profile.owner === 'oliver') expect(profile.copy.left).toBeLessThan(profile.media.left);
       if (profile.owner === 'michael') expect(profile.media.left).toBeLessThan(profile.copy.left);
-      if (profile.owner === 'anjali') expect(profile.media.left).toBeLessThan(profile.copy.left);
     } else {
       expect(profile.copy.bottom).toBeLessThanOrEqual(profile.media.top + 1);
       const internalGap = profile.media.top - profile.copy.bottom;
@@ -677,7 +670,6 @@ async function expectAboutLayout(page: Page, width: number, height: number) {
 
   const firstProfile = layout.profiles[0]?.profile;
   const secondProfile = layout.profiles[1]?.profile;
-  const thirdProfile = layout.profiles[2]?.profile;
   if (layout.peopleHeading && firstProfile) {
     const peopleGap = firstProfile.top - layout.peopleHeading.bottom;
     expect(peopleGap).toBeGreaterThanOrEqual(width >= 768 ? 32 : 24);
@@ -689,14 +681,8 @@ async function expectAboutLayout(page: Page, width: number, height: number) {
     expect(profileGap).toBeGreaterThanOrEqual(minimumProfileGap - 1);
     expect(profileGap).toBeLessThanOrEqual(width >= 1200 ? 192 : width >= 768 ? 160 : 112);
   }
-  if (secondProfile && thirdProfile) {
-    const profileGap = thirdProfile.top - secondProfile.bottom;
-    const minimumProfileGap = width >= 1200 ? 64 : width >= 768 ? 56 : 48;
-    expect(profileGap).toBeGreaterThanOrEqual(minimumProfileGap - 1);
-    expect(profileGap).toBeLessThanOrEqual(width >= 1200 ? 192 : width >= 768 ? 160 : 112);
-  }
-  if (thirdProfile && layout.capabilitiesHeading) {
-    const capabilitiesGap = layout.capabilitiesHeading.top - thirdProfile.bottom;
+  if (secondProfile && layout.capabilitiesHeading) {
+    const capabilitiesGap = layout.capabilitiesHeading.top - secondProfile.bottom;
     expect(capabilitiesGap).toBeGreaterThanOrEqual(width >= 768 ? 48 : 40);
     expect(capabilitiesGap).toBeLessThanOrEqual(width >= 1200 ? 192 : width >= 768 ? 160 : 112);
   }
@@ -704,15 +690,9 @@ async function expectAboutLayout(page: Page, width: number, height: number) {
 
 test('the work index has exactly 4, 2, and 2 complete columns', async ({ page }) => {
   await page.goto('/');
-  await expect(page.locator('[data-project-card]')).toHaveCount(32);
+  await expect(page.locator('[data-project-card]')).toHaveCount(28);
   await expect(page.locator('[data-gallery-remove]')).toHaveCount(0);
-  const addedMichaelStill = page.locator('[data-gallery-item-id="michael-native-stop-motion-still"]');
-  await expect(addedMichaelStill).toHaveCount(1);
-  await expect(addedMichaelStill).toHaveAttribute('data-desktop-column', '4');
-  await expect(addedMichaelStill.locator('img')).toHaveAttribute(
-    'src',
-    /\/media\/images\/michael\/michael_native_stop_motion-poster\.webp$/u,
-  );
+  await expect(page.locator('[data-gallery-item-id="michael-native-stop-motion-still"]')).toHaveCount(0);
   expect(await page.locator('.project-card__media').evaluateAll((items) => items.every((item) => {
     const styles = getComputedStyle(item);
     const inner = item.querySelector<HTMLElement>('.project-card__media-inner');
@@ -732,7 +712,7 @@ test('the work index has exactly 4, 2, and 2 complete columns', async ({ page })
 test('every standalone gallery photograph opens an image page and never routes through About', async ({ page }) => {
   await page.goto('/');
   const photoLinks = page.locator('[data-gallery-photo-link]');
-  await expect(photoLinks).toHaveCount(15);
+  await expect(photoLinks).toHaveCount(14);
 
   const destinations = await photoLinks.evaluateAll((links) => links.map((link) =>
     (link as HTMLAnchorElement).getAttribute('href') || ''));
@@ -749,6 +729,82 @@ test('every standalone gallery photograph opens an image page and never routes t
   await page.goto('/about');
   await expect(page.locator('[data-about-page] img[src*="/portfolio-expansion/"]')).toHaveCount(0);
   await expect(page.locator('[data-about-work-item][href^="/gallery/"]')).toHaveCount(0);
+});
+
+test('standalone gallery hero frames end exactly with their photographs', async ({ page }) => {
+  await page.goto('/gallery/michael-wow-rainbow-pavement');
+
+  const geometry = await page.locator('[data-gallery-photo-primary]').evaluate((figure) => {
+    const image = figure.querySelector('img');
+    if (!image) throw new Error('The gallery hero photograph is missing.');
+    const figureRect = figure.getBoundingClientRect();
+    const imageRect = image.getBoundingClientRect();
+    return {
+      heightDifference: Math.abs(figureRect.height - imageRect.height),
+      widthDifference: Math.abs(figureRect.width - imageRect.width),
+      background: getComputedStyle(figure).backgroundColor,
+      scrollbarGutter: window.innerWidth - document.documentElement.clientWidth,
+      nativeScrollbar: {
+        width: getComputedStyle(document.documentElement).scrollbarWidth,
+        webkitSupported: CSS.supports('selector(::-webkit-scrollbar)'),
+        webkitDisplay: getComputedStyle(document.documentElement, '::-webkit-scrollbar').display,
+        webkitWidth: getComputedStyle(document.documentElement, '::-webkit-scrollbar').width,
+      },
+      overlayScrollbar: (() => {
+        const track = document.querySelector<HTMLElement>('[data-site-scrollbar]');
+        const thumb = track?.querySelector<HTMLElement>('[data-site-scrollbar-thumb]');
+        return {
+          exists: Boolean(track && thumb),
+          background: track ? getComputedStyle(track).backgroundColor : null,
+          backgroundImage: track ? getComputedStyle(track).backgroundImage : null,
+          coarsePointer: matchMedia('(hover: none), (pointer: coarse)').matches,
+          thumbWidth: thumb?.getBoundingClientRect().width ?? 0,
+        };
+      })(),
+    };
+  });
+
+  expect(geometry.heightDifference).toBeLessThan(1);
+  expect(geometry.widthDifference).toBeLessThan(1);
+  expect(geometry.background).toBe('rgba(0, 0, 0, 0)');
+  expect(geometry.scrollbarGutter).toBe(0);
+  expect(geometry.nativeScrollbar.width).toBe('none');
+  if (geometry.nativeScrollbar.webkitSupported) {
+    expect(geometry.nativeScrollbar.webkitDisplay).toBe('none');
+    expect(geometry.nativeScrollbar.webkitWidth).toBe('0px');
+  }
+  expect(geometry.overlayScrollbar.exists).toBe(true);
+  expect(geometry.overlayScrollbar.background).toBe('rgba(0, 0, 0, 0)');
+  expect(geometry.overlayScrollbar.backgroundImage).toBe('none');
+  expect(geometry.overlayScrollbar.thumbWidth)
+    .toBe(geometry.overlayScrollbar.coarsePointer ? 0 : 3);
+});
+
+test('cover-cropped gallery photographs request enough raster pixels for their visible crop', async ({ page }) => {
+  await page.goto('/');
+
+  const image = page.locator(
+    'a[href="/gallery/michael-wow-rainbow-pavement"] img[data-gallery-image]',
+  );
+  await expect(image).toHaveAttribute('data-gallery-image-ready', 'true');
+  const quality = await image.evaluate((element) => {
+    const media = element.closest<HTMLElement>('.project-card__media');
+    if (!media) throw new Error('The rainbow photograph is missing its gallery frame.');
+    const currentSrc = (element as HTMLImageElement).currentSrc;
+    const candidateMatch = currentSrc.match(/\.w(\d+)\.(?:avif|webp)$/u);
+    const sourceWidth = Number(element.getAttribute('width'));
+    const sourceHeight = Number(element.getAttribute('height'));
+    const candidateWidth = candidateMatch
+      ? Number(candidateMatch[1])
+      : sourceWidth;
+    const requiredWidth = media.getBoundingClientRect().height
+      * (sourceWidth / sourceHeight)
+      * window.devicePixelRatio;
+    return { candidateWidth, currentSrc, requiredWidth };
+  });
+
+  expect(quality.currentSrc).toMatch(/michael-wow-rainbow-pavement/u);
+  expect(quality.candidateWidth).toBeGreaterThanOrEqual(quality.requiredWidth * .98);
 });
 
 test('static and reduced motion routes defer the full animation runtime', async ({ page }) => {
@@ -934,6 +990,110 @@ test('the four gallery tracks share one scroll target with subtle first-order mo
     getComputedStyle(card).transform));
   expect(new Set(reducedTransforms)).toEqual(new Set(['none']));
   await expect(page.locator('[data-card-cursor-label]')).toHaveCount(0);
+});
+
+test('compact gallery layouts receive the emphasized two-track inertia filter', async ({ page }) => {
+  for (const viewport of [
+    { width: 1_024, height: 900 },
+    { width: 375, height: 812 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto('/');
+
+    const gallery = page.locator('[data-work-gallery]');
+    await expect(gallery).toHaveAttribute('data-column-motion', 'first-order');
+
+    const compactLanes = await page.locator('[data-motion-column]').evaluateAll((cards) => {
+      const lanes = new Map<number, { response: number; ready: Set<string>; transitions: Set<string> }>();
+      cards.forEach((card) => {
+        const element = card as HTMLElement;
+        const lane = Number(element.dataset.tabletColumn);
+        if (!Number.isFinite(lane)) return;
+        const state = lanes.get(lane) ?? {
+          response: Number(element.dataset.motionColumnResponseTablet),
+          ready: new Set<string>(),
+          transitions: new Set<string>(),
+        };
+        state.ready.add(element.dataset.motionReady ?? '');
+        state.transitions.add(getComputedStyle(element).transitionProperty);
+        lanes.set(lane, state);
+      });
+      return [...lanes.entries()]
+        .map(([lane, state]) => ({
+          lane,
+          response: state.response,
+          ready: [...state.ready],
+          hasTransformTransition: [...state.transitions].some((value) =>
+            value.split(',').map((part) => part.trim()).includes('transform')),
+        }))
+        .sort((left, right) => left.lane - right.lane);
+    });
+
+    expect(compactLanes.map(({ lane }) => lane)).toEqual([1, 2]);
+    expect(compactLanes.map(({ response }) => response)).toEqual([0.18, 0.05]);
+    expect(compactLanes.every(({ ready }) => ready.length === 1 && ready[0] === 'animated')).toBe(true);
+    expect(compactLanes.every(({ hasTransformTransition }) => !hasTransformTransition)).toBe(true);
+    expect(compactLanes[0]!.response / compactLanes[1]!.response).toBeGreaterThan(3.5);
+  }
+});
+
+test('gallery cards reveal when their first pixels cross the viewport edge', async ({ page }) => {
+  for (const viewport of [
+    { width: 1_024, height: 900 },
+    { width: 375, height: 812 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto('/');
+    await expect(page.locator('[data-gallery-entrance]'))
+      .toHaveAttribute('data-gallery-entrance-state', 'settled', { timeout: 6_000 });
+
+    const reveals = page.locator('[data-work-gallery] [data-motion-reveal]');
+    const targetIndex = await reveals.evaluateAll((elements) => {
+      const candidates = elements
+        .map((element, index) => ({
+          index,
+          top: element.getBoundingClientRect().top,
+          opacity: Number.parseFloat(getComputedStyle(element).opacity),
+        }))
+        .filter(({ top, opacity }) => top > window.innerHeight + 24 && opacity < .01)
+        .sort((left, right) => left.top - right.top);
+      return candidates[0]?.index ?? -1;
+    });
+    expect(targetIndex).toBeGreaterThanOrEqual(0);
+
+    const target = reveals.nth(targetIndex);
+    const before = await target.evaluate((element) => {
+      const bounds = element.getBoundingClientRect();
+      return {
+        top: bounds.top,
+        opacity: Number.parseFloat(getComputedStyle(element).opacity),
+      };
+    });
+    expect(before.top).toBeGreaterThan(viewport.height);
+    expect(before.opacity).toBeLessThan(.01);
+
+    await page.evaluate(({ targetTop, viewportHeight }) => {
+      document.documentElement.style.scrollBehavior = 'auto';
+      window.scrollBy(0, targetTop - viewportHeight + 6);
+    }, { targetTop: before.top, viewportHeight: viewport.height });
+
+    await expect.poll(() => target.evaluate((element) =>
+      Number.parseFloat(getComputedStyle(element).opacity)), { timeout: 4_000 }).toBeGreaterThan(.99);
+
+    const partial = await target.evaluate((element) => {
+      const bounds = element.getBoundingClientRect();
+      return {
+        top: bounds.top,
+        bottom: bounds.bottom,
+        viewportHeight: window.innerHeight,
+        visibility: getComputedStyle(element).visibility,
+      };
+    });
+    expect(partial.top).toBeLessThan(partial.viewportHeight);
+    expect(partial.top).toBeGreaterThanOrEqual(partial.viewportHeight - 12);
+    expect(partial.bottom).toBeGreaterThan(partial.viewportHeight);
+    expect(partial.visibility).toBe('visible');
+  }
 });
 
 test('the desktop gallery follows left and right pointer movement without overflow or scroll hijacking', async ({ page }) => {
@@ -1181,7 +1341,7 @@ test('prototype filler copy completes the editorial review surfaces without enab
   await expect(page.locator('.notes-strip')).toHaveCount(0);
 });
 
-test('the About page presents Michael, Oliver, and Anjali as a responsive editorial sequence with reduced motion', async ({
+test('the About page presents Michael and Oliver as a responsive editorial sequence with reduced motion', async ({
   page,
 }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -1205,11 +1365,11 @@ test('About portfolio mosaics keep rectangular crops on hover and focus', async 
     'Tile emphasis is a fine-pointer enhancement.',
   );
 
-  for (const owner of ['oliver', 'michael', 'anjali'] as const) {
+  for (const owner of ['oliver', 'michael'] as const) {
     const profile = page.locator(`[data-about-person="${owner}"]`);
     const gallery = profile.locator('[data-about-mosaic]');
     const items = gallery.locator('[data-about-work-item]');
-    const expectedItems = owner === 'anjali' ? 4 : 5;
+    const expectedItems = 5;
     await expect(items).toHaveCount(expectedItems);
     await gallery.scrollIntoViewIfNeeded();
 
@@ -1257,7 +1417,6 @@ test('key routes render without editorial markers and remain noindex in prototyp
     { path: '/contact', heading: 'Contact', statuses: [200] },
     { path: '/work/arc', heading: 'Arc', statuses: [200] },
     { path: '/work/mercury-an-unexpected-life', heading: 'Mercury — An Unexpected Life', statuses: [200] },
-    { path: '/work/adobe', heading: 'Adobe', statuses: [200] },
     { path: '/404', heading: 'This page isn’t here.', statuses: [200, 404] },
   ];
 
@@ -1274,9 +1433,6 @@ test('key routes render without editorial markers and remain noindex in prototyp
 
   await page.goto('/');
   await expect(page.getByText('Chanel Test', { exact: true }).first()).toBeAttached();
-  for (const slug of ['adobe', 'stella-artois-daydream', 'rakuten']) {
-    await expect(page.locator(`[data-project-link][href="/work/${slug}"]`)).toHaveCount(1);
-  }
   await expect(page.getByText('Do Not Publish Without Approval')).toHaveCount(0);
 });
 
@@ -1286,51 +1442,6 @@ test('an unknown route uses the branded 404 recovery page', async ({ page }) => 
   expect(response?.status()).toBe(404);
   await expect(page.getByRole('heading', { level: 1, name: 'This page isn’t here.' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Return to all work' })).toHaveAttribute('href', '/');
-});
-
-test('Anjali previews stay local while full project films use click-to-load Vimeo players', async ({ page }) => {
-  const films = [
-    {
-      slug: 'adobe',
-      preview: '/media/video-previews/anjali/adobe-what-whack-wears-gallery-cut-08s.mp4',
-      vimeoId: '720040595',
-    },
-    {
-      slug: 'stella-artois-daydream',
-      preview: '/media/video-previews/anjali/stella-artois-daydream-gallery-cut-06s.mp4',
-      vimeoId: '439413250',
-    },
-    {
-      slug: 'rakuten',
-      preview: '/media/video-previews/anjali/rakuten-duet-gallery-cut-08s.mp4',
-      vimeoId: '479336941',
-    },
-  ];
-
-  await page.goto('/');
-  for (const film of films) {
-    const preview = page.locator(`[data-project-slug="${film.slug}"] [data-preview-video]`);
-    await expect(preview).toHaveAttribute('data-source', film.preview);
-    expect(await preview.evaluate((video) => ({
-      muted: (video as HTMLVideoElement).muted,
-      loop: (video as HTMLVideoElement).loop,
-      controls: (video as HTMLVideoElement).controls,
-    }))).toEqual({ muted: true, loop: true, controls: false });
-
-    await page.goto(`/work/${film.slug}`);
-    const heroSource = page.locator('[data-project-hero-media] source[data-deferred-source]');
-    const projectVideo = page.locator('.media-stream [data-lazy-embed]');
-    await expect(heroSource).toHaveAttribute('data-src', film.preview);
-    await expect(projectVideo).toHaveAttribute(
-      'data-embed-url',
-      new RegExp(`player\\.vimeo\\.com/video/${film.vimeoId}`, 'u'),
-    );
-    await expect(projectVideo.locator('iframe')).toHaveCount(0);
-    await expect(projectVideo.locator(`a[href="https://vimeo.com/${film.vimeoId}"]`))
-      .toHaveCount(1);
-
-    await page.goto('/');
-  }
 });
 
 test('prototype SEO blocks crawling, omits its sitemap, and never promotes a project cover to a share image', async ({ page }) => {
@@ -1380,6 +1491,88 @@ test('still-led and motion-led work share the project template without an empty 
   await expect(bodyFilm.locator('iframe')).toHaveCount(0);
   await expect(page.getByText('Film playback is unavailable. The poster remains visible.')).toBeVisible();
   await expect(page.getByRole('navigation', { name: 'Project navigation' })).toBeVisible();
+});
+
+test('project media stays decoded across the non-layout desktop threshold', async ({ page }) => {
+  await page.setViewportSize({ width: 1_210, height: 900 });
+  await page.goto('/gallery/michael-poolside-product', { waitUntil: 'networkidle' });
+
+  const projectImages = page.locator('.gallery-photo img');
+  await expect(projectImages).toHaveCount(2);
+  await projectImages.last().scrollIntoViewIfNeeded();
+  await expect.poll(() => projectImages.evaluateAll((images) => images.every((image) => {
+    const responsiveImage = image as HTMLImageElement;
+    return responsiveImage.complete && responsiveImage.naturalWidth > 0;
+  }))).toBe(true);
+  await expect.poll(() => page.evaluate(() => (
+    [...document.querySelectorAll<HTMLImageElement>('.gallery-photo img')]
+      .every((image) => {
+        const imageStyles = getComputedStyle(image);
+        const reveal = image.closest<HTMLElement>('[data-motion-reveal]');
+        const revealStyles = reveal ? getComputedStyle(reveal) : undefined;
+        return imageStyles.visibility !== 'hidden'
+          && Number.parseFloat(imageStyles.opacity) >= .99
+          && revealStyles?.visibility !== 'hidden'
+          && Number.parseFloat(revealStyles?.opacity || '1') >= .99;
+      })
+  ))).toBe(true);
+
+  const breakpointRequests: string[] = [];
+  page.on('request', (request) => {
+    if (/\/michael-poolside-product\.w\d+\.(?:avif|webp)(?:\?|$)/u.test(request.url())) {
+      breakpointRequests.push(request.url());
+    }
+  });
+  await page.evaluate(() => {
+    const root = document.documentElement;
+    root.dataset.projectResizeMotionRestarts = '0';
+    root.dataset.projectResizeVisualFlash = 'false';
+    const sampleUntil = performance.now() + 1_200;
+    const sampleVisibility = () => {
+      const flashed = [...document.querySelectorAll<HTMLImageElement>('.gallery-photo img')]
+        .some((image) => {
+          const imageStyles = getComputedStyle(image);
+          const reveal = image.closest<HTMLElement>('[data-motion-reveal]');
+          const revealStyles = reveal ? getComputedStyle(reveal) : undefined;
+          return imageStyles.visibility === 'hidden'
+            || Number.parseFloat(imageStyles.opacity) < .99
+            || revealStyles?.visibility === 'hidden'
+            || Number.parseFloat(revealStyles?.opacity || '1') < .99;
+        });
+      if (flashed) root.dataset.projectResizeVisualFlash = 'true';
+      if (performance.now() < sampleUntil) {
+        requestAnimationFrame(sampleVisibility);
+      }
+    };
+    requestAnimationFrame(sampleVisibility);
+    document.addEventListener('new-work:motion-ready', () => {
+      root.dataset.projectResizeMotionRestarts = String(
+        Number(root.dataset.projectResizeMotionRestarts || '0') + 1,
+      );
+    });
+  });
+
+  await page.setViewportSize({ width: 1_190, height: 900 });
+  await page.waitForTimeout(800);
+
+  const result = await page.evaluate(() => ({
+    motionRestarts: Number(document.documentElement.dataset.projectResizeMotionRestarts || '0'),
+    visualFlash: document.documentElement.dataset.projectResizeVisualFlash === 'true',
+    decoded: [...document.querySelectorAll<HTMLImageElement>('.gallery-photo img')]
+      .every((image) => (
+        image.complete
+        && image.naturalWidth > 0
+        && Boolean(image.currentSrc)
+      )),
+    visible: [...document.querySelectorAll<HTMLElement>('.gallery-photo [data-motion-reveal]')]
+      .every((element) => getComputedStyle(element).visibility !== 'hidden'),
+  }));
+
+  expect(breakpointRequests).toEqual([]);
+  expect(result.motionRestarts).toBe(0);
+  expect(result.visualFlash).toBe(false);
+  expect(result.decoded).toBe(true);
+  expect(result.visible).toBe(true);
 });
 
 test('project heroes pair left-hand copy with the gallery media and keep body content below', async ({ page }) => {
@@ -1507,11 +1700,25 @@ test('all four project presentation variants expose stable route markers', async
 });
 
 test('every fixture project has one gallery-derived hero and populated lower content', async ({ page }) => {
-  await page.goto('/');
-  const routes = await page.locator('[data-project-link]').evaluateAll((links) => [
-    ...new Set(links.map((link) => link.getAttribute('href')).filter((href): href is string => Boolean(href))),
-  ]);
-  expect(routes).toHaveLength(19);
+  const routes = [
+    'arc',
+    'mercury-an-unexpected-life',
+    'native-cucumber-mint-stop-motion',
+    'tour-de-france-x-toyota',
+    'cradlewise',
+    'humu-make-work-better-holly',
+    'dune-tansy',
+    'olympics-toyota-in-due-time',
+    'fellow',
+    'mercury-one-of-the-greats',
+    'brava',
+    'specialized-globe',
+    'molekule-in-office',
+    'miss-jones-pancake',
+    'chanel-test',
+    'untitled-portfolio-film',
+  ].map((slug) => `/work/${slug}`);
+  expect(routes).toHaveLength(16);
 
   for (const route of routes) {
     await page.goto(route);
@@ -1527,6 +1734,465 @@ test('every fixture project has one gallery-derived hero and populated lower con
     expect(await page.locator('.media-stream [data-project-block], [data-project-placeholder-content]').count())
       .toBeGreaterThan(0);
   }
+});
+
+test('the Olympics project keeps connector punctuation with its neighboring title words', async ({ page }) => {
+  await page.goto('/work/olympics-toyota-in-due-time');
+  const header = page.locator('[data-project-header]');
+  await expect(header).toHaveClass(/project-title-treatment--standard/u);
+
+  const chunks = page.locator('[data-project-title-chunk]');
+  await expect(chunks).not.toHaveCount(0);
+  expect((await chunks.allTextContents()).map((chunk) => chunk.trim())).toEqual([
+    'Olympics &',
+    'Toyota —',
+    'In',
+    'Due',
+    'Time',
+  ]);
+  await expect(page.locator('[data-project-hero-media][data-project-block="shortLoop"] video'))
+    .toBeAttached();
+});
+
+test('route media keeps the original node continuous with a compatibility handoff fallback', async ({ page }) => {
+  test.slow();
+  await page.setViewportSize({ width: 1_440, height: 1_000 });
+
+  const supportsPersistentMedia = await page.goto('/').then(() => page.evaluate(() => (
+    typeof document.startViewTransition === 'function'
+  )));
+  if (supportsPersistentMedia) {
+    for (const { selector, index } of [
+      { selector: '[data-project-slug="arc"]', index: 0 },
+      { selector: '[data-gallery-photo-link]', index: 0 },
+      { selector: '[data-gallery-photo-link]', index: 10 },
+    ]) {
+      await page.goto('/');
+      const link = page.locator(selector).nth(index);
+      const slug = await link.evaluate((element) =>
+        element.closest<HTMLElement>('[data-project-card]')?.dataset.galleryItemId);
+      if (!slug) throw new Error('The still gallery card is missing its item id.');
+      await link.scrollIntoViewIfNeeded();
+      const probe = `still-${slug}-${Date.now()}`;
+      await link.locator('.responsive-image').evaluate((element, value) => {
+        element.setAttribute('data-continuity-probe', value);
+      }, probe);
+
+      await link.click({ noWaitAfter: true });
+      await page.waitForURL((url) => url.pathname !== '/');
+      const heroImage = page.locator(
+        '[data-project-hero-media][data-first-media="true"] .responsive-image, '
+        + '[data-gallery-photo-primary] .responsive-image',
+      );
+      await expect(heroImage).toHaveAttribute('data-continuity-probe', probe);
+      await expect(heroImage).toHaveAttribute('data-route-media-continuity', slug);
+      await expect(page.locator('[data-photo-route-handoff]')).toHaveCount(0);
+      const storedOriginScroll = await page.evaluate(() => (
+        JSON.parse(sessionStorage.getItem('new-work-origin') || '{}') as { scrollY?: number }
+      ).scrollY);
+      expect(storedOriginScroll).toEqual(expect.any(Number));
+
+      await page.locator('[data-project-overlay-return]').click({ noWaitAfter: true });
+      await page.waitForURL((url) => url.pathname === '/');
+      const returnedImage = page.locator(
+        `[data-gallery-item-id="${slug}"] .responsive-image`,
+      );
+      await expect(returnedImage).toHaveAttribute('data-continuity-probe', probe);
+      await expect(returnedImage).toHaveAttribute('data-route-media-continuity', slug);
+      await expect(page.locator('[data-photo-return-handoff]')).toHaveCount(0);
+      await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(storedOriginScroll);
+    }
+
+    await page.goto('/');
+    const motionLink = page.locator('[data-project-link]:has([data-preview-video])').first();
+    const motionSlug = await motionLink.getAttribute('data-project-slug');
+    if (!motionSlug) throw new Error('The motion gallery card is missing its project slug.');
+    await motionLink.scrollIntoViewIfNeeded();
+    const motionPreview = motionLink.locator('[data-preview-video]');
+    await expect.poll(() => motionPreview.evaluate((video) => (
+      (video as HTMLVideoElement).readyState
+    ))).toBeGreaterThanOrEqual(1);
+    await motionPreview.evaluate(async (element) => {
+      const video = element as HTMLVideoElement;
+      video.dataset.continuityProbe = 'same-video-node';
+      video.currentTime = 1.25;
+      await video.play();
+    });
+
+    await motionLink.click({ noWaitAfter: true });
+    await page.waitForURL((url) => url.pathname !== '/');
+    const projectLoop = page.locator(
+      '[data-project-hero-media][data-first-media="true"] video[data-short-loop]',
+    );
+    await expect(projectLoop).toHaveAttribute('data-continuity-probe', 'same-video-node');
+    await expect(projectLoop).toHaveAttribute('data-route-video-persisted', 'true');
+    await expect.poll(() => projectLoop.evaluate((video) => (
+      (video as HTMLVideoElement).currentTime
+    ))).toBeGreaterThan(1.25);
+    await projectLoop.evaluate(async (element) => {
+      const video = element as HTMLVideoElement;
+      video.currentTime = 2.5;
+      await video.play();
+    });
+
+    await page.locator('[data-project-overlay-return]').click({ noWaitAfter: true });
+    await page.waitForURL((url) => url.pathname === '/');
+    const returnedPreview = page.locator(
+      `[data-gallery-item-id="${motionSlug}"] [data-preview-video]`,
+    );
+    await expect(returnedPreview).toHaveAttribute('data-continuity-probe', 'same-video-node');
+    await expect(returnedPreview).toHaveAttribute('data-route-video-persisted', 'true');
+    await expect.poll(() => returnedPreview.evaluate((video) => (
+      (video as HTMLVideoElement).currentTime
+    ))).toBeGreaterThan(2.5);
+    return;
+  }
+
+  for (const { selector, index } of [
+    { selector: '[data-project-slug="arc"]', index: 0 },
+    { selector: '[data-gallery-photo-link]', index: 0 },
+    { selector: '[data-gallery-photo-link]', index: 10 },
+  ]) {
+    await page.goto('/');
+    const link = page.locator(selector).nth(index);
+    const slug = await link.evaluate((element) =>
+      element.closest<HTMLElement>('[data-project-card]')?.dataset.galleryItemId);
+    if (!slug) throw new Error('The still gallery card is missing its item id.');
+
+    await link.scrollIntoViewIfNeeded();
+    const departureCapture = page.evaluate((targetSlug) => (
+      new Promise<{
+        handoffRect: { x: number; y: number; width: number; height: number };
+        handoffSrc?: string;
+        sourceRect: { x: number; y: number; width: number; height: number };
+        sourceSrc?: string;
+      }>((resolve) => {
+        const capture = () => {
+          const element = document.querySelector<HTMLElement>('[data-photo-route-handoff]');
+          const source = document.querySelector<HTMLElement>(
+            `[data-gallery-item-id="${CSS.escape(targetSlug)}"] .project-card__media`,
+          );
+          if (!element || !source) return;
+          const handoffRect = element.getBoundingClientRect();
+          const sourceRect = source.getBoundingClientRect();
+          observer.disconnect();
+          resolve({
+            handoffRect: {
+              x: handoffRect.x, y: handoffRect.y,
+              width: handoffRect.width, height: handoffRect.height,
+            },
+            handoffSrc: element.querySelector<HTMLImageElement>('img')?.src,
+            sourceRect: {
+              x: sourceRect.x, y: sourceRect.y,
+              width: sourceRect.width, height: sourceRect.height,
+            },
+            sourceSrc: (() => {
+              const image = source.querySelector<HTMLImageElement>('img');
+              return image?.currentSrc || image?.src;
+            })(),
+          });
+        };
+        const observer = new MutationObserver(capture);
+        observer.observe(document.body, { childList: true });
+        capture();
+      })
+    ), slug);
+    await link.click({ noWaitAfter: true });
+
+    const handoff = page.locator('[data-photo-route-handoff]');
+    await expect(handoff).toBeAttached();
+    await expect(handoff).toHaveCSS('view-transition-name', 'none');
+    const departureHandoff = await departureCapture;
+    const originMediaBox = departureHandoff.sourceRect;
+    expect(Math.abs(departureHandoff.handoffRect.x - departureHandoff.sourceRect.x)).toBeLessThan(1);
+    expect(Math.abs(departureHandoff.handoffRect.y - departureHandoff.sourceRect.y)).toBeLessThan(1);
+    expect(Math.abs(departureHandoff.handoffRect.width - departureHandoff.sourceRect.width)).toBeLessThan(1);
+    expect(Math.abs(departureHandoff.handoffRect.height - departureHandoff.sourceRect.height)).toBeLessThan(1);
+    expect(departureHandoff.handoffSrc).toBe(departureHandoff.sourceSrc);
+    await expect(page.locator('[data-gallery-route-transition-style]')).toHaveCount(0);
+    await page.waitForURL((url) => url.pathname !== '/');
+    await expect(handoff).toHaveAttribute('data-photo-route-handoff', 'animating');
+    await expect(handoff).toHaveAttribute('data-photo-route-layout', 'ready');
+    const projectTarget = page.locator(
+      '[data-project-hero-media][data-first-media="true"], [data-gallery-photo-primary]',
+    );
+    await expect(projectTarget).toBeAttached();
+    const routeImages = handoff.locator('img');
+    await expect(routeImages).toHaveCount(2);
+    await expect(routeImages.first()).toHaveCSS('opacity', '1');
+    const routeFraming = await routeImages.first().evaluate((element) => {
+      const target = document.querySelector<HTMLElement>(
+        '[data-project-hero-media][data-first-media="true"], [data-gallery-photo-primary]',
+      );
+      const targetImage = target?.querySelector<HTMLImageElement>('img');
+      const effect = element.getAnimations()[0]?.effect;
+      const keyframes = effect instanceof KeyframeEffect ? effect.getKeyframes() : [];
+      const finalFrame = keyframes.at(-1);
+      return {
+        destinationSrc: (element.parentElement?.querySelectorAll('img')[1] as HTMLImageElement | undefined)
+          ?.src,
+        handoffTransform: typeof finalFrame?.transform === 'string'
+          ? finalFrame.transform
+          : 'none',
+        targetSrc: targetImage?.currentSrc || targetImage?.src,
+        targetTransform: targetImage ? getComputedStyle(targetImage).transform : 'none',
+        targetInlineTransition: targetImage?.style.transition,
+      };
+    });
+    expect(routeFraming.destinationSrc).toBe(routeFraming.targetSrc);
+    expect(routeFraming.handoffTransform).toBe(routeFraming.targetTransform);
+    expect(routeFraming.targetInlineTransition).toBe('none');
+    const routeSettledGeometry = await handoff.evaluate((element) => (
+      new Promise<{ handoff: DOMRect; target: DOMRect }>((resolve) => {
+        const capture = () => {
+          if (element.getAttribute('data-photo-route-handoff') !== 'settled') return;
+          const target = document.querySelector<HTMLElement>(
+            '[data-project-hero-media][data-first-media="true"], [data-gallery-photo-primary]',
+          );
+          const targetImage = target?.querySelector<HTMLImageElement>('img');
+          // Route handoffs align with the painted image. Photography figures
+          // include extra layout height below the picture and are intentionally
+          // not the geometry target.
+          const targetFrame = targetImage;
+          if (!targetFrame) return;
+          observer.disconnect();
+          resolve({
+            handoff: element.getBoundingClientRect(),
+            target: targetFrame.getBoundingClientRect(),
+          });
+        };
+        const observer = new MutationObserver(capture);
+        observer.observe(element, { attributes: true, attributeFilter: ['data-photo-route-handoff'] });
+        capture();
+      })
+    ));
+    expect(Math.abs(routeSettledGeometry.handoff.x - routeSettledGeometry.target.x)).toBeLessThan(1);
+    expect(Math.abs(routeSettledGeometry.handoff.y - routeSettledGeometry.target.y)).toBeLessThan(1);
+    expect(Math.abs(routeSettledGeometry.handoff.width - routeSettledGeometry.target.width)).toBeLessThan(1);
+    expect(Math.abs(routeSettledGeometry.handoff.height - routeSettledGeometry.target.height)).toBeLessThan(1);
+    await expect(handoff).toHaveCount(0, { timeout: 2_000 });
+    await expect(projectTarget).toBeVisible();
+    await expect.poll(() => projectTarget.locator('img').evaluate((element) => ({
+      opacity: (element as HTMLElement).style.opacity,
+      transform: (element as HTMLElement).style.transform,
+      transition: (element as HTMLElement).style.transition,
+    }))).toEqual({ opacity: '', transform: '', transition: '' });
+
+    const storedOrigin = await page.evaluate(() =>
+      JSON.parse(sessionStorage.getItem('new-work-origin') || '{}') as {
+        slug?: string;
+        scrollY?: number;
+        historyIndex?: number;
+      });
+    expect(storedOrigin.slug).toBe(slug);
+    expect(storedOrigin.historyIndex).toEqual(expect.any(Number));
+
+    const returnLink = page.locator('[data-project-overlay-return]');
+    await returnLink.focus();
+    if (originMediaBox) {
+      // Activate the return by keyboard while the pointer remains over the
+      // destination card. This exercises the tile's hover scale/pan state and
+      // catches a final-frame reframing jump that a pointer click cannot.
+      await page.mouse.move(
+        originMediaBox.x + originMediaBox.width / 2,
+        originMediaBox.y + originMediaBox.height / 2,
+      );
+    }
+    await page.keyboard.press('Enter');
+    const returnHandoff = page.locator('[data-photo-return-handoff]');
+    await expect(returnHandoff).toBeAttached();
+    await expect(returnHandoff).toHaveCSS('view-transition-name', 'none');
+    await expect(returnHandoff.locator('img').first()).toBeAttached();
+    await expect(page.locator('[data-gallery-return-transition-style]')).toHaveCount(0);
+
+    await page.waitForURL((url) => url.pathname === '/');
+    await expect(returnHandoff).toHaveAttribute('data-photo-return-handoff', 'animating');
+    await expect(returnHandoff).toHaveAttribute('data-photo-return-layout', 'ready');
+    const targetMedia = page.locator(
+      `[data-gallery-item-id="${slug}"] .project-card__media`,
+    );
+    await expect(targetMedia).toBeAttached();
+    const returnImages = returnHandoff.locator('img');
+    await expect(returnImages).toHaveCount(2);
+    const returnImage = returnImages.first();
+    await expect(returnImage).toHaveCSS('opacity', '1');
+    await expect.poll(() => returnImage.evaluate((element) => element.getAnimations().length))
+      .toBeGreaterThan(0);
+    const framing = await returnImage.evaluate((element, targetSlug) => {
+      const targetInner = document.querySelector<HTMLElement>(
+        `[data-gallery-item-id="${CSS.escape(targetSlug)}"] [data-card-media]`,
+      );
+      const effect = element.getAnimations()[0]?.effect;
+      const keyframes = effect instanceof KeyframeEffect ? effect.getKeyframes() : [];
+      const finalFrame = keyframes.at(-1);
+      return {
+        handoffTransform: typeof finalFrame?.transform === 'string'
+          ? finalFrame.transform
+          : 'none',
+        destinationSrc: (element.parentElement?.querySelectorAll('img')[1] as HTMLImageElement | undefined)
+          ?.src,
+        targetSrc: (() => {
+          const targetImage = targetInner?.querySelector<HTMLImageElement>('img');
+          return targetImage?.currentSrc || targetImage?.src;
+        })(),
+        targetTransform: targetInner ? getComputedStyle(targetInner).transform : 'none',
+        targetInlineTransition: targetInner?.style.transition,
+      };
+    }, slug);
+    expect(framing.handoffTransform).toBe(framing.targetTransform);
+    expect(framing.targetTransform).not.toBe('none');
+    expect(framing.destinationSrc).toBe(framing.targetSrc);
+    expect(framing.targetInlineTransition).toBe('none');
+    const settledGeometry = await returnHandoff.evaluate((element, targetSlug) => (
+      new Promise<{ handoff: DOMRect; target: DOMRect }>((resolve) => {
+        const capture = () => {
+          if (element.getAttribute('data-photo-return-handoff') !== 'settled') return;
+          const target = document.querySelector<HTMLElement>(
+            `[data-gallery-item-id="${CSS.escape(targetSlug)}"] .project-card__media`,
+          );
+          if (!target) return;
+          observer.disconnect();
+          resolve({
+            handoff: element.getBoundingClientRect(),
+            target: target.getBoundingClientRect(),
+          });
+        };
+        const observer = new MutationObserver(capture);
+        observer.observe(element, { attributes: true, attributeFilter: ['data-photo-return-handoff'] });
+        capture();
+      })
+    ), slug);
+    expect(Math.abs(settledGeometry.handoff.x - settledGeometry.target.x)).toBeLessThan(1);
+    expect(Math.abs(settledGeometry.handoff.y - settledGeometry.target.y)).toBeLessThan(1);
+    expect(Math.abs(settledGeometry.handoff.width - settledGeometry.target.width)).toBeLessThan(1);
+    expect(Math.abs(settledGeometry.handoff.height - settledGeometry.target.height)).toBeLessThan(1);
+    await expect(returnHandoff).toHaveCount(0, { timeout: 2_000 });
+    await expect(targetMedia).toBeVisible();
+    await expect.poll(() => targetMedia.locator('[data-card-media]').evaluate((element) => ({
+      transform: (element as HTMLElement).style.transform,
+      transition: (element as HTMLElement).style.transition,
+    }))).toEqual({ transform: '', transition: '' });
+    await expect(page.locator('[data-gallery-entrance]'))
+      .toHaveAttribute('data-gallery-entrance-state', 'settled');
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(storedOrigin.scrollY);
+    const firstBox = await targetMedia.boundingBox();
+    await page.waitForTimeout(220);
+    const settledBox = await targetMedia.boundingBox();
+    expect(Math.abs((settledBox?.y ?? 0) - (firstBox?.y ?? 0))).toBeLessThan(2);
+  }
+
+  await page.goto('/');
+  const motionLink = page.locator('[data-project-link]:has([data-preview-video])').first();
+  const motionSlug = await motionLink.getAttribute('data-project-slug');
+  if (!motionSlug) throw new Error('The motion gallery card is missing its project slug.');
+  await motionLink.scrollIntoViewIfNeeded();
+  const motionPreview = motionLink.locator('[data-preview-video]');
+  await expect.poll(() => motionPreview.evaluate((video) => (
+    (video as HTMLVideoElement).readyState
+  ))).toBeGreaterThanOrEqual(1);
+  await motionPreview.evaluate(async (element) => {
+    const video = element as HTMLVideoElement;
+    video.currentTime = 1.25;
+    await video.play();
+    video.dataset.playing = 'true';
+  });
+  await motionLink.click({ noWaitAfter: true });
+
+  const motionStyle = page.locator('[data-gallery-route-transition-style]');
+  await expect(motionStyle).toHaveAttribute('data-gallery-route-transition-kind', 'motion');
+  const motionCss = await motionStyle.evaluate((element) => element.textContent || '');
+  expect(motionCss).not.toContain('@keyframes new-work-still-transition-old');
+  expect(motionCss).not.toContain('object-fit: cover');
+  await page.waitForURL((url) => url.pathname !== '/');
+
+  const projectLoop = page.locator(
+    '[data-project-hero-media][data-first-media="true"] video[data-short-loop]',
+  );
+  await expect(projectLoop).toHaveAttribute('data-route-video-restored', 'true');
+  await expect.poll(() => projectLoop.evaluate((video) => (
+    (video as HTMLVideoElement).currentTime
+  ))).toBeGreaterThan(1.25);
+  await expect(projectLoop).not.toHaveAttribute('data-route-transition-active', 'true');
+
+  await projectLoop.evaluate(async (element) => {
+    const video = element as HTMLVideoElement;
+    video.currentTime = 2.5;
+    await video.play();
+  });
+
+  await page.locator('[data-project-overlay-return]').click({ noWaitAfter: true });
+  const motionReturnStyle = page.locator('[data-gallery-return-transition-style]');
+  await expect(motionReturnStyle).toHaveAttribute('data-gallery-return-transition-style', 'motion');
+  const motionReturnCss = await motionReturnStyle.evaluate((element) => element.textContent || '');
+  expect(motionReturnCss).toContain('[data-project-return-source="motion"]');
+  expect(motionReturnCss).not.toContain('object-fit: cover');
+  expect(motionReturnCss).not.toContain('@keyframes new-work-return-still-old');
+  await page.waitForURL((url) => url.pathname === '/');
+  const restoredMotionCard = page.locator(`[data-gallery-item-id="${motionSlug}"]`);
+  await expect(restoredMotionCard).toBeAttached();
+  const restoredPreview = restoredMotionCard.locator('[data-preview-video]');
+  await expect(restoredPreview).toHaveAttribute('data-route-video-restored', 'true');
+  await expect.poll(() => restoredPreview.evaluate((video) => (
+    (video as HTMLVideoElement).currentTime
+  ))).toBeGreaterThan(2.5);
+  await expect.poll(() => restoredPreview.evaluate((video) => (
+    (video as HTMLVideoElement).paused
+  ))).toBe(false);
+  await expect(page.locator('[data-gallery-entrance]'))
+    .toHaveAttribute('data-gallery-entrance-state', 'settled');
+});
+
+test('mobile still-photo navigation keeps the persisted image visible through the route swap', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+
+  if (await page.evaluate(() => typeof document.startViewTransition === 'function')) {
+    const link = page.locator('[data-project-slug="arc"]');
+    await link.scrollIntoViewIfNeeded();
+    const originScroll = await page.evaluate(() => window.scrollY);
+    await link.locator('.responsive-image').evaluate((element) => {
+      element.setAttribute('data-continuity-probe', 'mobile-still-node');
+    });
+    await link.click({ noWaitAfter: true });
+    await page.waitForURL('**/work/arc');
+    const heroImage = page.locator(
+      '[data-project-hero-media][data-first-media="true"] .responsive-image',
+    );
+    await expect(heroImage).toHaveAttribute('data-continuity-probe', 'mobile-still-node');
+    await expect(page.locator('[data-photo-route-handoff]')).toHaveCount(0);
+
+    await page.locator('[data-project-overlay-return]').click({ noWaitAfter: true });
+    await page.waitForURL((url) => url.pathname === '/');
+    await expect(page.locator('[data-gallery-item-id="arc"] .responsive-image'))
+      .toHaveAttribute('data-continuity-probe', 'mobile-still-node');
+    await expect(page.locator('[data-photo-return-handoff]')).toHaveCount(0);
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(originScroll);
+    return;
+  }
+
+  const link = page.locator('[data-project-slug="arc"]');
+  await link.scrollIntoViewIfNeeded();
+  await link.click({ noWaitAfter: true });
+
+  const handoff = page.locator('[data-photo-route-handoff]');
+  await expect(handoff).toBeAttached();
+  await page.waitForURL('**/work/arc');
+  await expect(handoff).toHaveAttribute('data-photo-route-handoff', 'animating');
+  await expect(handoff.locator('img').first()).toBeAttached();
+  await expect(handoff).toHaveCount(0, { timeout: 2_000 });
+  await expect(page.locator('[data-project-hero-media][data-first-media="true"]')).toBeVisible();
+
+  const originScroll = await page.evaluate(() =>
+    (JSON.parse(sessionStorage.getItem('new-work-origin') || '{}') as { scrollY?: number }).scrollY);
+  await page.locator('[data-project-overlay-return]').click({ noWaitAfter: true });
+  const returnHandoff = page.locator('[data-photo-return-handoff]');
+  await expect(returnHandoff).toBeAttached();
+  await page.waitForURL((url) => url.pathname === '/');
+  await expect(returnHandoff).toHaveAttribute('data-photo-return-handoff', 'animating');
+  await expect(returnHandoff.locator('img').first()).toBeAttached();
+  await expect(returnHandoff).toHaveCount(0, { timeout: 2_000 });
+  await expect(page.locator('[data-gallery-item-id="arc"] .project-card__media')).toBeVisible();
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(originScroll);
 });
 
 test('ClientRouter navigation shares project media names and restores the originating work position', async ({ page }) => {
@@ -1555,9 +2221,30 @@ test('ClientRouter navigation shares project media names and restores the origin
     getComputedStyle(element).viewTransitionName);
   expect(cardTransitionName).toBe(`project-${projectSlug}-media`);
 
-  await projectLink.click();
+  await projectLink.click({ noWaitAfter: true });
+  const routeTransitionStyle = page.locator('[data-gallery-route-transition-style]');
+  await expect(routeTransitionStyle).toHaveAttribute(
+    'data-gallery-route-transition-style',
+    cardTransitionName,
+  );
+  const routeTransitionCss = await routeTransitionStyle.evaluate((style) => style.textContent || '');
+  expect(routeTransitionCss).toContain('animation-duration: 900ms');
+  expect(routeTransitionCss).toContain('animation-duration: 520ms');
   await page.waitForURL(`**/work/${projectSlug}`);
   await expect(page.locator('[data-project-template]')).toBeVisible();
+  const storedClickOrigin = await page.evaluate(() =>
+    JSON.parse(sessionStorage.getItem('new-work-origin') || '{}') as { slug?: string; scrollY?: number });
+  expect(storedClickOrigin.slug).toBe(projectSlug);
+  expect(storedClickOrigin.scrollY).toBeGreaterThan(400);
+  const readyHeroPoster = await page.locator(
+    '[data-project-hero-media][data-first-media="true"] img[data-project-poster]',
+  ).evaluate((image) => ({
+    complete: (image as HTMLImageElement).complete,
+    currentSrc: (image as HTMLImageElement).currentSrc,
+  }));
+  expect(readyHeroPoster.complete && Boolean(readyHeroPoster.currentSrc)).toBe(true);
+  await expect(page.locator('[data-project-overlay]')).toHaveAttribute('data-overlay-backdrop', 'snapshot');
+  await expect(page.locator('[data-project-overlay-snapshot] img')).not.toHaveCount(0);
   await expect(page.locator('html')).toHaveAttribute('data-motion-route', `/work/${projectSlug}`);
   const projectTransitionName = await page.locator(
     '[data-project-hero-media][data-first-media="true"]',
@@ -1578,15 +2265,16 @@ test('ClientRouter navigation shares project media names and restores the origin
   await expect(page.locator('[data-gallery-entrance]'))
     .toHaveAttribute('data-gallery-entrance-state', 'settled');
   await expect(page.locator('[data-gallery-entrance]')).toHaveCSS('transform', 'none');
-  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(originScroll - 160);
-  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeLessThan(originScroll + 160);
+  const storedScrollY = storedClickOrigin.scrollY ?? originScroll;
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(storedScrollY - 40);
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeLessThan(storedScrollY + 40);
   await expect(projectLink).toBeInViewport();
 
   await expect(page.locator('[data-card-cursor-label]')).toHaveCount(0);
 
   await projectLink.click();
   await page.waitForURL(`**/work/${projectSlug}`);
-  const returnLink = page.locator('[data-project-return][data-restore-work-scroll]');
+  const returnLink = page.locator('[data-project-overlay-return][data-restore-work-scroll]');
   await returnLink.scrollIntoViewIfNeeded();
   await returnLink.click();
   await page.waitForURL(/\/$/u);
@@ -1595,6 +2283,91 @@ test('ClientRouter navigation shares project media names and restores the origin
     JSON.parse(sessionStorage.getItem('new-work-origin') || '{}') as { slug?: string; scrollY?: number });
   expect(restoredOrigin.slug).toBe(projectSlug);
   expect(restoredOrigin.scrollY).toBeGreaterThan(400);
+});
+
+test('project routes are dismissible inset panels over a blurred gallery surround', async ({ page }) => {
+  for (const viewport of [
+    { width: 1_440, height: 1_000 },
+    { width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto('/work/arc');
+
+    const overlay = page.locator('[data-project-overlay]');
+    const panel = page.locator('[data-project-overlay-panel]');
+    const backdrop = page.locator('[data-project-overlay-fallback]');
+    const edgeClose = page.locator('[data-project-overlay-edge-close]');
+    const returnLink = page.locator('[data-project-overlay-return]');
+    await expect(overlay).toBeVisible();
+    await expect(panel).toBeVisible();
+    await expect(backdrop).toBeVisible();
+    await expect(returnLink).toBeVisible();
+    await expect(returnLink).toHaveAccessibleName('Return to gallery');
+    await expect(returnLink).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+    await expect(edgeClose).toHaveAttribute('tabindex', '-1');
+    await expect(edgeClose).toHaveAccessibleName('Close Arc and return to the gallery');
+    await expect(edgeClose).toHaveCSS('cursor', 'pointer');
+
+    const geometry = await panel.evaluate((element) => {
+      const box = element.getBoundingClientRect();
+      const fallback = document.querySelector<HTMLElement>('[data-project-overlay-fallback]');
+      return {
+        left: box.left,
+        right: window.innerWidth - box.right,
+        width: box.width,
+        viewportWidth: window.innerWidth,
+        filter: fallback ? getComputedStyle(fallback).filter : 'none',
+        overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      };
+    });
+    expect(geometry.left).toBeGreaterThanOrEqual(viewport.width < 768 ? 9 : 24);
+    expect(geometry.right).toBeGreaterThanOrEqual(viewport.width < 768 ? 9 : 24);
+    expect(geometry.width).toBeLessThan(geometry.viewportWidth);
+    expect(geometry.filter).toContain('blur');
+    expect(geometry.overflow).toBeLessThanOrEqual(0);
+
+    await page.mouse.click(Math.max(2, geometry.left / 2), Math.min(viewport.height - 20, 300));
+    await page.waitForURL(/\/$/u);
+    await expect(page.locator('[data-project-grid]')).toBeVisible();
+  }
+});
+
+test('project footer is full-width and separated from the overlay panel', async ({ page }) => {
+  for (const viewport of [
+    { width: 1_440, height: 1_000 },
+    { width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto('/work/arc');
+
+    const geometry = await page.locator('[data-site-footer]').evaluate((element) => {
+      const footerBox = element.getBoundingClientRect();
+      const panel = document.querySelector<HTMLElement>('[data-project-overlay-panel]');
+      if (!panel) throw new Error('Project overlay panel is missing.');
+      const styles = getComputedStyle(element);
+      return {
+        left: footerBox.left,
+        right: window.innerWidth - footerBox.right,
+        width: footerBox.width,
+        viewportWidth: window.innerWidth,
+        margin: styles.margin,
+        boxShadow: styles.boxShadow,
+        sideBorders: Number.parseFloat(styles.borderLeftWidth) + Number.parseFloat(styles.borderRightWidth),
+        gap: footerBox.top - panel.getBoundingClientRect().bottom,
+        overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      };
+    });
+
+    expect(Math.abs(geometry.left)).toBeLessThanOrEqual(0.5);
+    expect(Math.abs(geometry.right)).toBeLessThanOrEqual(0.5);
+    expect(Math.abs(geometry.width - geometry.viewportWidth)).toBeLessThanOrEqual(1);
+    expect(geometry.margin).toBe('0px');
+    expect(geometry.boxShadow).toBe('none');
+    expect(geometry.sideBorders).toBe(0);
+    expect(geometry.gap).toBeGreaterThanOrEqual(viewport.width < 768 ? 18 : 28);
+    expect(geometry.gap).toBeLessThanOrEqual(viewport.width < 768 ? 19 : 73);
+    expect(geometry.overflow).toBeLessThanOrEqual(0);
+  }
 });
 
 test('related project cards preserve poster geometry and keep their labels together', async ({ page }) => {
@@ -1652,12 +2425,22 @@ test('a failed first-party image leaves a titled fallback without collapsing the
   await expect(page.getByRole('heading', { level: 1, name: 'Arc' })).toBeVisible();
 });
 
-test('disabled Reel and Notes leave no module, heading, navigation item, or Notes route', async ({ page }) => {
+test('the placeholder Reel closes Work above the footer while disabled Notes stay absent', async ({ page }) => {
   await page.goto('/');
 
-  await expect(page.locator('.reel, [data-reel-shell]')).toHaveCount(0);
+  const reel = page.locator('.reel');
+  await expect(reel).toBeVisible();
+  await expect(reel.locator('[data-deferred-source]')).toHaveAttribute(
+    'data-desktop-src',
+    /mercury-helen-mayer\/gallery-cut-08s\.mp4/u,
+  );
+  expect(await reel.evaluate((element) => {
+    const footer = document.querySelector('[data-site-footer]');
+    return Boolean(footer
+      && (element.compareDocumentPosition(footer) & Node.DOCUMENT_POSITION_FOLLOWING));
+  })).toBe(true);
   await expect(page.locator('[data-notes-strip]')).toHaveCount(0);
-  await expect(page.getByRole('heading', { name: 'Reel' })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Reel' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Notes' })).toHaveCount(0);
   await expect(page.locator('[data-site-header] a', { hasText: 'Notes' })).toHaveCount(0);
 
@@ -1927,8 +2710,20 @@ test('pointer motion never reshuffles the active desktop preview pool', async ({
     .map((video, index) => ({ index, playing: video.dataset.playing === 'true' }))
     .filter(({ playing }) => playing)
     .map(({ index }) => index));
-  await expect.poll(activeIndexes).toHaveLength(2);
+  await expect.poll(activeIndexes).not.toHaveLength(0);
   const before = await activeIndexes();
+  const predominantlyVisibleIndexes = await previews.evaluateAll((videos) => videos
+    .map((video, index) => {
+      const bounds = video.getBoundingClientRect();
+      const visibleHeight = Math.max(
+        0,
+        Math.min(bounds.bottom, window.innerHeight) - Math.max(bounds.top, 0),
+      );
+      return { index, visibility: visibleHeight / Math.max(bounds.height, 1) };
+    })
+    .filter(({ visibility }) => visibility >= 0.7)
+    .map(({ index }) => index));
+  expect(before).toEqual(expect.arrayContaining(predominantlyVisibleIndexes));
 
   await previews.evaluateAll((videos) => {
     const previewWindow = window as typeof window & { __previewMutations?: string[] };
@@ -1956,12 +2751,12 @@ test('pointer motion never reshuffles the active desktop preview pool', async ({
   await page.waitForTimeout(500);
 
   expect(await activeIndexes()).toEqual(before);
-  expect(await page.evaluate(() =>
+  const previewMutations = await page.evaluate(() =>
     (window as typeof window & { __previewMutations?: string[] }).__previewMutations ?? [],
+  );
+  expect(previewMutations.filter((mutation) =>
+    before.some((index) => mutation.startsWith(`${index}:`)),
   )).toEqual([]);
-  expect(await previews.evaluateAll((videos) =>
-    videos.filter((video) => video.dataset.playing === 'true').length,
-  )).toBeLessThanOrEqual(2);
   expect(await previews.evaluateAll((videos) => videos
     .filter((video) => video.hasAttribute('src'))
     .every((video) => video.dataset.previewPreloaded === 'true'))).toBe(true);
@@ -1972,25 +2767,32 @@ test('pointer motion never reshuffles the active desktop preview pool', async ({
   })).toBe(true);
 });
 
-test('a visible gallery preview starts without hover or focus', async ({ page }) => {
+test('every predominantly visible gallery preview starts without hover or focus', async ({ page }) => {
   await page.goto('/');
-  const previews = page.locator('[data-project-grid] [data-preview-video]');
-  await previews.first().scrollIntoViewIfNeeded();
+  const olympicsPreview = page.locator(
+    '[data-gallery-item-id="olympics-toyota-in-due-time"] [data-preview-video]',
+  );
+  await olympicsPreview.scrollIntoViewIfNeeded();
+  await expect(olympicsPreview).toHaveAttribute('data-playing', 'true');
+  await expect(olympicsPreview).toHaveAttribute('src', /\/media\/video-previews\/oliver\/olympics-toyota/u);
+  expect(await olympicsPreview.evaluate((video) => (video as HTMLVideoElement).muted)).toBe(true);
 
-  await expect.poll(() => previews.evaluateAll((videos) =>
-    videos.filter((video) => video.dataset.playing === 'true').length,
-  )).toBeGreaterThan(0);
-  const playingPreview = page.locator(
-    '[data-project-grid] [data-preview-video][data-playing="true"]',
-  ).first();
-  await expect(playingPreview).toHaveAttribute('src', /\/media\/video(?:-previews)?\//u);
-  expect(await playingPreview.evaluate((video) => (video as HTMLVideoElement).muted)).toBe(true);
+  await expect.poll(() => page.locator('[data-project-grid] [data-preview-video]').evaluateAll((videos) => {
+    const predominantlyVisible = videos.filter((video) => {
+      const bounds = video.getBoundingClientRect();
+      const visibleHeight = Math.max(
+        0,
+        Math.min(bounds.bottom, window.innerHeight) - Math.max(bounds.top, 0),
+      );
+      return visibleHeight / Math.max(bounds.height, 1) >= 0.7;
+    });
+    return predominantlyVisible.filter((video) => video.dataset.playing !== 'true').length;
+  })).toBe(0);
 });
 
-test('gallery images and videos are prepared before their cards enter the viewport', async ({ page }) => {
+test('gallery images prepare early while background video requests remain bounded', async ({ page }) => {
   await page.goto('/');
   const imageApproachDistance = await page.evaluate(() => Math.max(720, window.innerHeight * 1.5));
-  const videoApproachDistance = await page.evaluate(() => Math.max(640, window.innerHeight * 1.25));
 
   await expect.poll(() => page.locator('img[data-gallery-preload]').evaluateAll((images, distance) => {
     const approaching = images.filter((image) => {
@@ -2004,21 +2806,22 @@ test('gallery images and videos are prepared before their cards enter the viewpo
     };
   }, imageApproachDistance)).toEqual({ count: expect.any(Number), ready: true });
 
-  const approachingMedia = await page.locator('[data-preview-video]').evaluateAll((videos, distance) =>
-    videos.filter((video) => {
-      const bounds = video.getBoundingClientRect();
-      return bounds.top > window.innerHeight && bounds.top <= window.innerHeight + Number(distance);
-    }).map((video) => ({
-      hasSource: video.hasAttribute('src'),
-      preload: (video as HTMLVideoElement).preload,
-      prepared: video.dataset.previewPreloaded,
-    })), videoApproachDistance);
-  expect(approachingMedia.length).toBeGreaterThan(0);
-  expect(approachingMedia.every((item) =>
-    item.hasSource && item.preload === 'auto' && item.prepared === 'true')).toBe(true);
+  await expect.poll(() => page.locator('[data-preview-video]').evaluateAll((videos) => ({
+    prepared: videos.filter((video) => video.hasAttribute('src')).length,
+    invalid: videos.filter((video) =>
+      video.hasAttribute('src')
+      && ((video as HTMLVideoElement).preload !== 'auto'
+        || video.dataset.previewPreloaded !== 'true')).length,
+  }))).toEqual({
+    prepared: expect.any(Number),
+    invalid: 0,
+  });
+  const preparedCount = await page.locator('[data-preview-video][src]').count();
+  expect(preparedCount).toBeGreaterThan(0);
+  expect(preparedCount).toBeLessThanOrEqual(4);
 });
 
-test('touch scrolling keeps only one predominantly visible preview active', async ({ page }) => {
+test('touch scrolling plays every predominantly visible preview', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.addInitScript(() => {
     const playing = new WeakSet<HTMLMediaElement>();
@@ -2053,18 +2856,25 @@ test('touch scrolling keeps only one predominantly visible preview active', asyn
 
   const previews = page.locator('[data-preview-video]');
   expect(await previews.count()).toBeGreaterThanOrEqual(2);
-  const playingCount = () => previews.evaluateAll((videos) =>
-    videos.filter((video) => video.dataset.playing === 'true').length);
+  const missingVisiblePreviews = () => previews.evaluateAll((videos) => videos.filter((video) => {
+    const bounds = video.getBoundingClientRect();
+    const visibleHeight = Math.max(
+      0,
+      Math.min(bounds.bottom, window.innerHeight) - Math.max(bounds.top, 0),
+    );
+    return visibleHeight / Math.max(bounds.height, 1) >= 0.7
+      && video.dataset.playing !== 'true';
+  }).length);
 
   await previews.nth(0).evaluate((video) => video.scrollIntoView({ block: 'center' }));
-  await expect.poll(playingCount).toBe(1);
+  await expect.poll(missingVisiblePreviews).toBe(0);
   await expect(previews.nth(0)).toHaveAttribute('data-playing', 'true');
 
   await previews.nth(1).evaluate((video) => video.scrollIntoView({ block: 'center' }));
-  await expect.poll(playingCount).toBe(1);
+  await expect.poll(missingVisiblePreviews).toBe(0);
   const playingPreview = page.locator('[data-preview-video][data-playing="true"]');
-  await expect(playingPreview).toHaveCount(1);
-  await expect(playingPreview).toHaveAttribute('src', /\/media\/video(?:-previews)?\//u);
+  expect(await playingPreview.count()).toBeGreaterThan(0);
+  await expect(playingPreview.first()).toHaveAttribute('src', /\/media\/video(?:-previews)?\//u);
   expect(await previews.evaluateAll((videos) => videos.filter((video) =>
     !(video as HTMLVideoElement).muted).length)).toBe(0);
 });

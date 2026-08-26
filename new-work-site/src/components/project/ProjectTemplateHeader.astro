@@ -12,7 +12,16 @@ interface Props {
 }
 
 const { project, variant, titleTreatment } = Astro.props;
-const titleWords = project.title.trim().split(/\s+/u).filter(Boolean);
+const connectorWords = new Set(['&', '+', '/', '×', '—', '–']);
+const rawTitleWords = project.title.trim().split(/\s+/u).filter(Boolean);
+const titleWords = rawTitleWords.reduce<string[]>((chunks, word) => {
+  if (connectorWords.has(word) && chunks.length > 0) {
+    chunks[chunks.length - 1] = `${chunks[chunks.length - 1]}\u00a0${word}`;
+  } else {
+    chunks.push(word);
+  }
+  return chunks;
+}, []);
 const outputs = project.types.filter(Boolean);
 const contributors = project.contributors.filter((contributor) => (
   contributor.name.trim().length > 0 && contributor.role.trim().length > 0
@@ -40,6 +49,7 @@ const contributors = project.contributors.filter((contributor) => (
             >
               <span
                 class="project-title__word"
+                data-project-title-chunk
                 data-motion-reveal="up"
                 data-motion-delay={(0.18 + index * 0.035).toFixed(3)}
               >{word}</span>

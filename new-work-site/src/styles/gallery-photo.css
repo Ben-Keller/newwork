@@ -42,8 +42,9 @@
   }
 
   .gallery-photo__primary {
-    min-height: 70svh;
-    background: #deded9;
+    align-self: start;
+    min-height: 0;
+    background: transparent;
     overflow: hidden;
   }
 
@@ -51,10 +52,8 @@
   .gallery-photo__primary picture,
   .gallery-photo__primary img {
     width: 100%;
-    height: 100%;
+    height: auto;
   }
-
-  .gallery-photo__primary img { object-fit: cover; }
 
   .gallery-photo__story {
     display: grid;
@@ -139,13 +138,24 @@
   }
 }
 
+/* Standalone photographs use the full viewport edge. Scrolling remains on the
+   document, but the browser must not reserve or paint a separate track. */
+html:has(> body.gallery-photo-page) {
+  scrollbar-width: none;
+}
+
+html:has(> body.gallery-photo-page)::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
 @media (max-width: 767px) {
   @layer components {
     .gallery-photo { padding-top: 4rem; }
     .gallery-photo__hero { grid-template-columns: 1fr; gap: 2.5rem; min-height: 0; }
     .gallery-photo__intro { position: static; }
     .gallery-photo h1 { max-width: 9ch; font-size: clamp(3.8rem, 21vw, 6rem); }
-    .gallery-photo__primary { min-height: 62svh; }
+    .gallery-photo__primary { min-height: 0; }
     .gallery-photo__story { grid-template-columns: 1fr; gap: 3rem; padding: 5.5rem 0; }
     .gallery-photo__story > p, .gallery-photo__closing { font-size: clamp(2rem, 10vw, 3.2rem); }
     .gallery-photo__detail { width: 100%; height: 68svh; }

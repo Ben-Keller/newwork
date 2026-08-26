@@ -1,0 +1,82 @@
+<script>
+  declare global {
+    interface Window {
+      __newWorkBackdropCaptureReady?: boolean;
+    }
+  }
+
+  interface GalleryBackdropItem {
+    src: string;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    objectPosition: string;
+  }
+
+  const backdropStorageKey = 'new-work:gallery-backdrop:v1';
+
+  const captureGalleryBackdrop = (event: MouseEvent): void => {
+    if (
+      event.defaultPrevented
+      || event.button !== 0
+      || event.metaKey
+      || event.ctrlKey
+      || event.shiftKey
+      || event.altKey
+      || !(event.target instanceof Element)
+    ) return;
+
+    const link = event.target.closest<HTMLAnchorElement>('[data-project-link], [data-gallery-link]');
+    const grid = link?.closest<HTMLElement>('[data-project-grid]');
+    if (!link || !grid || window.innerWidth <= 0 || window.innerHeight <= 0) return;
+
+    const pathnameParts = new URL(link.href, window.location.href).pathname.split('/').filter(Boolean);
+    const destination = link.dataset.projectSlug || pathnameParts.at(-1);
+    if (!destination) return;
+
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const items = [...grid.querySelectorAll<HTMLElement>('[data-project-card]')]
+      .flatMap((card): GalleryBackdropItem[] => {
+        const media = card.querySelector<HTMLElement>('.project-card__media');
+        const image = media?.querySelector<HTMLImageElement>('img');
+        if (!media || !image) return [];
+
+        const box = media.getBoundingClientRect();
+        const nearViewport = box.bottom > -viewportHeight * .35
+          && box.top < viewportHeight * 1.35
+          && box.right > -viewportWidth * .2
+          && box.left < viewportWidth * 1.2;
+        if (!nearViewport || box.width <= 0 || box.height <= 0) return [];
+
+        const source = image.currentSrc || image.src;
+        if (!source) return [];
+
+        return [{
+          src: source,
+          x: box.left / viewportWidth,
+          y: box.top / viewportHeight,
+          width: box.width / viewportWidth,
+          height: box.height / viewportHeight,
+          objectPosition: getComputedStyle(image).objectPosition || '50% 50%',
+        }];
+      })
+      .slice(0, 20);
+
+    if (!items.length) return;
+
+    try {
+      sessionStorage.setItem(backdropStorageKey, JSON.stringify({ destination, items }));
+    } catch {
+      // Storage can be unavailable in hardened browsing modes. The overlay has
+      // a complete server-rendered gallery fallback for that case.
+    }
+  };
+
+  if (!window.__newWorkBackdropCaptureReady) {
+    window.__newWorkBackdropCaptureReady = true;
+    // Capture before the client router handles the link and swaps the page.
+    document.addEventListener('click', captureGalleryBackdrop, { capture: true });
+  }
+</script>

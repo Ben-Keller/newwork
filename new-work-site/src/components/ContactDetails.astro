@@ -1,11 +1,15 @@
 ---
 import type { SiteSettingsView } from '../lib/types';
+import RichText from './RichText.astro';
 interface Props { settings: SiteSettingsView }
 const { settings } = Astro.props;
 ---
 <section class="utility-content contact-content" aria-labelledby="contact-heading">
-  <p class="eyebrow" data-motion-reveal="fade">New Work</p>
-  <h1 id="contact-heading" data-motion-split="words">Contact</h1>
+  <p class="eyebrow" data-motion-reveal="fade">{settings.workIntroName}</p>
+  <h1 id="contact-heading" data-motion-split="words">{settings.contactHeading}</h1>
+  {settings.contactIntroduction ? (
+    <RichText value={settings.contactIntroduction} class="contact-introduction" />
+  ) : null}
   {settings.contactEmail ? (
     <a class="contact-email" href={`mailto:${settings.contactEmail}`} data-motion-reveal="up">
       <span>{settings.contactEmail}</span><span class="contact-email__arrow" aria-hidden="true">↗</span>

@@ -1,0 +1,351 @@
+---
+import { inferVideoMimeType } from './media/video-mime';
+import { withBase } from '../lib/base-path';
+import type { ProjectView } from '../lib/types';
+
+export interface Props {
+  projects?: ProjectView[];
+}
+
+const { projects = [] } = Astro.props;
+
+const assignments = [
+  { glyph: 'N', slug: 'mercury-an-unexpected-life', position: '52% 48%', x: 1.82, y: 8.79, width: 28.26, height: 38.87 },
+  { glyph: 'E', slug: 'native-cucumber-mint-stop-motion', position: '50% 50%', x: 30.47, y: 8.79, width: 29.17, height: 38.87 },
+  { glyph: 'W', slug: 'cradlewise', position: '52% 46%', x: 60.03, y: 8.79, width: 38.02, height: 38.87 },
+  { glyph: 'W', slug: 'tour-de-france-x-toyota', position: '62% 50%', x: 1.82, y: 48.24, width: 29.95, height: 39.06 },
+  { glyph: 'O', slug: 'specialized-globe', position: '50% 52%', x: 32.16, y: 48.24, width: 24.61, height: 39.06 },
+  { glyph: 'R', slug: 'brava', position: '48% 50%', x: 57.16, y: 48.24, width: 28, height: 39.06 },
+  { glyph: 'K', slug: 'olympics-toyota-in-due-time', position: '50% 50%', x: 85.55, y: 48.24, width: 12.5, height: 39.06 },
+] as const;
+
+const fallbackProjects = projects.filter((project) => project.cover.poster?.src);
+const media = assignments.flatMap((assignment, index) => {
+  const project = projects.find((candidate) => candidate.slug === assignment.slug)
+    || fallbackProjects[index % Math.max(1, fallbackProjects.length)];
+  if (!project?.cover.poster?.src) return [];
+  const videoSource = project.cover.previewVideo;
+  return [{
+    ...assignment,
+    index,
+    project,
+    poster: project.cover.previewPosterOverride?.src || project.cover.poster.src,
+    videoSource,
+    videoMime: videoSource ? inferVideoMimeType(videoSource) : undefined,
+    regionStyle: [
+      `--asset-left:${assignment.x}%`,
+      `--asset-top:${assignment.y}%`,
+      `--asset-width:${assignment.width}%`,
+      `--asset-height:${assignment.height}%`,
+    ].join(';'),
+  }];
+});
+
+const maskUrl = withBase('/media/brand/new-work-block-mask.png');
+const experienceStyle = `--logo-mask:url("${maskUrl}")`;
+---
+
+<section
+  class="logo-mask-experience"
+  style={experienceStyle}
+  data-logo-mask-experience
+  data-logo-reveal="1"
+  data-logo-reveal-ready="false"
+  aria-label="New Work logo media study"
+>
+  <div class="logo-mask-experience__canvas">
+    <div class="logo-mask-stage" data-logo-stage>
+      <div class="logo-mask-stage__solid" aria-hidden="true"></div>
+
+      <div class="logo-mask-stage__single" aria-hidden="true">
+        {media.map((asset) => (
+          <div
+            class="logo-mask-stage__single-layer logo-mask-stage__masked"
+            data-single-layer
+            data-asset-index={asset.index}
+            data-active={asset.index === 0 ? 'true' : undefined}
+          >
+            <img
+              src={asset.poster}
+              alt=""
+              loading={asset.index === 0 ? 'eager' : 'lazy'}
+              decoding="async"
+              style={`object-position:${asset.position}`}
+            />
+            {asset.videoSource ? (
+              <video muted loop playsinline preload="none" poster={asset.poster} style={`object-position:${asset.position}`} data-logo-video>
+                <source data-src={asset.videoSource} type={asset.videoMime} />
+              </video>
+            ) : null}
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  declare global {
+    interface Window {
+      __newWorkLogoMaskCleanup?: () => void;
+    }
+  }
+
+  const initializeLogoMask = (): void => {
+    const root = document.querySelector<HTMLElement>('[data-logo-mask-experience]');
+    if (!root || root.dataset.logoMaskReady === 'true') return;
+    root.dataset.logoMaskReady = 'true';
+
+    const revealModes = ['1', '2', '3', '4', '5'] as const;
+    const randomRevealMode = (): string => revealModes[Math.floor(Math.random() * revealModes.length)] ?? '1';
+    let revealFrame = 0;
+    let revealSettleFrame = 0;
+    const playReveal = (mode = randomRevealMode()): void => {
+      if (revealFrame) window.cancelAnimationFrame(revealFrame);
+      if (revealSettleFrame) window.cancelAnimationFrame(revealSettleFrame);
+      root.dataset.logoRevealReady = 'false';
+      root.dataset.logoReveal = mode;
+      revealFrame = window.requestAnimationFrame(() => {
+        revealFrame = 0;
+        revealSettleFrame = window.requestAnimationFrame(() => {
+          revealSettleFrame = 0;
+          root.dataset.logoRevealReady = 'true';
+        });
+      });
+    };
+
+    let revealMode = randomRevealMode();
+    try {
+      const storedReveal = window.sessionStorage.getItem('new-work-logo-reveal');
+      if (storedReveal && revealModes.includes(storedReveal as (typeof revealModes)[number])) revealMode = storedReveal;
+      window.sessionStorage.removeItem('new-work-logo-reveal');
+    } catch {
+      // Storage can be unavailable in privacy-restricted contexts.
+    }
+    playReveal(revealMode);
+    const handleRevealRequest = (): void => playReveal();
+    window.addEventListener('new-work:logo-reveal', handleRevealRequest);
+
+    const singleLayers = [...root.querySelectorAll<HTMLElement>('[data-single-layer]')];
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const saveData = Boolean((navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData);
+
+    const pauseVideos = (): void => {
+      root.querySelectorAll<HTMLVideoElement>('[data-logo-video]').forEach((video) => video.pause());
+    };
+
+    const playVideo = (layer: HTMLElement | undefined): void => {
+      const video = layer?.querySelector<HTMLVideoElement>('[data-logo-video]');
+      if (!video || reducedMotion || saveData) return;
+      const source = video.querySelector<HTMLSourceElement>('source[data-src]');
+      if (source?.dataset.src && !source.src) {
+        source.src = source.dataset.src;
+        video.load();
+      }
+      void video.play().catch(() => undefined);
+    };
+
+    const clearLayers = (): void => {
+      singleLayers.forEach((layer) => layer.removeAttribute('data-active'));
+    };
+
+    const activate = (index: number): void => {
+      const layer = singleLayers
+        .find((candidate) => Number(candidate.dataset.assetIndex) === index);
+      if (!layer) return;
+      clearLayers();
+      pauseVideos();
+      layer.dataset.active = 'true';
+      playVideo(layer);
+    };
+
+    activate(0);
+    window.__newWorkLogoMaskCleanup?.();
+    window.__newWorkLogoMaskCleanup = () => {
+      if (revealFrame) window.cancelAnimationFrame(revealFrame);
+      if (revealSettleFrame) window.cancelAnimationFrame(revealSettleFrame);
+      window.removeEventListener('new-work:logo-reveal', handleRevealRequest);
+      pauseVideos();
+      delete window.__newWorkLogoMaskCleanup;
+    };
+  };
+
+  initializeLogoMask();
+  document.addEventListener('astro:page-load', initializeLogoMask);
+  document.addEventListener('astro:before-swap', () => window.__newWorkLogoMaskCleanup?.());
+</script>
+
+<style>
+  .logo-mask-experience {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 100%;
+    height: 100svh;
+    min-height: 0;
+    overflow: hidden;
+    padding: var(--page-gutter);
+  }
+
+  .logo-mask-experience__canvas {
+    align-self: stretch;
+    display: grid;
+    align-items: safe center;
+    justify-items: center;
+    width: 100%;
+    min-height: 0;
+    perspective: 1200px;
+  }
+
+  .logo-mask-stage {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1487 / 849;
+    isolation: isolate;
+    opacity: 0;
+    will-change: clip-path, filter, opacity, transform;
+  }
+
+  .logo-mask-stage__solid,
+  .logo-mask-stage__single {
+    position: absolute;
+    top: -10.247%;
+    left: -1.681%;
+    width: 103.295%;
+    height: 120.612%;
+    transform: scaleY(.95);
+    transform-origin: 50% 50%;
+  }
+
+  .logo-mask-stage__single-layer { position: absolute; inset: 0; }
+
+  .logo-mask-stage__solid {
+    z-index: 1;
+    background: var(--color-ink);
+    -webkit-mask: var(--logo-mask) center / 100% 100% no-repeat;
+    mask: var(--logo-mask) center / 100% 100% no-repeat;
+    -webkit-mask-mode: alpha;
+    mask-mode: alpha;
+  }
+
+  .logo-mask-stage__single { z-index: 2; }
+
+  .logo-mask-stage__masked {
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+    -webkit-mask: var(--logo-mask) center / 100% 100% no-repeat;
+    mask: var(--logo-mask) center / 100% 100% no-repeat;
+    -webkit-mask-mode: alpha;
+    mask-mode: alpha;
+    transition: opacity 260ms ease;
+  }
+
+  .logo-mask-stage__single-layer[data-active="true"] { opacity: 1; }
+
+  .logo-mask-stage__masked img,
+  .logo-mask-stage__masked video {
+    position: absolute;
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .logo-mask-stage__masked video { z-index: 1; }
+
+  .logo-mask-experience[data-logo-reveal-ready="true"] .logo-mask-stage { opacity: 1; }
+
+  .logo-mask-experience[data-logo-reveal="1"][data-logo-reveal-ready="true"] .logo-mask-stage {
+    animation: logo-reveal-aperture 1300ms cubic-bezier(.16, 1, .3, 1) both;
+  }
+
+  .logo-mask-experience[data-logo-reveal="2"][data-logo-reveal-ready="true"] .logo-mask-stage {
+    animation: logo-reveal-diagonal 1100ms cubic-bezier(.2, .8, .2, 1) both;
+  }
+
+  .logo-mask-experience[data-logo-reveal="3"][data-logo-reveal-ready="true"] .logo-mask-stage {
+    transform-origin: 50% 0;
+    backface-visibility: hidden;
+    animation: logo-reveal-fold 1350ms cubic-bezier(.16, 1, .3, 1) both;
+  }
+
+  .logo-mask-experience[data-logo-reveal="4"][data-logo-reveal-ready="true"] .logo-mask-stage {
+    -webkit-mask-image:
+      linear-gradient(#000 0 0), linear-gradient(#000 0 0),
+      linear-gradient(#000 0 0), linear-gradient(#000 0 0),
+      linear-gradient(#000 0 0), linear-gradient(#000 0 0);
+    mask-image:
+      linear-gradient(#000 0 0), linear-gradient(#000 0 0),
+      linear-gradient(#000 0 0), linear-gradient(#000 0 0),
+      linear-gradient(#000 0 0), linear-gradient(#000 0 0);
+    -webkit-mask-position: left 0%, right 20%, left 40%, right 60%, left 80%, right 100%;
+    mask-position: left 0%, right 20%, left 40%, right 60%, left 80%, right 100%;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    animation: logo-reveal-blinds 1250ms cubic-bezier(.16, 1, .3, 1) both;
+  }
+
+  .logo-mask-experience[data-logo-reveal="5"][data-logo-reveal-ready="true"] .logo-mask-stage {
+    animation: logo-reveal-seam 1200ms cubic-bezier(.16, 1, .3, 1) both;
+  }
+
+  @keyframes logo-reveal-aperture {
+    0% { opacity: 0; clip-path: circle(0% at 50% 50%); transform: scale(.88) rotate(-2deg); }
+    70% { opacity: 1; }
+    100% { opacity: 1; clip-path: circle(80% at 50% 50%); transform: none; }
+  }
+
+  @keyframes logo-reveal-diagonal {
+    0% {
+      opacity: 0;
+      clip-path: polygon(0 0, 0 0, -20% 100%, -20% 100%);
+      transform: translateX(-4%) skewX(-3deg);
+    }
+    100% {
+      opacity: 1;
+      clip-path: polygon(0 0, 120% 0, 100% 100%, 0 100%);
+      transform: none;
+    }
+  }
+
+  @keyframes logo-reveal-fold {
+    0% { opacity: 0; transform: rotateX(-88deg) translateY(-12%) scale(.96); }
+    58% { opacity: 1; transform: rotateX(7deg) translateY(1%); }
+    100% { opacity: 1; transform: none; }
+  }
+
+  @keyframes logo-reveal-blinds {
+    0% {
+      opacity: 0;
+      -webkit-mask-size: 0% 16.8%, 0% 16.8%, 0% 16.8%, 0% 16.8%, 0% 16.8%, 0% 16.8%;
+      mask-size: 0% 16.8%, 0% 16.8%, 0% 16.8%, 0% 16.8%, 0% 16.8%, 0% 16.8%;
+    }
+    24% { opacity: 1; }
+    100% {
+      opacity: 1;
+      -webkit-mask-size: 100% 16.8%, 100% 16.8%, 100% 16.8%, 100% 16.8%, 100% 16.8%, 100% 16.8%;
+      mask-size: 100% 16.8%, 100% 16.8%, 100% 16.8%, 100% 16.8%, 100% 16.8%, 100% 16.8%;
+    }
+  }
+
+  @keyframes logo-reveal-seam {
+    0% { opacity: 0; clip-path: inset(0 50%); filter: brightness(2); transform: scaleX(.82); }
+    62% { opacity: 1; clip-path: inset(0 -3%); filter: brightness(1.15); transform: scaleX(1.035); }
+    100% { opacity: 1; clip-path: inset(0); filter: none; transform: none; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .logo-mask-stage__masked { transition: none; }
+
+    .logo-mask-experience[data-logo-reveal][data-logo-reveal-ready="true"] .logo-mask-stage {
+      animation: none;
+      opacity: 1;
+      clip-path: none;
+      filter: none;
+      transform: none;
+      -webkit-mask-image: none;
+      mask-image: none;
+    }
+  }
+</style>

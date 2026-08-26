@@ -116,6 +116,41 @@ describe('project presentation projections', () => {
 });
 
 describe('About people projections', () => {
+  const people = [
+    {
+      _key: 'approved',
+      _type: 'aboutPerson',
+      name: 'Approved person',
+      projectOwner: 'oliver',
+      bio: [{_type: 'block', children: [{_type: 'span', text: 'Approved biography.'}]}],
+      selectedWork: [
+        {
+          _key: 'approved-work',
+          _type: 'aboutWork',
+          title: 'Approved work',
+          image: {asset: {_ref: 'image-about-work'}},
+        },
+        {
+          _key: 'blocked-work',
+          _type: 'aboutWork',
+          title: 'Blocked work',
+          image: {asset: {_ref: 'image-about-work-blocked'}},
+          prototypeOnly: true,
+        },
+      ],
+      needsReview: false,
+      prototypeOnly: false,
+    },
+    {
+      _key: 'prototype',
+      _type: 'aboutPerson',
+      name: 'Prototype person',
+      projectOwner: 'michael',
+      bio: [{_type: 'block', children: [{_type: 'span', text: 'Placeholder biography.'}]}],
+      needsReview: true,
+      prototypeOnly: true,
+    },
+  ];
   const settings = {
     _id: 'siteSettings',
     _type: 'siteSettings',
@@ -126,65 +161,30 @@ describe('About people projections', () => {
       shareImage: {asset: {_ref: 'image-share'}},
       shareImageAlt: 'Approved share image.',
     },
-    reel: {enabled: false},
-    aboutPeople: [
-      {
-        _key: 'approved',
-        _type: 'aboutPerson',
-        name: 'Approved person',
-        projectOwner: 'oliver',
-        bio: [{_type: 'block', children: [{_type: 'span', text: 'Approved biography.'}]}],
-        selectedWork: [
-          {
-            _key: 'approved-work',
-            _type: 'aboutWork',
-            title: 'Approved work',
-            image: {asset: {_ref: 'image-about-work'}},
-          },
-          {
-            _key: 'blocked-work',
-            _type: 'aboutWork',
-            title: 'Blocked work',
-            image: {asset: {_ref: 'image-about-work-blocked'}},
-            prototypeOnly: true,
-          },
-        ],
-        needsReview: false,
-        prototypeOnly: false,
-      },
-      {
-        _key: 'prototype',
-        _type: 'aboutPerson',
-        name: 'Prototype person',
-        projectOwner: 'michael',
-        bio: [{_type: 'block', children: [{_type: 'span', text: 'Placeholder biography.'}]}],
-        needsReview: true,
-        prototypeOnly: true,
-      },
-    ],
   };
+  const aboutPage = {_id: 'aboutPage', _type: 'aboutPage', people};
 
   it('filters provisional profiles individually from the public projection', async () => {
-    const result = await queryResult<{aboutPeople: Array<{name: string; selectedWork: Array<{title: string}>}>}>(
+    const result = await queryResult<{aboutPage: {people: Array<{name: string; selectedWork: Array<{title: string}>}>}}>(
       SITE_SETTINGS_QUERY,
-      [settings],
+      [settings, aboutPage],
     );
 
-    expect(result.aboutPeople.map((person) => person.name)).toEqual(['Approved person']);
-    expect(result.aboutPeople[0]?.selectedWork.map((work) => work.title)).toEqual(['Approved work']);
+    expect(result.aboutPage.people.map((person) => person.name)).toEqual(['Approved person']);
+    expect(result.aboutPage.people[0]?.selectedWork.map((work) => work.title)).toEqual(['Approved work']);
   });
 
   it('retains provisional profiles in the preview projection', async () => {
-    const result = await queryResult<{aboutPeople: Array<{name: string; selectedWork?: Array<{title: string}>}>}>(
+    const result = await queryResult<{aboutPage: {people: Array<{name: string; selectedWork?: Array<{title: string}>}>}}>(
       PREVIEW_SITE_SETTINGS_QUERY,
-      [settings],
+      [settings, aboutPage],
     );
 
-    expect(result.aboutPeople.map((person) => person.name)).toEqual([
+    expect(result.aboutPage.people.map((person) => person.name)).toEqual([
       'Approved person',
       'Prototype person',
     ]);
-    expect(result.aboutPeople[0]?.selectedWork?.map((work) => work.title)).toEqual([
+    expect(result.aboutPage.people[0]?.selectedWork?.map((work) => work.title)).toEqual([
       'Approved work',
       'Blocked work',
     ]);

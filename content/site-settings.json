@@ -37,62 +37,6 @@
       "needsReview": true,
       "prototypeOnly": true,
       "doNotPublishWithoutExplicitApproval": false
-    },
-    {
-      "_key": "about-person-anjali",
-      "name": "Anjali Rao",
-      "projectOwner": "anjali",
-      "roleLabel": "Creative Director / Art Direction",
-      "bio": "Anjali Rao is a Creative Director and art director whose practice spans Adobe, Stella Artois and Rakuten. Her portfolio brings together image-led campaigns, film and playful conceptual work.",
-      "selectedWork": [
-        {
-          "_key": "about-work-anjali-adobe",
-          "title": "Adobe",
-          "client": "Adobe",
-          "url": "https://arao.squarespace.com/new-page-10/",
-          "image": "assets/web-ready/images/anjali/anjali-adobe-portrait.webp",
-          "alt": "",
-          "needsReview": true,
-          "prototypeOnly": true,
-          "doNotPublishWithoutExplicitApproval": true
-        },
-        {
-          "_key": "about-work-anjali-stella-artois",
-          "title": "Daydream",
-          "client": "Stella Artois",
-          "url": "https://arao.squarespace.com/stella-produced/",
-          "image": "assets/web-ready/images/anjali/anjali-stella-artois.webp",
-          "alt": "",
-          "needsReview": true,
-          "prototypeOnly": true,
-          "doNotPublishWithoutExplicitApproval": true
-        },
-        {
-          "_key": "about-work-anjali-rakuten",
-          "title": "Rakuten",
-          "client": "Rakuten",
-          "url": "https://arao.squarespace.com/rakuten-produced/",
-          "image": "assets/web-ready/images/anjali/anjali-rakuten.webp",
-          "alt": "",
-          "needsReview": true,
-          "prototypeOnly": true,
-          "doNotPublishWithoutExplicitApproval": true
-        },
-        {
-          "_key": "about-work-anjali-rakuten-duet-frame",
-          "title": "Duet",
-          "client": "Rakuten",
-          "url": "https://arao.squarespace.com/rakuten-produced/",
-          "image": "assets/web-ready/images/anjali/anjali-rakuten-duet-frame.webp",
-          "alt": "",
-          "needsReview": true,
-          "prototypeOnly": true,
-          "doNotPublishWithoutExplicitApproval": true
-        }
-      ],
-      "needsReview": true,
-      "prototypeOnly": true,
-      "doNotPublishWithoutExplicitApproval": true
     }
   ],
   "capabilities": [

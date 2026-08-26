@@ -1,4 +1,4 @@
-import { createClient } from '@sanity/client';
+import {sanityClient} from 'sanity:client';
 import fixtureProjects from '../content/local/projects.json';
 import fixtureSettings from '../content/local/site-settings.json';
 import attributionRecords from '../content/local/asset-attribution.json';
@@ -43,6 +43,8 @@ import type {
   ImagePairBlock,
   ImageView,
   ProjectLayoutVariant,
+  FooterSettingsView,
+  NavigationDestination,
   NoteView,
   ProjectOwner,
   ProjectType,
@@ -54,8 +56,10 @@ import type {
   SiteContent,
   SiteSettingsView,
   VideoView,
+  WorkGalleryPlacementView,
 } from './types';
 import { withBase } from './base-path';
+import {SANITY_API_VERSION} from './sanity-config';
 
 const attribution = attributionRecords as Record<string, AttributionRecord>;
 const fixtureProjectRecords = fixtureProjects as UnknownRecord[];
@@ -146,6 +150,12 @@ function isApprovedSanityAsset(value: unknown, kind: 'image' | 'file'): boolean 
 }
 
 function videoBlockHasApprovedSource(block: UnknownRecord): boolean {
+  const libraryAsset = recordOrEmpty(block.mediaItem);
+  block = {
+    ...libraryAsset,
+    ...block,
+    externalUrl: block.externalUrl || libraryAsset.videoUrl,
+  };
   const vimeoId = typeof block.vimeoId === 'string' && VIMEO_ID_PATTERN.test(block.vimeoId);
   const youtubeId = typeof block.youtubeId === 'string' && YOUTUBE_ID_PATTERN.test(block.youtubeId);
   const uploaded = Boolean(safeHostedVideoUrl(sourceUrl(block.source || block.file)));
@@ -155,6 +165,16 @@ function videoBlockHasApprovedSource(block: UnknownRecord): boolean {
 }
 
 function blockHasAccessibleMedia(block: UnknownRecord): boolean {
+  const libraryAsset = recordOrEmpty(block.mediaItem);
+  block = {
+    ...libraryAsset,
+    ...block,
+    image: block.image || libraryAsset.image,
+    poster: block.poster || libraryAsset.poster,
+    alt: block.alt || libraryAsset.alt,
+    decorative: block.decorative ?? libraryAsset.decorative,
+    externalUrl: block.externalUrl || libraryAsset.videoUrl,
+  };
   if (['heroVideo', 'video', 'shortLoop'].includes(String(block._type))) {
     if (!isApprovedSanityAsset(block.poster, 'image') || !videoBlockHasApprovedSource(block)) return false;
     if (block.remoteSource && !safeHostedVideoUrl(block.remoteSource)) return false;
@@ -175,8 +195,9 @@ function blockHasAccessibleMedia(block: UnknownRecord): boolean {
     return images.length > 0 && images.every((image: unknown, index: number) => {
       if (image && typeof image === 'object') {
         const record = image as UnknownRecord;
-        return isApprovedSanityAsset(record.image || record, 'image') &&
-          Boolean(record.decorative || hasMeaningfulAlt(record.alt));
+        const libraryImage = recordOrEmpty(record.mediaItem);
+        return isApprovedSanityAsset(record.image || libraryImage.image || record, 'image') &&
+          Boolean(record.decorative || libraryImage.decorative || hasMeaningfulAlt(record.alt || libraryImage.alt));
       }
       const alt = Array.isArray(block.alt) ? block.alt[index] : undefined;
       return hasMeaningfulAlt(alt);
@@ -186,7 +207,10 @@ function blockHasAccessibleMedia(block: UnknownRecord): boolean {
 }
 
 export function isProductionEligible(project: UnknownRecord, now = new Date()): boolean {
-  if (!project.visible || project.needsReview || project.doNotPublishWithoutExplicitApproval) return false;
+  const approvedForWebsite = project.editorialStatus === 'approved' ||
+    (project.editorialStatus === undefined && project.visible === true);
+  if (!approvedForWebsite || project.doNotPublishWithoutExplicitApproval) return false;
+  if (project.editorialStatus === undefined && project.needsReview) return false;
   if (project.rightsApprovalStatus !== 'approved' || !hasMeaningfulAlt(project.rightsApprovalEvidence)) return false;
   if (typeof project.rightsExpiresAt === 'string' && new Date(project.rightsExpiresAt) <= now) return false;
   const slugRecord = recordOrEmpty(project.slug);
@@ -388,6 +412,16 @@ function resolveImage(
 }
 
 function normalizeVideo(raw: UnknownRecord, projectTitle: string): VideoView {
+  const libraryAsset = recordOrEmpty(raw.mediaItem);
+  raw = {
+    ...libraryAsset,
+    ...raw,
+    poster: raw.poster || libraryAsset.poster,
+    externalUrl: raw.externalUrl || libraryAsset.videoUrl,
+    alt: raw.alt || libraryAsset.alt,
+    caption: raw.caption || libraryAsset.caption,
+    credit: raw.credit || libraryAsset.credit,
+  };
   const watch = parseApprovedWatchUrl(raw.externalUrl);
   const explicitVimeoId = typeof raw.vimeoId === 'string' && VIMEO_ID_PATTERN.test(raw.vimeoId)
     ? raw.vimeoId
@@ -468,28 +502,37 @@ function resolveBlockImage(
 }
 
 function normalizeBlock(raw: UnknownRecord, projectTitle: string): ContentBlockView | null {
+  const libraryAsset = recordOrEmpty(raw.mediaItem);
+  const editorialBlock = {
+    ...libraryAsset,
+    ...raw,
+    image: raw.image || libraryAsset.image,
+    alt: raw.alt || libraryAsset.alt,
+    caption: raw.caption || libraryAsset.caption,
+    credit: raw.credit || libraryAsset.credit,
+  };
   const base = {
     _key: String(raw._key || `${projectTitle}-${raw._type || 'block'}`),
-    caption: typeof raw.caption === 'string' ? raw.caption : undefined,
-    credit: typeof raw.credit === 'string' ? raw.credit : undefined,
+    caption: typeof editorialBlock.caption === 'string' ? editorialBlock.caption : undefined,
+    credit: typeof editorialBlock.credit === 'string' ? editorialBlock.credit : undefined,
   };
   switch (raw._type) {
     case 'heroImage':
       return {
         ...base,
         _type: 'heroImage',
-        image: resolveBlockImage(raw.image, raw),
+        image: resolveBlockImage(editorialBlock.image, editorialBlock, editorialBlock.alt),
         displayWidth: enumValue(raw.displayWidth, ['contained', 'wide', 'fullBleed'] as const),
       };
     case 'heroVideo':
       return { ...base, _type: 'heroVideo', video: normalizeVideo(raw, projectTitle) };
     case 'fullBleedImage':
-      return { ...base, _type: 'fullBleedImage', image: resolveBlockImage(raw.image, raw) };
+      return { ...base, _type: 'fullBleedImage', image: resolveBlockImage(editorialBlock.image, editorialBlock, editorialBlock.alt) };
     case 'containedImage':
       return {
         ...base,
         _type: 'containedImage',
-        image: resolveBlockImage(raw.image, raw),
+        image: resolveBlockImage(editorialBlock.image, editorialBlock, editorialBlock.alt),
         width: raw.width === 'small' || raw.width === 'narrow'
           ? 'narrow'
           : raw.width === 'medium'
@@ -504,13 +547,15 @@ function normalizeBlock(raw: UnknownRecord, projectTitle: string): ContentBlockV
       if (!Array.isArray(sources) || sources.length < 2) return null;
       const left = sources[0] as UnknownRecord;
       const right = sources[1] as UnknownRecord;
+      const leftLibrary = recordOrEmpty(left.mediaItem);
+      const rightLibrary = recordOrEmpty(right.mediaItem);
       return {
         ...base,
         _type: 'imagePair',
         caption: typeof raw.sharedCaption === 'string' ? raw.sharedCaption : base.caption,
         images: [
-          resolveBlockImage(left.image || left, left, left.alt, Boolean(raw.altNeedsReview)),
-          resolveBlockImage(right.image || right, right, right.alt, Boolean(raw.altNeedsReview)),
+          resolveBlockImage(left.image || leftLibrary.image || left, {...leftLibrary, ...left}, left.alt || leftLibrary.alt, Boolean(raw.altNeedsReview)),
+          resolveBlockImage(right.image || rightLibrary.image || right, {...rightLibrary, ...right}, right.alt || rightLibrary.alt, Boolean(raw.altNeedsReview)),
         ],
         ratioHandling: enumValue(raw.ratioHandling, ['natural', 'matched', 'crop'] as const),
       } satisfies ImagePairBlock;
@@ -522,7 +567,8 @@ function normalizeBlock(raw: UnknownRecord, projectTitle: string): ContentBlockV
         images: Array.isArray(raw.images)
           ? raw.images.map((value: unknown) => {
               const item = value && typeof value === 'object' ? value as UnknownRecord : {};
-              return resolveBlockImage(item.image || value, item, item.alt, Boolean(raw.altNeedsReview));
+              const itemLibrary = recordOrEmpty(item.mediaItem);
+              return resolveBlockImage(item.image || itemLibrary.image || value, {...itemLibrary, ...item}, item.alt || itemLibrary.alt, Boolean(raw.altNeedsReview));
             })
           : [],
         columns: (raw.desktopColumns ?? raw.columns) === 2 ? 2 : 3,
@@ -619,7 +665,7 @@ function normalizeBrandAsset(value: unknown): BrandAssetView | undefined {
 
 export function normalizeProject(raw: UnknownRecord): ProjectView {
   const slug = typeof raw.slug === 'string' ? raw.slug : recordOrEmpty(raw.slug).current;
-  const owner = enumValue(raw.owner, ['oliver', 'michael', 'anjali', 'collective', 'other'] as const) || 'other';
+  const owner = enumValue(raw.owner, ['oliver', 'michael', 'collective', 'other'] as const) || 'other';
   const types = Array.isArray(raw.types)
     ? raw.types.flatMap((type) => {
         const value = enumValue(type, ['Film', 'Photography', 'Campaign', 'Animation', 'BTS'] as const);
@@ -675,6 +721,8 @@ export function normalizeProject(raw: UnknownRecord): ProjectView {
       ['cinematic', 'photoEssay', 'campaign', 'experimental'] as const,
     ) || inferredLayoutVariant(types),
     motionIntensity: enumValue(raw.motionIntensity, ['low', 'medium', 'high'] as const) || 'medium',
+    editorialStatus: enumValue(raw.editorialStatus, ['draft', 'review', 'ready', 'approved'] as const)
+      || (raw.visible ? 'approved' : raw.needsReview ? 'review' : 'draft'),
     visible: Boolean(raw.visible),
     publishAt: typeof raw.publishAt === 'string' ? raw.publishAt : undefined,
     needsReview: Boolean(raw.needsReview),
@@ -709,7 +757,7 @@ function normalizeAboutPeople(value: unknown, mode: ContentMode): AboutPersonVie
     const name = stringFrom(person?.name);
     const projectOwner = enumValue(
       person?.projectOwner,
-      ['oliver', 'michael', 'anjali', 'collective', 'other'] as const,
+      ['oliver', 'michael', 'collective', 'other'] as const,
     );
     const bio = normalizeRichText(person?.bio);
     if (!name || !projectOwner || !bio) return [];
@@ -778,46 +826,174 @@ function normalizeAboutSelectedWork(value: unknown, mode: ContentMode): AboutWor
   });
 }
 
+const DEFAULT_NAVIGATION: SiteSettingsView['navigation'] = [
+  {label: 'Work', destination: 'work', visible: true},
+  {label: 'About', destination: 'about', visible: true},
+  {label: 'Contact', destination: 'contact', visible: true},
+];
+
+function normalizeNavigation(value: unknown): SiteSettingsView['navigation'] {
+  if (!Array.isArray(value)) return DEFAULT_NAVIGATION;
+  const navigation = value.flatMap((candidate): SiteSettingsView['navigation'] => {
+    const item = optionalRecord(candidate);
+    const label = stringFrom(item?.label);
+    const destination = enumValue(
+      item?.destination,
+      ['work', 'about', 'notes', 'contact'] as const,
+    );
+    if (!label || !destination) return [];
+    return [{
+      _key: stringFrom(item?._key),
+      label,
+      destination: destination satisfies NavigationDestination,
+      visible: item?.visible !== false,
+    }];
+  });
+  return navigation.length ? navigation : DEFAULT_NAVIGATION;
+}
+
+function normalizeWorkGallery(value: unknown): WorkGalleryPlacementView[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  return value.flatMap((candidate, index): WorkGalleryPlacementView[] => {
+    const placement = optionalRecord(candidate);
+    const projectId = stringFrom(placement?.projectId);
+    if (!projectId) return [];
+    return [{
+      _key: stringFrom(placement?._key) || `gallery-${index + 1}`,
+      projectId,
+      cardSize: enumValue(placement?.cardSize, ['standard', 'tall', 'large', 'wide'] as const) || 'standard',
+      treatment: enumValue(placement?.treatment, ['standard', 'masked', 'framed', 'poster'] as const) || 'standard',
+    }];
+  });
+}
+
+function normalizeFooter(value: unknown): FooterSettingsView {
+  const footer = recordOrEmpty(value);
+  const strapline = Array.isArray(footer.strapline)
+    ? footer.strapline.flatMap((candidate, index) => {
+        const line = optionalRecord(candidate);
+        const text = stringFrom(line?.text);
+        return text ? [{
+          _key: stringFrom(line?._key) || `footer-line-${index + 1}`,
+          text,
+          emphasis: stringFrom(line?.emphasis),
+        }] : [];
+      })
+    : [];
+  const exploreLinks = Array.isArray(footer.exploreLinks)
+    ? footer.exploreLinks.flatMap((candidate) => {
+        const link = optionalRecord(candidate);
+        const label = stringFrom(link?.label);
+        const destination = enumValue(
+          link?.destination,
+          ['work', 'about', 'notes', 'contact', 'external'] as const,
+        );
+        const url = destination === 'external' ? safeHttpsUrl(link?.url) : undefined;
+        if (!label || !destination || (destination === 'external' && !url)) return [];
+        return [{_key: stringFrom(link?._key), label, destination, url}];
+      })
+    : [];
+
+  return {
+    strapline: strapline.length ? strapline : [
+      {text: 'New Work is film.', emphasis: 'New Work'},
+      {text: 'New Work is photography.', emphasis: 'New Work'},
+      {text: 'We make beautiful work.', emphasis: 'beautiful'},
+      {text: 'Come create with us.', emphasis: 'create'},
+    ],
+    peopleHeading: stringFrom(footer.peopleHeading) || 'People',
+    exploreHeading: stringFrom(footer.exploreHeading) || 'Explore',
+    connectHeading: stringFrom(footer.connectHeading) || 'Connect',
+    exploreLinks: exploreLinks.length ? exploreLinks : [
+      {label: 'Work', destination: 'work'},
+      {label: 'About', destination: 'about'},
+      {label: 'Contact', destination: 'contact'},
+    ],
+    contactLabel: stringFrom(footer.contactLabel),
+    copyrightLine: stringFrom(footer.copyrightLine) || 'All rights reserved.',
+    showYear: footer.showYear !== false,
+  };
+}
+
 export function normalizeSiteSettings(
   raw: UnknownRecord,
   mode: ContentMode,
 ): SiteSettingsView {
   const contactOverride = import.meta.env.PUBLIC_CONTACT_EMAIL?.trim();
   const approvedContactOverride = isSafeEmail(contactOverride) ? contactOverride : undefined;
+  const workPage = optionalRecord(raw.workPage);
+  const aboutPage = optionalRecord(raw.aboutPage);
+  const contactPage = optionalRecord(raw.contactPage);
+  const fixtureFallback = mode === 'prototype' ? raw : {};
+  const capabilities = aboutPage?.capabilities ?? fixtureFallback.capabilities;
+  const socialLinks = contactPage?.socialLinks ?? fixtureFallback.socialLinks;
   return {
     siteName: typeof raw.siteName === 'string' && raw.siteName ? raw.siteName : 'New Work Agency',
+    navigation: normalizeNavigation(raw.navigation),
+    workIntroName: stringFrom(workPage?.introName) || 'New Work',
+    workGallery: normalizeWorkGallery(workPage?.gallery),
     wordmark: normalizeBrandAsset(raw.wordmark),
     compactMark: normalizeBrandAsset(raw.compactMark),
-    manifesto: typeof raw.manifesto === 'string' && raw.manifesto ? raw.manifesto : undefined,
-    manifestoNeedsReview: Boolean(raw.manifestoNeedsReview),
-    about: normalizeRichText(raw.about),
-    aboutImage: raw.aboutImage
-      ? resolveImage(raw.aboutImage, {
-          alt: raw.aboutImageDecorative === true ? '' : raw.aboutImageAlt,
-          needsReview: Boolean(recordOrEmpty(raw.aboutImage).altNeedsReview),
+    manifesto: stringFrom(workPage?.manifesto) || stringFrom(fixtureFallback.manifesto),
+    manifestoNeedsReview: !workPage && Boolean(fixtureFallback.manifestoNeedsReview),
+    about: normalizeRichText(aboutPage?.about || fixtureFallback.about),
+    aboutHeading: stringFrom(aboutPage?.heading) || 'About',
+    aboutPeopleHeading: stringFrom(aboutPage?.peopleHeading) || 'The Creatives',
+    aboutPeopleIntroduction: stringFrom(aboutPage?.peopleIntroduction),
+    aboutImage: (aboutPage?.image || fixtureFallback.aboutImage)
+      ? resolveImage(aboutPage?.image || fixtureFallback.aboutImage, {
+          alt: (aboutPage?.imageDecorative ?? fixtureFallback.aboutImageDecorative) === true
+            ? ''
+            : aboutPage?.imageAlt || fixtureFallback.aboutImageAlt,
+          needsReview: Boolean(recordOrEmpty(aboutPage?.image || fixtureFallback.aboutImage).altNeedsReview),
         })
       : undefined,
-    aboutPeople: normalizeAboutPeople(raw.aboutPeople, mode),
-    aboutSeo: normalizeSeo(raw.aboutSeo),
-    contactSeo: normalizeSeo(raw.contactSeo),
-    capabilities: Array.isArray(raw.capabilities)
-      ? raw.capabilities.filter((value): value is string => typeof value === 'string' && Boolean(value.trim()))
+    aboutPeople: normalizeAboutPeople(aboutPage?.people || fixtureFallback.aboutPeople, mode),
+    aboutSeo: normalizeSeo(aboutPage?.seo || fixtureFallback.aboutSeo),
+    contactSeo: normalizeSeo(contactPage?.seo || fixtureFallback.contactSeo),
+    contactHeading: stringFrom(contactPage?.heading) || 'Contact',
+    contactIntroduction: normalizeRichText(contactPage?.introduction),
+    capabilities: Array.isArray(capabilities)
+      ? capabilities.filter((value): value is string => typeof value === 'string' && Boolean(value.trim()))
       : [],
     contactEmail:
-      approvedContactOverride || (isSafeEmail(raw.contactEmail) ? raw.contactEmail : undefined),
-    location: typeof raw.location === 'string' && raw.location ? raw.location : undefined,
-    socialLinks: Array.isArray(raw.socialLinks)
-      ? raw.socialLinks.flatMap((item: UnknownRecord) => {
+      approvedContactOverride || (isSafeEmail(contactPage?.email) ? contactPage.email : isSafeEmail(fixtureFallback.contactEmail) ? fixtureFallback.contactEmail : undefined),
+    location: stringFrom(contactPage?.location) || stringFrom(fixtureFallback.location),
+    socialLinks: Array.isArray(socialLinks)
+      ? socialLinks.flatMap((item: UnknownRecord) => {
           const url = safeHttpsUrl(item.url);
           const label = typeof item.label === 'string' ? item.label.trim() : '';
           return url && label ? [{ _key: typeof item._key === 'string' ? item._key : undefined, label, url }] : [];
         })
       : [],
-    reel: normalizeReel(raw.reel),
-    notesEnabled: Boolean(raw.notesEnabled),
-    analyticsEnabled: Boolean(raw.analyticsEnabled),
+    reel: normalizeReel(workPage?.reel || fixtureFallback.reel),
+    notesEnabled: Boolean(workPage ? workPage.notesEnabled : fixtureFallback.notesEnabled),
     defaultSeo: normalizeSeo(raw.defaultSeo) || { noIndex: true },
+    footer: normalizeFooter(raw.footer),
   };
+}
+
+function applyWorkGallery(
+  projects: ProjectView[],
+  placements: WorkGalleryPlacementView[] | undefined,
+): ProjectView[] {
+  if (!placements) return sortProjects(projects);
+  const placementByProject = new Map(
+    placements.map((placement, index) => [placement.projectId, {placement, index}]),
+  );
+  return sortProjects(projects.map((project) => {
+    const curated = placementByProject.get(project.id.replace(/^drafts\./u, ''))
+      || placementByProject.get(project.id);
+    return {
+      ...project,
+      featuredOnHome: Boolean(curated),
+      homeOrder: curated ? curated.index + 1 : Number.MAX_SAFE_INTEGER,
+      homeCardSize: curated?.placement.cardSize || project.homeCardSize,
+      homeTreatment: curated?.placement.treatment || project.homeTreatment,
+      homeColumn: curated ? undefined : project.homeColumn,
+      homeOffset: curated ? 0 : project.homeOffset,
+    };
+  }));
 }
 
 function normalizeNote(raw: UnknownRecord): NoteView {
@@ -897,15 +1073,11 @@ export function isProductionEligibleNote(raw: UnknownRecord): boolean {
   return true;
 }
 
-function hasEligibleEnabledReel(raw: UnknownRecord): boolean {
-  const reel = raw.reel && typeof raw.reel === 'object' ? raw.reel as UnknownRecord : undefined;
-  if (!reel || reel.enabled !== true) return true;
-  if (!isApprovedSanityAsset(reel.poster, 'image')) return false;
-  if (reel.desktopSource && !safeHostedVideoUrl(sourceUrl(reel.desktopSource))) return false;
-  if (reel.desktopSourceUrl && !safeHostedVideoUrl(reel.desktopSourceUrl)) return false;
-  if (!safeHostedVideoUrl(sourceUrl(reel.desktopSource)) && !safeHostedVideoUrl(reel.desktopSourceUrl)) return false;
-  if (reel.mobileSource && !safeHostedVideoUrl(sourceUrl(reel.mobileSource))) return false;
-  if (reel.mobileSourceUrl && !safeHostedVideoUrl(reel.mobileSourceUrl)) return false;
+function hasEligibleEnabledReel(reel: ReelView): boolean {
+  if (!reel.enabled) return true;
+  if (!reel.poster?.src || !isApprovedSanityAsset({asset: {url: reel.poster.src}}, 'image')) return false;
+  if (!safeHostedVideoUrl(reel.desktopSource)) return false;
+  if (reel.mobileSource && !safeHostedVideoUrl(reel.mobileSource)) return false;
   return true;
 }
 
@@ -923,51 +1095,63 @@ function prototypeContent(): SiteContent {
 }
 
 async function sanityContent(mode: 'preview' | 'production'): Promise<SiteContent> {
-  const projectId = import.meta.env.PUBLIC_SANITY_PROJECT_ID;
-  const dataset = import.meta.env.PUBLIC_SANITY_DATASET;
-  if (!projectId || !dataset) {
-    throw new Error(
-      `PUBLIC_CONTENT_MODE=${mode} requires PUBLIC_SANITY_PROJECT_ID and PUBLIC_SANITY_DATASET. Fixture content was not used.`,
-    );
-  }
   const previewToken = mode === 'preview' ? import.meta.env.SANITY_PREVIEW_TOKEN : undefined;
   if (mode === 'preview' && !previewToken) {
     throw new Error('Preview mode requires the server-only SANITY_PREVIEW_TOKEN.');
   }
 
-  const client = createClient({
-    projectId,
-    dataset,
-    apiVersion: import.meta.env.SANITY_API_VERSION || '2026-08-01',
+  const client = sanityClient.withConfig({
+    apiVersion: SANITY_API_VERSION,
     useCdn: false,
     token: previewToken,
     perspective: mode === 'preview' ? 'previewDrafts' : 'published',
   });
 
   try {
-    const [settingsRaw, projectsRaw, notesRaw] = mode === 'preview' ? await Promise.all([
-      client.fetch<UnknownRecord | null>(previewSiteSettingsQuery),
-      client.fetch<UnknownRecord[]>(previewProjectsQuery),
-      client.fetch<UnknownRecord[]>(previewNotesQuery),
+    const [settingsRaw, projectsRaw] = mode === 'preview' ? await Promise.all([
+      client.fetch(previewSiteSettingsQuery),
+      client.fetch(previewProjectsQuery),
     ]) : await Promise.all([
-      client.fetch<UnknownRecord | null>(siteSettingsQuery),
-      client.fetch<UnknownRecord[]>(projectsQuery),
-      client.fetch<UnknownRecord[]>(notesQuery),
+      client.fetch(siteSettingsQuery),
+      client.fetch(projectsQuery),
     ]);
     if (!settingsRaw) {
       throw new Error('The approved siteSettings singleton is missing or contains blocked public assets.');
     }
+    if (mode === 'production') {
+      const rawSettings = settingsRaw as UnknownRecord;
+      const workPage = recordOrEmpty(rawSettings.workPage);
+      const reel = recordOrEmpty(workPage.reel);
+      const publicSingletonContent = {
+        brand: {
+          wordmark: rawSettings.wordmark,
+          compactMark: rawSettings.compactMark,
+          defaultSeo: rawSettings.defaultSeo,
+        },
+        workSeo: workPage.seo,
+        activeReel: reel.enabled === true ? reel : undefined,
+        aboutPage: rawSettings.aboutPage,
+        contactPage: rawSettings.contactPage,
+      };
+      if (hasBlockedBlock(publicSingletonContent)) {
+        throw new Error('A public page singleton still contains a blocking review or approval flag.');
+      }
+    }
+    const preliminarySettings = normalizeSiteSettings(settingsRaw as UnknownRecord, mode);
+    const notesRaw = preliminarySettings.notesEnabled
+      ? await client.fetch(mode === 'preview' ? previewNotesQuery : notesQuery)
+      : [];
     const parsed = parseCmsPayload({settings: settingsRaw, projects: projectsRaw, notes: notesRaw});
-    if (mode === 'production' && !hasEligibleEnabledReel(parsed.settings)) {
+    const settings = normalizeSiteSettings(parsed.settings, mode);
+    if (mode === 'production' && !hasEligibleEnabledReel(settings.reel)) {
       throw new Error('The enabled Reel is missing an approved poster or hosted source.');
     }
-    const projects = sortProjects((mode === 'production'
+    const projects = applyWorkGallery((mode === 'production'
       ? parsed.projects.filter((project) => isProductionEligible(project))
-      : parsed.projects).map(normalizeProject));
+      : parsed.projects).map(normalizeProject), settings.workGallery);
     if (mode === 'production' && (projects.length === 0 || !projects.some((project) => project.featuredOnHome))) {
       throw new Error('Production requires at least one approved project featured on the home page.');
     }
-    const settings = normalizeSiteSettings(parsed.settings, mode);
     if (mode === 'production' && settings.manifestoNeedsReview) settings.manifesto = undefined;
     const notes = settings.notesEnabled || mode === 'preview'
       ? (mode === 'production' ? parsed.notes.filter(isProductionEligibleNote) : parsed.notes).map(normalizeNote)

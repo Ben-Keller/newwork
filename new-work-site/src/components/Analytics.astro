@@ -3,12 +3,11 @@ import type { ContentMode } from '../lib/types';
 
 interface Props {
   mode: ContentMode;
-  enabled: boolean;
 }
 
-const { mode, enabled } = Astro.props;
+const { mode } = Astro.props;
 const token = import.meta.env.PUBLIC_CLOUDFLARE_ANALYTICS_TOKEN?.trim();
-const shouldLoad = mode === 'production' && enabled && Boolean(token);
+const shouldLoad = mode === 'production' && Boolean(token);
 ---
 
 {shouldLoad ? (

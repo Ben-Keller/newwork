@@ -14,4 +14,5 @@ export const excludedWorkGalleryItemIds: ReadonlySet<string> = new Set([
   'michael-aw51026-court-portrait',
   'michael-aw59536-group',
   'michael-aw59665-double-exposure',
+  'michael-native-stop-motion-still',
 ] as const);

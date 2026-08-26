@@ -5,8 +5,8 @@
     "exactOptionalPropertyTypes": false,
     "noUncheckedIndexedAccess": true,
     "resolveJsonModule": true,
-    "types": ["vitest/globals", "node"]
+    "types": ["@sanity/astro/module", "vitest/globals", "node"]
   },
-  "include": [".astro/types.d.ts", "**/*"],
+  "include": [".astro/types.d.ts", "src/**/*", "sanity/**/*", "scripts/**/*", "tests/**/*", "*.ts", "src/sanity.types.ts"],
   "exclude": ["dist", "node_modules"]
 }

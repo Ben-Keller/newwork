@@ -1,6 +1,7 @@
 export { initializeCardPointer } from './card-pointer';
 export {
   COLUMN_SCROLL_RESPONSES,
+  COMPACT_COLUMN_SCROLL_RESPONSES,
   columnLagOffset,
   filterColumnScroll,
   frameAdjustedColumnAlpha,

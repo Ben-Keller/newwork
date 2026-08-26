@@ -115,7 +115,10 @@
     vertical-align: bottom;
   }
 
-  .project-title__word { display: inline-block; }
+  .project-title__word {
+    display: inline-block;
+    white-space: nowrap;
+  }
 
   .project-title-treatment--stacked .project-title__words,
   .project-title-treatment--stacked .project-title__mask { display: block; }

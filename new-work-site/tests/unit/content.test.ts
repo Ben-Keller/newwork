@@ -93,12 +93,12 @@ describe('content mode', () => {
 });
 
 describe('fixture ordering', () => {
-  it('returns all 19 provisional records in the exact editorial order', () => {
+  it('returns all 16 provisional records in the exact editorial order', () => {
     const projects = getFixtureProjects();
 
-    expect(projects).toHaveLength(19);
+    expect(projects).toHaveLength(16);
     expect(projects.map((project) => project.homeOrder)).toEqual([
-      10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190,
+      10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160,
     ]);
     expect(projects.map((project) => project.slug)).toEqual([
       'arc',
@@ -117,9 +117,6 @@ describe('fixture ordering', () => {
       'miss-jones-pancake',
       'chanel-test',
       'untitled-portfolio-film',
-      'adobe',
-      'stella-artois-daydream',
-      'rakuten',
     ]);
   });
 
@@ -157,73 +154,63 @@ describe('About people content', () => {
     expect(settings.defaultSeo.shareImageAlt).toBe('New Work Agency');
   });
 
-  it('retains all three provisional profiles in prototype and preview modes', () => {
-    for (const mode of ['prototype', 'preview'] as const) {
-      const people = normalizeSiteSettings(localFixtureSettingsJson, mode).aboutPeople;
+  it('retains provisional profiles in the prototype fixture and dedicated preview singleton', () => {
+    const prototypePeople = normalizeSiteSettings(localFixtureSettingsJson, 'prototype').aboutPeople;
+    const previewPeople = normalizeSiteSettings({
+      ...localFixtureSettingsJson,
+      aboutPage: {people: localFixtureSettingsJson.aboutPeople},
+    }, 'preview').aboutPeople;
 
+    for (const people of [prototypePeople, previewPeople]) {
       expect(people.map((person) => [person.name, person.projectOwner])).toEqual([
         ['Michael', 'michael'],
         ['Oliver', 'oliver'],
-        ['Anjali Rao', 'anjali'],
       ]);
       expect(people.every((person) => person.needsReview && person.prototypeOnly)).toBe(true);
       expect(people.every((person) => String(person.bio[0]?.spans[0]?.text || '').length > 120)).toBe(true);
     }
   });
 
-  it('normalizes Anjali’s supplied portfolio work with safe links and production blockers', () => {
-    const people = normalizeSiteSettings(localFixtureSettingsJson, 'prototype').aboutPeople;
-    const anjali = people.find((person) => person.projectOwner === 'anjali');
-
-    expect(anjali?.selectedWork.map((work) => [work.title, work.client])).toEqual([
-      ['Adobe', 'Adobe'],
-      ['Daydream', 'Stella Artois'],
-      ['Rakuten', 'Rakuten'],
-      ['Duet', 'Rakuten'],
-    ]);
-    expect(anjali?.selectedWork.every((work) =>
-      work.href?.startsWith('https://arao.squarespace.com/') &&
-      work.image.src.startsWith('/media/images/anjali/') &&
-      work.image.alt === '' &&
-      work.needsReview &&
-      work.prototypeOnly &&
-      work.doNotPublishWithoutExplicitApproval
-    )).toBe(true);
-  });
-
   it('filters provisional profiles individually in production without dropping approved profiles', () => {
     const settings = {
       ...localFixtureSettingsJson,
-      aboutPeople: localFixtureSettingsJson.aboutPeople.map((person) => (
-        person.projectOwner === 'michael' ? {
-          ...person,
-          needsReview: false,
-          prototypeOnly: false,
-        } : person
-      )),
+      aboutPage: {
+        people: localFixtureSettingsJson.aboutPeople.map((person) => (
+          person.projectOwner === 'michael' ? {
+            ...person,
+            needsReview: false,
+            prototypeOnly: false,
+          } : person
+        )),
+      },
     };
 
     expect(normalizeSiteSettings(settings, 'production').aboutPeople.map((person) => person.name))
       .toEqual(['Michael']);
   });
 
-  it('derives three ordered supporting projects for each profile owner', () => {
+  it('does not use removed legacy page fields outside prototype mode', () => {
+    const normalized = normalizeSiteSettings(localFixtureSettingsJson, 'production');
+
+    expect(normalized.manifesto).toBeUndefined();
+    expect(normalized.about).toBeUndefined();
+    expect(normalized.aboutPeople).toEqual([]);
+    expect(normalized.notesEnabled).toBe(false);
+  });
+
+  it('derives ordered supporting projects for each profile owner', () => {
     const projects = getFixtureProjects();
     const oliver = aboutProjectsForPerson(projects, 'oliver');
     const michael = aboutProjectsForPerson(projects, 'michael');
-    const anjali = aboutProjectsForPerson(projects, 'anjali');
     const oliverTessellation = aboutProjectsForPerson(projects, 'oliver', 5);
     const michaelTessellation = aboutProjectsForPerson(projects, 'michael', 5);
 
     expect(oliver).toHaveLength(3);
     expect(michael).toHaveLength(3);
-    expect(anjali).toHaveLength(3);
     expect(oliver.every((project) => project.owner === 'oliver')).toBe(true);
     expect(michael.every((project) => project.owner === 'michael')).toBe(true);
-    expect(anjali.every((project) => project.owner === 'anjali')).toBe(true);
     expect(oliver.map((project) => project.homeOrder)).toEqual([20, 40, 60]);
     expect(michael.map((project) => project.homeOrder)).toEqual([10, 30, 50]);
-    expect(anjali.map((project) => project.homeOrder)).toEqual([170, 180, 190]);
     expect(oliverTessellation).toHaveLength(5);
     expect(michaelTessellation).toHaveLength(5);
     expect(oliverTessellation.every((project) => project.owner === 'oliver')).toBe(true);
@@ -544,34 +531,6 @@ describe('fixture media normalization', () => {
     }
   });
 
-  it('uses local Anjali cuts for gallery motion and Vimeo for full project playback', () => {
-    const expected = new Map<string, readonly [string, string, number]>([
-      ['adobe', ['adobe-what-whack-wears-gallery-cut-08s.mp4', '720040595', 93.845]],
-      ['stella-artois-daydream', ['stella-artois-daydream-gallery-cut-06s.mp4', '439413250', 6.015]],
-      ['rakuten', ['rakuten-duet-gallery-cut-08s.mp4', '479336941', 30.036667]],
-    ] as const);
-
-    for (const project of getFixtureProjects().filter((item) => item.owner === 'anjali')) {
-      const media = expected.get(project.slug);
-      expect(media).toBeDefined();
-      expect(project.cover).toMatchObject({
-        mediaType: 'motion',
-        previewVideo: `/media/video-previews/anjali/${media?.[0]}`,
-      });
-      const video = project.contentBlocks.find((block) => block._type === 'video');
-      expect(video?._type).toBe('video');
-      if (video?._type === 'video') {
-        expect(video.video).toMatchObject({
-          provider: 'vimeo',
-          providerId: media?.[1],
-          externalUrl: `https://vimeo.com/${media?.[1]}`,
-          sourceDurationSeconds: media?.[2],
-          prototypeOnly: true,
-        });
-        expect(video.video.src).toBeUndefined();
-      }
-    }
-  });
 });
 
 describe('prototype project detail copy', () => {
@@ -594,7 +553,7 @@ describe('prototype project detail copy', () => {
   ] as const)('keeps two deterministic, publication-blocked text notes in every %s record', (_label, projects) => {
     const allKeys = new Set<string>();
 
-    expect(projects).toHaveLength(19);
+    expect(projects).toHaveLength(16);
     for (const project of projects) {
       const notes = project.contentBlocks.filter((block) => block._type === 'textNote');
 
@@ -625,7 +584,7 @@ describe('prototype project detail copy', () => {
       }
     }
 
-    expect(allKeys.size).toBe(38);
+    expect(allKeys.size).toBe(32);
   });
 
   it.each([
@@ -712,10 +671,6 @@ describe('project adjacency', () => {
     });
     expect(adjacentProjects(projects, 'untitled-portfolio-film')).toMatchObject({
       previous: { slug: 'chanel-test' },
-      next: { slug: 'adobe' },
-    });
-    expect(adjacentProjects(projects, 'rakuten')).toMatchObject({
-      previous: { slug: 'stella-artois-daydream' },
       next: undefined,
     });
   });

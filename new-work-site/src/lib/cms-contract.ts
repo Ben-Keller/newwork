@@ -58,9 +58,13 @@ export function parseCmsPayload(input: {
   if (!isRecord(input.settings)) throw new Error('siteSettings must be an object.');
   if (!isNonEmptyString(input.settings.siteName)) throw new Error('siteSettings.siteName is required.');
   if (!isRecord(input.settings.defaultSeo)) throw new Error('siteSettings.defaultSeo must be an object.');
-  if (!isRecord(input.settings.reel)) throw new Error('siteSettings.reel must be an object.');
-  if (input.settings.aboutPeople !== undefined) {
-    recordArray(input.settings.aboutPeople, 'siteSettings.aboutPeople');
+  if (!isRecord(input.settings.workPage)) throw new Error('The workPage singleton is required.');
+  if (!isRecord(input.settings.workPage.reel)) throw new Error('workPage.reel must be an object.');
+  if (!isRecord(input.settings.aboutPage)) throw new Error('The aboutPage singleton is required.');
+  if (!isRecord(input.settings.contactPage)) throw new Error('The contactPage singleton is required.');
+  if (!isRecord(input.settings.footer)) throw new Error('The footerSettings singleton is required.');
+  if (input.settings.aboutPage.people !== undefined) {
+    recordArray(input.settings.aboutPage.people, 'aboutPage.people');
   }
 
   const projects = recordArray(input.projects, 'projects');

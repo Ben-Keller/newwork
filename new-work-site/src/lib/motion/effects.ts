@@ -2,6 +2,7 @@
 import type { MotionCleanup, MotionEnvironment } from './types';
 import {
   COLUMN_SCROLL_RESPONSES,
+  COMPACT_COLUMN_SCROLL_RESPONSES,
   columnLagOffset,
   filterColumnScroll,
 } from './column-filter';
@@ -31,6 +32,8 @@ const revealVars = (treatment: string): gsap.TweenVars => {
 
 const initializeReveals = (environment: MotionEnvironment): MotionCleanup => {
   const elements = selectAll<HTMLElement>(environment.root, '[data-motion-reveal]');
+  const cleanups: MotionCleanup[] = [];
+  const pendingGalleryReveals = new Map<HTMLElement, gsap.core.Tween>();
   if (environment.reducedMotion) {
     elements.forEach((element) => {
       element.dataset.motionReady = 'static';
@@ -42,27 +45,102 @@ const initializeReveals = (environment: MotionEnvironment): MotionCleanup => {
     if (element.hasAttribute('data-motion-split')) return;
     const treatment = element.dataset.motionReveal || 'up';
     const delay = parseMotionValue(element.dataset.motionDelay, 0, 0, MOTION_LIMIT.revealDelay);
+    const isGalleryReveal = Boolean(element.closest('[data-work-gallery]'));
     const clearProps = treatment === 'clip'
       ? 'opacity,visibility,clipPath'
       : treatment === 'fade'
         ? 'opacity,visibility'
         : 'opacity,visibility,transform,clipPath';
     element.dataset.motionReady = 'animated';
-    gsap.from(element, {
+    const animation = {
       ...revealVars(treatment),
       delay,
       duration: MOTION_DURATION.reveal,
       ease: MOTION_EASE.customOut,
       clearProps,
+    };
+
+    if (isGalleryReveal) {
+      const tween = gsap.from(element, {
+        ...animation,
+        paused: true,
+      });
+      pendingGalleryReveals.set(element, tween);
+      cleanups.push(() => { tween.kill(); });
+      return;
+    }
+
+    const tween = gsap.from(element, {
+      ...animation,
       scrollTrigger: {
         trigger: element,
-        start: 'top 88%',
+        start: isGalleryReveal ? 'top bottom' : 'top 88%',
         once: true,
       },
     });
+    cleanups.push(() => { tween.kill(); });
   });
 
-  return () => elements.forEach((element) => delete element.dataset.motionReady);
+  if (pendingGalleryReveals.size) {
+    const gallery = environment.root.querySelector<HTMLElement>('[data-work-gallery]');
+    let refreshFrame = 0;
+    let monitorUntil = 0;
+
+    const revealPartiallyVisibleCards = (time: number): void => {
+      refreshFrame = 0;
+      pendingGalleryReveals.forEach((tween, element) => {
+        if (!element.isConnected) {
+          pendingGalleryReveals.delete(element);
+          return;
+        }
+        const bounds = element.getBoundingClientRect();
+        const intersectsViewport = (
+          bounds.width > 0
+          && bounds.height > 0
+          && bounds.bottom > 0
+          && bounds.top < window.innerHeight
+          && bounds.right > 0
+          && bounds.left < window.innerWidth
+        );
+        if (!intersectsViewport) return;
+        pendingGalleryReveals.delete(element);
+        tween.play();
+      });
+
+      if (pendingGalleryReveals.size && time < monitorUntil) {
+        refreshFrame = window.requestAnimationFrame(revealPartiallyVisibleCards);
+      }
+    };
+
+    const requestGalleryRevealRefresh = (): void => {
+      if (!pendingGalleryReveals.size) return;
+      // Continue sampling through the longest compact-column momentum tail so
+      // a card reveals on the frame its transformed edge first becomes visible.
+      monitorUntil = performance.now() + 2_400;
+      if (!refreshFrame) {
+        refreshFrame = window.requestAnimationFrame(revealPartiallyVisibleCards);
+      }
+    };
+
+    const resizeObserver = gallery && 'ResizeObserver' in window
+      ? new ResizeObserver(requestGalleryRevealRefresh)
+      : undefined;
+    if (gallery) resizeObserver?.observe(gallery);
+    window.addEventListener('scroll', requestGalleryRevealRefresh, { passive: true });
+    window.addEventListener('resize', requestGalleryRevealRefresh, { passive: true });
+    requestGalleryRevealRefresh();
+    cleanups.push(() => {
+      if (refreshFrame) window.cancelAnimationFrame(refreshFrame);
+      resizeObserver?.disconnect();
+      window.removeEventListener('scroll', requestGalleryRevealRefresh);
+      window.removeEventListener('resize', requestGalleryRevealRefresh);
+    });
+  }
+
+  return () => {
+    cleanups.reverse().forEach((cleanup) => cleanup());
+    elements.forEach((element) => delete element.dataset.motionReady);
+  };
 };
 
 const initializeParallax = (environment: MotionEnvironment): MotionCleanup => {
@@ -106,6 +184,7 @@ const initializeColumns = (environment: MotionEnvironment): MotionCleanup => {
   const animateColumns = (
     attribute: 'desktopColumn' | 'tabletColumn',
     laneCount: number,
+    responses: readonly number[] = COLUMN_SCROLL_RESPONSES,
   ) => {
     interface ColumnLane {
       elements: HTMLElement[];
@@ -121,7 +200,7 @@ const initializeColumns = (environment: MotionEnvironment): MotionCleanup => {
       filteredScroll: initialTarget,
       index,
       lagOffset: 0,
-      response: COLUMN_SCROLL_RESPONSES[index] ?? COLUMN_SCROLL_RESPONSES.at(-1)!,
+      response: responses[index] ?? responses.at(-1) ?? COLUMN_SCROLL_RESPONSES.at(-1)!,
     }));
     columns.forEach((column) => {
       column.dataset.motionReady = 'animated';
@@ -252,8 +331,8 @@ const initializeColumns = (environment: MotionEnvironment): MotionCleanup => {
     () => animateColumns('desktopColumn', 4),
   );
   responsiveMotion.add(
-    '(min-width: 768px) and (max-width: 1199px)',
-    () => animateColumns('tabletColumn', 2),
+    '(max-width: 1199px)',
+    () => animateColumns('tabletColumn', 2, COMPACT_COLUMN_SCROLL_RESPONSES),
   );
 
   return () => {

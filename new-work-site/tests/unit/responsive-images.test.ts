@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { buildResponsiveAvifSrcset, buildResponsiveSrcset } from '../../src/lib/responsive-images';
+import {
+  GALLERY_PHOTO_DETAIL_IMAGE_SIZES,
+  GALLERY_PHOTO_PRIMARY_IMAGE_SIZES,
+  PROJECT_CONTAINED_IMAGE_SIZES,
+  PROJECT_HERO_IMAGE_SIZES,
+  buildGalleryImageSizes,
+  buildResponsiveAvifSrcset,
+  buildResponsiveSrcset,
+} from '../../src/lib/responsive-images';
 import type { ImageView } from '../../src/lib/types';
 
 const image = (src: string, width = 1000): ImageView => ({
@@ -42,5 +50,41 @@ describe('responsive image source sets', () => {
   it('leaves unsupported remote and non-WebP sources without invented derivatives', () => {
     expect(buildResponsiveSrcset(image('https://images.example.invalid/frame.jpg'))).toBeUndefined();
     expect(buildResponsiveSrcset(image('/media/images/work/frame.jpg'))).toBeUndefined();
+  });
+
+  it('keeps project source-size hints continuous across the non-layout 1200px threshold', () => {
+    const projectSizes = [
+      PROJECT_HERO_IMAGE_SIZES,
+      PROJECT_CONTAINED_IMAGE_SIZES,
+      GALLERY_PHOTO_PRIMARY_IMAGE_SIZES,
+      GALLERY_PHOTO_DETAIL_IMAGE_SIZES,
+    ];
+
+    expect(projectSizes.every((sizes) => sizes.includes('(min-width: 768px)'))).toBe(true);
+    expect(projectSizes.every((sizes) => !sizes.includes('1200px'))).toBe(true);
+  });
+
+  it('accounts for the extra raster width used by cover-cropped gallery images', () => {
+    const landscape = image('/media/images/work/landscape.webp', 2200);
+    landscape.height = 1466;
+
+    expect(buildGalleryImageSizes(landscape)).toBe([
+      '(min-width: 1800px) 910px',
+      '(min-width: 1200px) 50.648vw',
+      '(min-width: 768px) 93.793vw',
+      '93.793vw',
+    ].join(', '));
+  });
+
+  it('does not inflate portrait candidates that already cover a standard gallery tile', () => {
+    const portrait = image('/media/images/work/portrait.webp', 800);
+    portrait.height = 1000;
+
+    expect(buildGalleryImageSizes(portrait)).toBe([
+      '(min-width: 1800px) 485px',
+      '(min-width: 1200px) 27vw',
+      '(min-width: 768px) 50vw',
+      '50vw',
+    ].join(', '));
   });
 });

@@ -12,7 +12,10 @@ import {
 const settings = {
   siteName: 'New Work',
   defaultSeo: {},
-  reel: {},
+  workPage: {reel: {}},
+  aboutPage: {},
+  contactPage: {},
+  footer: {},
 };
 
 const project = {
@@ -44,7 +47,11 @@ describe('CMS payload boundary', () => {
   it.each([
     [{...settings, siteName: ''}, 'siteSettings.siteName'],
     [{...settings, defaultSeo: undefined}, 'siteSettings.defaultSeo'],
-    [{...settings, reel: undefined}, 'siteSettings.reel'],
+    [{...settings, workPage: undefined}, 'workPage singleton'],
+    [{...settings, workPage: {}}, 'workPage.reel'],
+    [{...settings, aboutPage: undefined}, 'aboutPage singleton'],
+    [{...settings, contactPage: undefined}, 'contactPage singleton'],
+    [{...settings, footer: undefined}, 'footerSettings singleton'],
   ])('rejects malformed settings', (candidate, message) => {
     expect(() => parseCmsPayload({settings: candidate, projects: [], notes: []})).toThrow(message);
   });
@@ -54,13 +61,19 @@ describe('CMS payload boundary', () => {
       settings: {...settings, aboutPeople: 'wrong'},
       projects: [],
       notes: [],
-    })).toThrow('siteSettings.aboutPeople must be an array');
+    })).not.toThrow();
 
-    expect(parseCmsPayload({
-      settings: {...settings, aboutPeople: [{}]},
+    expect(() => parseCmsPayload({
+      settings: {...settings, aboutPage: {people: 'wrong'}},
       projects: [],
       notes: [],
-    }).settings.aboutPeople).toEqual([{}]);
+    })).toThrow('aboutPage.people must be an array');
+
+    expect(parseCmsPayload({
+      settings: {...settings, aboutPage: {people: [{}]}},
+      projects: [],
+      notes: [],
+    }).settings.aboutPage).toEqual({people: [{}]});
   });
 
   it('rejects non-record lists and reports the exact entry', () => {

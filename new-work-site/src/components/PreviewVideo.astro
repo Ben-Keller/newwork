@@ -32,6 +32,7 @@ const { source, poster, mobilePoster, title, placeholder = false } = Astro.props
 <script>
   type PreviewState = {
     active: HTMLVideoElement[];
+    warm: HTMLVideoElement[];
     preloadTimer?: number;
     refreshFrame?: number;
     refreshTimers: number[];
@@ -48,14 +49,21 @@ const { source, poster, mobilePoster, title, placeholder = false } = Astro.props
 
   const state: PreviewState = window.__newWorkPreviews || {
     active: [],
+    warm: [],
     refreshTimers: [],
     visibility: new Map(),
   };
+  state.warm ||= [];
   state.refreshTimers ||= [];
   state.visibility ||= new Map();
   window.__newWorkPreviews = state;
 
+  const holdsRouteContinuity = (video: HTMLVideoElement) => (
+    Number(video.dataset.routeContinuityUntil || 0) > performance.now()
+  );
+
   const pause = (video: HTMLVideoElement) => {
+    if (holdsRouteContinuity(video)) return;
     video.pause();
     video.removeAttribute('data-playing');
     video.removeAttribute('data-preview-frame-pending');
@@ -63,6 +71,7 @@ const { source, poster, mobilePoster, title, placeholder = false } = Astro.props
   };
 
   const detachSource = (video: HTMLVideoElement) => {
+    if (holdsRouteContinuity(video)) return;
     pause(video);
     if (video.hasAttribute('src')) {
       video.removeAttribute('src');
@@ -71,6 +80,7 @@ const { source, poster, mobilePoster, title, placeholder = false } = Astro.props
     video.preload = 'none';
     video.removeAttribute('data-preview-preloaded');
     video.removeAttribute('poster');
+    state.warm = state.warm.filter((item) => item !== video);
   };
 
   const verticalVisibility = (video: HTMLVideoElement) => {
@@ -148,14 +158,41 @@ const { source, poster, mobilePoster, title, placeholder = false } = Astro.props
   const warmApproachingPreviews = (videos: HTMLVideoElement[]) => {
     if (reducedMotion.matches || saveData) return;
     const approachDistance = Math.max(640, window.innerHeight * 1.25);
-    videos.forEach((video) => {
-      if (video.hasAttribute('src')) return;
+    const active = new Set(state.active.filter((video) => video.isConnected));
+    const approachLimit = finePointer.matches ? 2 : 1;
+    const viewportCenter = window.innerHeight / 2;
+    const inApproachBand = (video: HTMLVideoElement) => {
       const bounds = video.getBoundingClientRect();
-      if (bounds.height <= 0) return;
-      if (bounds.top <= window.innerHeight + approachDistance && bounds.bottom >= -approachDistance) {
-        attachSource(video);
-      }
+      return bounds.height > 0
+        && bounds.top <= window.innerHeight + approachDistance
+        && bounds.bottom >= -approachDistance;
+    };
+    const retainedWarm = state.warm.filter((video) =>
+      video.isConnected && !active.has(video) && inApproachBand(video));
+    const retainedWarmSet = new Set(retainedWarm);
+    const entrants = videos
+      .filter((video) => {
+        if (active.has(video) || retainedWarmSet.has(video) || !posterIsStable(video)) return false;
+        return inApproachBand(video);
+      })
+      .sort((left, right) => {
+        const leftBounds = left.getBoundingClientRect();
+        const rightBounds = right.getBoundingClientRect();
+        const leftDistance = Math.abs((leftBounds.top + leftBounds.bottom) / 2 - viewportCenter);
+        const rightDistance = Math.abs((rightBounds.top + rightBounds.bottom) / 2 - viewportCenter);
+        return leftDistance - rightDistance;
+      })
+      .slice(0, Math.max(0, approachLimit - retainedWarm.length));
+    state.warm = [...retainedWarm, ...entrants].slice(0, approachLimit);
+    const retained = new Set([...active, ...state.warm]);
+
+    // Keep only a very small warm pool. Previously every preview within the
+    // approach band opened a full video request and could delay sharper poster
+    // candidates for several seconds on hosted builds.
+    videos.forEach((video) => {
+      if (!retained.has(video) && video.hasAttribute('src')) detachSource(video);
     });
+    state.warm.forEach((video) => attachSource(video));
   };
 
   const revealCurrentFrame = (video: HTMLVideoElement) => {
@@ -207,7 +244,6 @@ const { source, poster, mobilePoster, title, placeholder = false } = Astro.props
   };
 
   const reconcilePreviews = (videos: HTMLVideoElement[]) => {
-    const limit = finePointer.matches ? 2 : 1;
     const connectedActive = state.active.filter((video) => video.isConnected);
     // Once a preview starts, retain it until it is mostly out of view. The
     // separate enter/exit thresholds prevent tiny geometry changes from
@@ -220,7 +256,12 @@ const { source, poster, mobilePoster, title, placeholder = false } = Astro.props
       .sort((left, right) =>
         (state.visibility.get(right) ?? 0) - (state.visibility.get(left) ?? 0)
         || videos.indexOf(left) - videos.indexOf(right));
-    const selected = [...retained, ...entrants].slice(0, limit);
+    // Every substantially visible motion tile should play. The previous
+    // one/two-video cap allowed earlier cards to monopolize playback and left
+    // other fully visible cards frozen on their posters. Network pressure is
+    // still bounded by the visibility gate above and the small off-screen
+    // warm pool in warmApproachingPreviews().
+    const selected = [...retained, ...entrants];
     const selectedSet = new Set(selected);
 
     connectedActive.forEach((video) => {
@@ -305,7 +346,11 @@ const { source, poster, mobilePoster, title, placeholder = false } = Astro.props
     state.preloadTimer = 0;
     state.refreshTimers.forEach((timer) => window.clearTimeout(timer));
     state.refreshTimers = [];
-    document.querySelectorAll<HTMLVideoElement>('[data-preview-video]').forEach(detachSource);
+    document.querySelectorAll<HTMLVideoElement>('[data-preview-video]').forEach((video) => {
+      // The selected route preview remains alive until the browser captures the
+      // outgoing transition frame. Every unrelated preview is still released.
+      if (video.dataset.routeTransitionActive !== 'true') detachSource(video);
+    });
     state.active = [];
     state.visibility.clear();
   });

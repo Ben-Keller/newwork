@@ -29,17 +29,11 @@ const curatedProjectSlugs: Record<string, readonly string[]> = {
     'specialized-globe',
     'brava',
   ],
-  anjali: [
-    'adobe',
-    'stella-artois-daydream',
-    'rakuten',
-  ],
 };
 
 const motionFeatureSlugs: Record<string, readonly string[]> = {
   oliver: ['tour-de-france-x-toyota'],
   michael: ['native-cucumber-mint-stop-motion'],
-  anjali: ['adobe', 'rakuten'],
 };
 
 const profiles = settings.aboutPeople.map((person) => {
@@ -91,9 +85,7 @@ const profiles = settings.aboutPeople.map((person) => {
   const minimumTiles = 4;
   const alternateCrops = portfolioItems.length > 0 && portfolioItems.length < minimumTiles
     ? Array.from({ length: minimumTiles - portfolioItems.length }, (_, index) => {
-        const sourceIndex = person.projectOwner === 'anjali'
-          ? portfolioItems.length - 1
-          : index % portfolioItems.length;
+        const sourceIndex = index % portfolioItems.length;
         const source = portfolioItems[sourceIndex]!;
         return {
           ...source,
@@ -114,8 +106,8 @@ const profiles = settings.aboutPeople.map((person) => {
 
 <div class="about-content" data-about-page>
   <section class="about-intro" aria-labelledby="about-heading" data-about-intro>
-    <p class="eyebrow" data-motion-reveal="fade">New Work</p>
-    <h1 id="about-heading" data-motion-split="words">About</h1>
+    <p class="eyebrow" data-motion-reveal="fade">{settings.workIntroName}</p>
+    <h1 id="about-heading" data-motion-split="words">{settings.aboutHeading}</h1>
 
     <div class="about-intro__lower">
       {settings.about ? (
@@ -140,8 +132,8 @@ const profiles = settings.aboutPeople.map((person) => {
   {profiles.length ? (
     <section class="about-people" aria-labelledby="about-people-heading" data-about-people>
       <header class="about-section-heading">
-        <h2 id="about-people-heading">The Creatives</h2>
-        <p>Lorem ipsum<br />Dolor sit amet</p>
+        <h2 id="about-people-heading">{settings.aboutPeopleHeading}</h2>
+        {settings.aboutPeopleIntroduction ? <p>{settings.aboutPeopleIntroduction}</p> : null}
       </header>
 
       {profiles.map(({ person, galleryItems }) => {

@@ -7,6 +7,11 @@ import {
 import {basename, dirname, extname, resolve} from 'node:path'
 import {fileURLToPath} from 'node:url'
 import {createClient, type SanityClient, type SanityDocumentStub} from '@sanity/client'
+import {
+  DEFAULT_SANITY_DATASET,
+  DEFAULT_SANITY_PROJECT_ID,
+  SANITY_API_VERSION,
+} from '../src/lib/sanity-config'
 
 export type JsonRecord = Record<string, unknown>
 export type SeedUpdateMode = 'preserve' | 'force'
@@ -259,14 +264,13 @@ async function uploadAsset(
     return existingId
   }
 
+  const sourceUrl = row.source_media_url || row.source_page
   const uploaded = await client.assets.upload(kind, createReadStream(absolutePath), {
     filename: basename(localPath),
     title: [row.project, row.kind].filter(Boolean).join(' — '),
-    source: {
-      id: row.asset_id,
-      name: 'New Work asset manifest',
-      url: row.source_media_url || row.source_page,
-    },
+    ...(sourceUrl
+      ? {source: {id: row.asset_id, name: 'New Work asset manifest', url: sourceUrl}}
+      : {}),
   })
   console.log(`Uploaded ${localPath}`)
   return uploaded._id
@@ -648,70 +652,21 @@ function createMapper(
   }
 
   function settings(value: JsonRecord): JsonRecord {
-    const reel = isRecord(value.reel) ? value.reel : {enabled: false}
-    const mappedReel: JsonRecord = {
-      ...reel,
-      _type: 'reelSettings',
-      enabled: reel.enabled === true,
-      startMuted: true,
-      aspectRatio: reel.aspectRatio ?? '16:9',
-    }
-    if (reel.poster) mappedReel.poster = image(reel.poster)
-    if (typeof reel.desktopSource === 'string' && /^https:\/\//u.test(reel.desktopSource)) {
-      mappedReel.desktopSourceUrl = reel.desktopSource
-      delete mappedReel.desktopSource
-    } else if (reel.desktopSource) {
-      mappedReel.desktopSource = file(reel.desktopSource)
-    }
-    if (typeof reel.mobileSource === 'string' && /^https:\/\//u.test(reel.mobileSource)) {
-      mappedReel.mobileSourceUrl = reel.mobileSource
-      delete mappedReel.mobileSource
-    } else if (reel.mobileSource) {
-      mappedReel.mobileSource = file(reel.mobileSource)
-    }
-    if (reel.credits) mappedReel.credits = creditItems(reel.credits, 'siteSettings:reel')
-
-    const about = typeof value.about === 'string' && value.about.trim()
-      ? portableTextFromString(value.about, 'siteSettings:about')
-      : value.about
-    const seededAboutPeople = aboutPeopleSeedItems(value.aboutPeople)
-    const mappedAboutPeople = Array.isArray(seededAboutPeople)
-      ? seededAboutPeople.map((rawPerson, personIndex) => {
-          const person = isRecord(rawPerson) ? rawPerson : {}
-          const selectedWork = Array.isArray(person.selectedWork)
-            ? person.selectedWork.map((rawWork, workIndex) => {
-                const work = isRecord(rawWork) ? rawWork : {}
-                return withoutUndefined({
-                  ...work,
-                  _type: 'aboutWork',
-                  _key: typeof work._key === 'string'
-                    ? work._key
-                    : deterministicKey(
-                        'about-work',
-                        person.projectOwner ?? personIndex,
-                        work.title ?? workIndex,
-                      ),
-                  image: work.image ? image(work.image) : undefined,
-                })
-              })
-            : person.selectedWork
-          return {...person, selectedWork}
-        })
-      : seededAboutPeople
-
     return withoutUndefined({
-      ...value,
       _id: 'siteSettings',
       _type: 'siteSettings',
       siteName: value.siteName ?? 'New Work Agency',
       wordmark: brandAsset(value.wordmark),
       compactMark: brandAsset(value.compactMark),
-      about,
-      aboutPeople: mappedAboutPeople,
-      socialLinks: keyedObjects(value.socialLinks ?? [], 'socialLink', 'siteSettings'),
-      reel: mappedReel,
-      notesEnabled: value.notesEnabled === true,
-      analyticsEnabled: value.analyticsEnabled === true,
+      navigation: keyedObjects(
+        value.navigation ?? [
+          {label: 'Work', destination: 'work', visible: true},
+          {label: 'About', destination: 'about', visible: true},
+          {label: 'Contact', destination: 'contact', visible: true},
+        ],
+        'navigationItem',
+        'siteSettings',
+      ),
       defaultSeo: seo(value.defaultSeo ?? {noIndex: true}),
     })
   }
@@ -724,22 +679,23 @@ function createMapper(
       ? slug.current
       : undefined
     if (!slugCurrent) throw new Error('Every seed project requires a confirmed fixture slug.')
-    const projectId = typeof value._id === 'string' && value._id
-      ? value._id
-      : `project.seed.${deterministicKey('id', slugCurrent)}`
+    const legacyId = typeof value._id === 'string' && value._id ? value._id : undefined
+    const projectSourceKey = legacyId ?? `project:${slugCurrent}`
     const blocks = Array.isArray(value.contentBlocks)
-      ? value.contentBlocks.map((block, index) => contentBlock(block, projectId, index))
+      ? value.contentBlocks.map((block, index) => contentBlock(block, projectSourceKey, index))
       : []
+    const fixtureFields = {...value}
+    delete fixtureFields._id
 
     return withoutUndefined({
-      ...value,
-      _id: projectId,
+      ...fixtureFields,
       _type: 'project',
+      legacyId,
       slug,
-      contributors: keyedObjects(value.contributors, 'contributor', projectId),
+      contributors: keyedObjects(value.contributors, 'contributor', projectSourceKey),
       cover: cover(value.cover),
       contentBlocks: blocks,
-      credits: creditItems(value.credits, projectId),
+      credits: creditItems(value.credits, projectSourceKey),
       visible: false,
       needsReview: true,
       featuredOnHome: value.featuredOnHome === true,
@@ -752,19 +708,20 @@ function createMapper(
 
   function note(value: JsonRecord): JsonRecord {
     const slugValue = typeof value.slug === 'string' ? value.slug : undefined
-    const noteId = typeof value._id === 'string'
-      ? value._id
-      : `note.${slugValue ?? deterministicKey('note', value.title)}`
+    const legacyId = typeof value._id === 'string' && value._id ? value._id : undefined
+    const noteSourceKey = legacyId ?? `note:${slugValue ?? deterministicKey('note', value.title)}`
     const body = typeof value.body === 'string'
-      ? portableTextFromString(value.body, `${noteId}:body`)
+      ? portableTextFromString(value.body, `${noteSourceKey}:body`)
       : value.body
+    const fixtureFields = {...value}
+    delete fixtureFields._id
 
     return withoutUndefined({
-      ...value,
-      _id: noteId,
+      ...fixtureFields,
       _type: 'note',
+      legacyId,
       slug: slugValue ? {_type: 'slug', current: slugValue} : value.slug,
-      media: mediaAsset(value.media, `${noteId}:media`),
+      media: mediaAsset(value.media, `${noteSourceKey}:media`),
       body,
       visible: false,
       needsReview: true,
@@ -776,6 +733,63 @@ function createMapper(
   }
 
   return {settings, project, note}
+}
+
+function slugFromDocument(document: JsonRecord): string | undefined {
+  return isRecord(document.slug) && typeof document.slug.current === 'string'
+    ? document.slug.current
+    : undefined
+}
+
+/**
+ * Lookup aliases keep fixture imports idempotent without forcing editorial
+ * documents to use source-controlled IDs. A migrated record can be found by
+ * its hidden legacy ID, while older datasets can still be matched by the old
+ * `_id` during a safe transition.
+ */
+export function seedDocumentLookupKeys(document: JsonRecord): string[] {
+  const type = typeof document._type === 'string' ? document._type : 'unknown'
+  const keys: string[] = []
+  if (typeof document._id === 'string' && document._id) keys.push(`id:${document._id}`)
+  if (typeof document.legacyId === 'string' && document.legacyId) {
+    keys.push(`legacy:${type}:${document.legacyId}`, `id:${document.legacyId}`)
+  }
+  const slug = slugFromDocument(document)
+  if (slug && ['project', 'note'].includes(type)) keys.push(`slug:${type}:${slug}`)
+  return [...new Set(keys)]
+}
+
+function indexExistingSeedDocuments(documents: JsonRecord[]): Map<string, JsonRecord> {
+  const index = new Map<string, JsonRecord>()
+  for (const document of documents) {
+    for (const key of seedDocumentLookupKeys(document)) {
+      const indexed = index.get(key)
+      if (indexed && indexed._id !== document._id) {
+        throw new Error(
+          `Multiple Sanity documents match the same seed identity (${key}). Resolve the duplicate before importing.`,
+        )
+      }
+      index.set(key, document)
+    }
+  }
+  return index
+}
+
+function existingDocumentForSeed(
+  seed: JsonRecord,
+  index: Map<string, JsonRecord>,
+): JsonRecord | undefined {
+  const matches = [...new Set(
+    seedDocumentLookupKeys(seed)
+      .map((key) => index.get(key))
+      .filter((document): document is JsonRecord => Boolean(document)),
+  )]
+  if (matches.length > 1) {
+    throw new Error(
+      `Seed identity ${seedDocumentLookupKeys(seed).join(', ')} matches multiple Sanity documents.`,
+    )
+  }
+  return matches[0]
 }
 
 function assertUnique(values: string[], label: string): void {
@@ -819,7 +833,7 @@ function fixtureAuthoritativeMerge(seed: unknown, existing: unknown): unknown {
 }
 
 /**
- * Merge an imported seed document with an existing deterministic document.
+ * Merge an imported seed document with an existing editorial document.
  *
  * Preservation mode (default): existing editorial values and existing-only
  * keyed array items win, new fixture fields/items are added, and any specific
@@ -949,7 +963,7 @@ function optionalNotes(): JsonRecord[] {
   return path ? readJson<JsonRecord[]>(path) : []
 }
 
-async function main(): Promise<void> {
+export async function runSanitySeed(): Promise<void> {
   loadEnvironmentFiles()
 
   const updateMode = resolveSeedUpdateMode()
@@ -964,14 +978,14 @@ async function main(): Promise<void> {
     )
   }
 
-  const projectId = process.env.SANITY_STUDIO_PROJECT_ID ?? process.env.PUBLIC_SANITY_PROJECT_ID
-  const dataset = process.env.SANITY_STUDIO_DATASET ?? process.env.PUBLIC_SANITY_DATASET ?? 'production'
+  const projectId = process.env.PUBLIC_SANITY_PROJECT_ID ?? DEFAULT_SANITY_PROJECT_ID
+  const dataset = process.env.PUBLIC_SANITY_DATASET ?? DEFAULT_SANITY_DATASET
   const token = process.env.SANITY_WRITE_TOKEN
   const readToken = dryRun ? process.env.SANITY_PREVIEW_TOKEN : undefined
-  const apiVersion = process.env.SANITY_API_VERSION ?? '2026-08-01'
+  const apiVersion = SANITY_API_VERSION
 
   if (!projectId) {
-    throw new Error('Set SANITY_STUDIO_PROJECT_ID (or PUBLIC_SANITY_PROJECT_ID) before seeding.')
+    throw new Error('Set PUBLIC_SANITY_PROJECT_ID before seeding.')
   }
   if (!token && !dryRun) {
     throw new Error(
@@ -1084,29 +1098,48 @@ async function main(): Promise<void> {
     'mapped block _key',
   )
 
-  const existingDocuments = await client.fetch<JsonRecord[]>(
-    `*[_id in $ids]`,
-    {ids: seedDocuments.map((document) => document._id)},
+  const explicitIds = seedDocuments.flatMap((document) => [
+    ...(typeof document._id === 'string' ? [document._id] : []),
+    ...(typeof document.legacyId === 'string' ? [document.legacyId] : []),
+  ])
+  const legacyIds = seedDocuments.flatMap((document) =>
+    typeof document.legacyId === 'string' ? [document.legacyId] : [],
   )
-  const existingById = new Map(
-    existingDocuments.map((document) => [String(document._id), document]),
+  const slugs = seedDocuments.flatMap((document) => {
+    const slug = slugFromDocument(document)
+    return slug ? [slug] : []
+  })
+  const existingDocuments = await client.fetch<JsonRecord[]>(
+    `*[
+      _id in $explicitIds ||
+      legacyId in $legacyIds ||
+      (_type in ["project", "note"] && slug.current in $slugs)
+    ]`,
+    {explicitIds, legacyIds, slugs},
+  )
+  const existingIndex = indexExistingSeedDocuments(existingDocuments)
+  const existingBySeed = new Map(
+    seedDocuments.map((document) => [document, existingDocumentForSeed(document, existingIndex)]),
   )
   const documents = seedDocuments.map((document) =>
     mergeSeedWithExisting(
       document,
-      existingById.get(String(document._id)),
+      existingBySeed.get(document),
       updateMode,
     ) as JsonRecord,
   )
 
   if (dryRun) {
     const missingAssets = [...uploadedAssetIds.values()].filter((id) => id.startsWith('dry-run-missing-')).length
-    const documentPlans = documents.map((document) => {
-      const existing = existingById.get(String(document._id))
+    const documentPlans = documents.map((document, index) => {
+      const seed = seedDocuments[index]
+      const existing = seed ? existingBySeed.get(seed) : undefined
       const paths = changedDocumentPaths(existing, document)
         .filter((path) => !['_rev', '_createdAt', '_updatedAt'].includes(path))
       return {
-        id: String(document._id),
+        id: typeof document._id === 'string'
+          ? document._id
+          : String(document.legacyId ?? slugFromDocument(document) ?? '(Sanity-generated ID)'),
         action: existing ? (paths.length ? 'update' : 'unchanged') : 'create',
         changedPaths: paths,
       }
@@ -1124,7 +1157,9 @@ async function main(): Promise<void> {
 
   let transaction = client.transaction()
   for (const document of documents) {
-    transaction = transaction.createOrReplace(document as SanityDocumentStub & {_id: string})
+    transaction = typeof document._id === 'string'
+      ? transaction.createOrReplace(document as SanityDocumentStub & {_id: string})
+      : transaction.create(document as SanityDocumentStub)
   }
   await transaction.commit({autoGenerateArrayKeys: false})
 
@@ -1140,7 +1175,7 @@ async function main(): Promise<void> {
 
 const executedFile = process.argv[1] ? resolve(process.argv[1]) : undefined
 if (executedFile === fileURLToPath(import.meta.url)) {
-  main().catch((error: unknown) => {
+  runSanitySeed().catch((error: unknown) => {
     console.error(error instanceof Error ? error.message : error)
     process.exitCode = 1
   })

@@ -5,6 +5,7 @@ import {
   MOTION_LIMIT,
   MOTION_PHYSICS,
   COLUMN_SCROLL_RESPONSES,
+  COMPACT_COLUMN_SCROLL_RESPONSES,
   clampMotionValue,
   columnLagOffset,
   filterColumnScroll,
@@ -95,6 +96,36 @@ describe('motion tokens and transition names', () => {
       );
       expect(Math.abs(target - fastFiltered)).toBeLessThan(MOTION_LIMIT.columnLagOffset);
     }
+  });
+
+  it('gives two-column layouts a pronounced but fully damped response split', () => {
+    expect(COMPACT_COLUMN_SCROLL_RESPONSES).toEqual([0.18, 0.05]);
+
+    const target = 80;
+    let quick = 0;
+    let heavy = 0;
+    for (let frame = 0; frame < 6; frame += 1) {
+      quick = filterColumnScroll(
+        quick,
+        target,
+        COMPACT_COLUMN_SCROLL_RESPONSES[0],
+        1 / 60,
+      );
+      heavy = filterColumnScroll(
+        heavy,
+        target,
+        COMPACT_COLUMN_SCROLL_RESPONSES[1],
+        1 / 60,
+      );
+    }
+    expect((target - heavy) - (target - quick)).toBeGreaterThan(30);
+
+    for (let frame = 0; frame < 240; frame += 1) {
+      quick = filterColumnScroll(quick, target, COMPACT_COLUMN_SCROLL_RESPONSES[0], 1 / 60);
+      heavy = filterColumnScroll(heavy, target, COMPACT_COLUMN_SCROLL_RESPONSES[1], 1 / 60);
+    }
+    expect(Math.abs(target - quick)).toBeLessThan(MOTION_PHYSICS.columnRestDistance);
+    expect(Math.abs(target - heavy)).toBeLessThan(MOTION_PHYSICS.columnRestDistance);
   });
 
   it('creates stable, project-specific shared transition names', () => {

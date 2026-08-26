@@ -1,6 +1,6 @@
 ---
 import BrandLockup from './BrandLockup.astro';
-import type { BrandAssetView } from '../lib/types';
+import type { BrandAssetView, FooterLineView } from '../lib/types';
 import type { WordmarkTone } from './Wordmark.astro';
 import { withBase } from '../lib/base-path';
 
@@ -16,6 +16,12 @@ export interface Props {
   contactLabel?: string;
   links?: readonly FooterLink[];
   people?: readonly FooterLink[];
+  strapline?: readonly FooterLineView[];
+  exploreLinks?: readonly FooterLink[];
+  peopleHeading?: string;
+  exploreHeading?: string;
+  connectHeading?: string;
+  copyrightLine?: string;
   wordmarkAsset?: BrandAssetView;
   tone?: WordmarkTone;
   showContact?: boolean;
@@ -30,6 +36,17 @@ const {
   contactLabel,
   links = [],
   people = [],
+  strapline = [
+    {text: 'New Work is film.', emphasis: 'New Work'},
+    {text: 'New Work is photography.', emphasis: 'New Work'},
+    {text: 'We make beautiful work.', emphasis: 'beautiful'},
+    {text: 'Come create with us.', emphasis: 'create'},
+  ],
+  exploreLinks: suppliedExploreLinks,
+  peopleHeading = 'People',
+  exploreHeading = 'Explore',
+  connectHeading = 'Connect',
+  copyrightLine = 'All rights reserved.',
   wordmarkAsset,
   tone = 'dark',
   showContact = true,
@@ -48,34 +65,45 @@ const resolvedPeople = people.flatMap((link) => {
   const href = link.href ?? link.url;
   return href ? [{ href, label: link.label }] : [];
 });
-const exploreLinks = [
+const defaultExploreLinks = [
   { href: withBase('/'), label: 'Work' },
   { href: withBase('/about'), label: 'About' },
   ...(showNotes ? [{ href: withBase('/notes'), label: 'Notes' }] : []),
   { href: withBase('/contact'), label: 'Contact' },
 ];
+const exploreLinks = suppliedExploreLinks?.length ? suppliedExploreLinks : defaultExploreLinks;
 const connectLinks = [
   ...(showContact && contactEmail && emailText
     ? [{ href: `mailto:${contactEmail}`, label: emailText }]
     : []),
   ...resolvedLinks,
 ];
+const straplineParts = strapline.map((line) => {
+  if (!line.emphasis) return {text: line.text};
+  const index = line.text.indexOf(line.emphasis);
+  if (index < 0) return {text: line.text};
+  return {
+    text: line.text,
+    before: line.text.slice(0, index),
+    emphasis: line.emphasis,
+    after: line.text.slice(index + line.emphasis.length),
+  };
+});
 ---
 
 <footer class:list={['site-footer', className]} data-site-footer>
   <div class="site-footer__inner">
     <div class="site-footer__main">
       <div class="site-footer__strapline">
-        <p><em>New Work</em> is film.</p>
-        <p><em>New Work</em> is photography.</p>
-        <p>We make <em>beautiful</em> work.</p>
-        <p>Come <em>create</em> with us.</p>
+        {straplineParts.map((line) => (
+          <p>{line.emphasis ? <>{line.before}<em>{line.emphasis}</em>{line.after}</> : line.text}</p>
+        ))}
       </div>
 
       <nav class="site-footer__directory" aria-label="Footer">
         {resolvedPeople.length ? (
           <div class="site-footer__group site-footer__group--people">
-            <h2>People</h2>
+            <h2>{peopleHeading}</h2>
             <ul role="list">
               {resolvedPeople.map((link) => <li><a href={link.href}>{link.label}</a></li>)}
             </ul>
@@ -83,7 +111,7 @@ const connectLinks = [
         ) : null}
 
         <div class="site-footer__group site-footer__group--explore">
-          <h2>Explore</h2>
+          <h2>{exploreHeading}</h2>
           <ul role="list">
             {exploreLinks.map((link) => <li><a href={link.href}>{link.label}</a></li>)}
           </ul>
@@ -91,7 +119,7 @@ const connectLinks = [
 
         {connectLinks.length ? (
           <div class="site-footer__group site-footer__group--connect">
-            <h2>Connect</h2>
+            <h2>{connectHeading}</h2>
             <ul role="list">
               {connectLinks.map((link) => (
                 <li><a href={link.href} rel={/^https?:/u.test(link.href) ? 'noreferrer' : undefined}>{link.label}</a></li>
@@ -117,7 +145,7 @@ const connectLinks = [
           artworkHeight={wordmarkAsset?.height}
         />
       </a>
-      {showYear && <p class="site-footer__legal">© {year} {siteName}<br />All rights reserved.</p>}
+      {showYear && <p class="site-footer__legal">© {year} {siteName}<br />{copyrightLine}</p>}
     </div>
   </div>
 </footer>

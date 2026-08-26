@@ -21,7 +21,6 @@ All collected assets should be treated as `prototype-only`, `owner-review`, and 
 - Michael's Squarespace page provides portfolio-resolution renditions, three GIFs, one directly hosted video, and seven YouTube embeds. The included MP4 loops are working preview derivatives, not source masters.
 - Several Michael labels are inferred from filenames. The Chanel-labelled still is explicitly a test and must not be published under that client without approval.
 - The source pages do not provide definitive copy, credits, dates, client mappings, alt text, captions, transcripts, or clearances for every item.
-- Three Anjali portfolio references supplied in the original brief (Adobe, Stella Artois, and Rakuten) are packaged as prototype-only working images. They remain explicitly blocked from production until Anjali confirms the selection, metadata, credits, reuse rights, and approved masters.
 - The creative-reference deck and design-site screenshots are research inputs, not public site assets.
 - No commercial font files are included. The identity designer must provide font files together with web-use license confirmation.
 

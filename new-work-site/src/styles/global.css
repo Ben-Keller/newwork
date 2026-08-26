@@ -10,7 +10,19 @@
 
 @layer reset {
   *, *::before, *::after { box-sizing: border-box; }
-  html { scroll-behavior: auto; text-size-adjust: 100%; }
+  html {
+    scrollbar-gutter: auto;
+    scrollbar-width: none;
+    scroll-behavior: auto;
+    text-size-adjust: 100%;
+    -ms-overflow-style: none;
+  }
+  html::-webkit-scrollbar,
+  body::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+  }
   body, h1, h2, h3, p, figure, dl, dd { margin: 0; }
   ul { margin: 0; padding: 0; list-style: none; }
   img, picture, video, iframe { display: block; max-width: 100%; }
@@ -219,6 +231,7 @@
     transition: opacity var(--duration-fast);
   }
   .preview-video video[data-playing="true"] { opacity: 1; }
+  .preview-video video[data-route-transition-poster] { opacity: 0; transition: none; }
   .responsive-image { position: relative; background: #d9d9d4; }
   .responsive-image img { width: 100%; height: auto; object-position: var(--image-position, 50% 50%); }
   .error-media, .media-placeholder {

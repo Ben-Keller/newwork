@@ -1,5 +1,6 @@
 ---
 import GalleryPhotoPage from '../../components/GalleryPhotoPage.astro';
+import ProjectOverlay from '../../components/project/ProjectOverlay.astro';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { excludedWorkGalleryItemIds } from '../../content/local/gallery-curation';
 import {
@@ -8,6 +9,7 @@ import {
   type DevelopmentGalleryImage,
 } from '../../content/local/michael-gallery';
 import { getSiteContent } from '../../lib/content';
+import { GALLERY_PHOTO_PRIMARY_IMAGE_SIZES } from '../../lib/responsive-images';
 import type { SiteContent } from '../../lib/types';
 import '../../styles/gallery-photo.css';
 
@@ -61,14 +63,20 @@ const { item, placeholder, previous, next, previousTitle, nextTitle, content } =
   pageClass="project-page gallery-photo-page"
   pageTheme="warm"
   preloadImage={item.image}
-  preloadImageSizes="(min-width: 1200px) 58vw, (min-width: 768px) 56vw, 100vw"
+  preloadImageSizes={GALLERY_PHOTO_PRIMARY_IMAGE_SIZES}
 >
-  <GalleryPhotoPage
-    item={item}
-    placeholder={placeholder}
-    previous={previous}
-    next={next}
-    previousTitle={previousTitle}
-    nextTitle={nextTitle}
-  />
+  <ProjectOverlay
+    projectSlug={item.id}
+    projectTitle={placeholder.title}
+    projects={content.projects}
+  >
+    <GalleryPhotoPage
+      item={item}
+      placeholder={placeholder}
+      previous={previous}
+      next={next}
+      previousTitle={previousTitle}
+      nextTitle={nextTitle}
+    />
+  </ProjectOverlay>
 </BaseLayout>

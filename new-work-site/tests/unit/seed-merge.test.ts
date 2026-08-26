@@ -3,6 +3,7 @@ import {
   aboutPeopleSeedItems,
   mergeSeedWithExisting,
   resolveSeedUpdateMode,
+  seedDocumentLookupKeys,
   seedIsDryRun,
 } from '../../scripts/seed-sanity'
 
@@ -230,5 +231,28 @@ describe('seed update-mode selection', () => {
       'SANITY_SEED_UPDATE_MODE must be either preserve or force.',
     )
     expect(() => resolveSeedUpdateMode(['--force'], {})).toThrow('Unknown seed option')
+  })
+})
+
+describe('seed document identity', () => {
+  it('matches migrated records through a hidden legacy ID without assigning it as _id', () => {
+    expect(seedDocumentLookupKeys({
+      _type: 'project',
+      legacyId: 'project.michael.arc',
+      slug: {_type: 'slug', current: 'arc'},
+    })).toEqual([
+      'legacy:project:project.michael.arc',
+      'id:project.michael.arc',
+      'slug:project:arc',
+    ])
+  })
+
+  it('keeps singleton IDs and separates equal slugs belonging to different types', () => {
+    expect(seedDocumentLookupKeys({_id: 'siteSettings', _type: 'siteSettings'})).toEqual([
+      'id:siteSettings',
+    ])
+    expect(seedDocumentLookupKeys({_type: 'note', slug: {current: 'arc'}})).toEqual([
+      'slug:note:arc',
+    ])
   })
 })

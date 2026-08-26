@@ -1,7 +1,7 @@
 export type ContentMode = 'prototype' | 'preview' | 'production';
 
 export type ProjectType = 'Film' | 'Photography' | 'Campaign' | 'Animation' | 'BTS';
-export type ProjectOwner = 'oliver' | 'michael' | 'anjali' | 'collective' | 'other';
+export type ProjectOwner = 'oliver' | 'michael' | 'collective' | 'other';
 export type HomeCardSize = 'standard' | 'tall' | 'large' | 'wide';
 export type HomeColumn = 1 | 2 | 3 | 4;
 export type HomeTreatment = 'standard' | 'masked' | 'framed' | 'poster';
@@ -10,6 +10,7 @@ export type TitleTreatment = 'standard' | 'stacked' | 'oversized' | 'split';
 export type HeroTreatment = 'contained' | 'fullViewport' | 'split' | 'masked';
 export type ProjectLayoutVariant = 'cinematic' | 'photoEssay' | 'campaign' | 'experimental';
 export type MotionIntensity = 'low' | 'medium' | 'high';
+export type NavigationDestination = 'work' | 'about' | 'notes' | 'contact';
 
 export interface FocalPoint {
   x: number;
@@ -210,11 +211,41 @@ export interface ProjectView {
   heroTreatment: HeroTreatment;
   layoutVariant: ProjectLayoutVariant;
   motionIntensity: MotionIntensity;
+  editorialStatus: 'draft' | 'review' | 'ready' | 'approved';
   visible: boolean;
   publishAt?: string;
   needsReview: boolean;
   doNotPublishWithoutExplicitApproval: boolean;
   seo?: SeoFields;
+}
+
+export interface WorkGalleryPlacementView {
+  _key: string;
+  projectId: string;
+  cardSize: HomeCardSize;
+  treatment: HomeTreatment;
+}
+
+export interface FooterLineView {
+  _key?: string;
+  text: string;
+  emphasis?: string;
+}
+
+export interface FooterSettingsView {
+  strapline: FooterLineView[];
+  peopleHeading: string;
+  exploreHeading: string;
+  connectHeading: string;
+  exploreLinks: Array<{
+    _key?: string;
+    label: string;
+    destination: NavigationDestination | 'external';
+    url?: string;
+  }>;
+  contactLabel?: string;
+  copyrightLine: string;
+  showYear: boolean;
 }
 
 export interface ReelView {
@@ -254,23 +285,36 @@ export interface AboutPersonView {
 
 export interface SiteSettingsView {
   siteName: string;
+  navigation: Array<{
+    _key?: string;
+    label: string;
+    destination: NavigationDestination;
+    visible: boolean;
+  }>;
+  workIntroName: string;
+  workGallery?: WorkGalleryPlacementView[];
   wordmark?: BrandAssetView;
   compactMark?: BrandAssetView;
   manifesto?: string;
   manifestoNeedsReview?: boolean;
   about?: RichTextView;
+  aboutHeading: string;
+  aboutPeopleHeading: string;
+  aboutPeopleIntroduction?: string;
   aboutImage?: ImageView;
   aboutPeople: AboutPersonView[];
   aboutSeo?: SeoFields;
   contactSeo?: SeoFields;
+  contactHeading: string;
+  contactIntroduction?: RichTextView;
   capabilities: string[];
   contactEmail?: string;
   location?: string;
   socialLinks: Array<{ _key?: string; label: string; url: string }>;
   reel: ReelView;
   notesEnabled: boolean;
-  analyticsEnabled: boolean;
   defaultSeo: SeoFields;
+  footer: FooterSettingsView;
 }
 
 export interface NoteView {

@@ -1,7 +1,11 @@
 ---
 import type { DevelopmentGalleryImage } from '../content/local/michael-gallery';
-import { COLUMN_SCROLL_RESPONSES } from '../lib/motion/column-filter';
+import {
+  COLUMN_SCROLL_RESPONSES,
+  COMPACT_COLUMN_SCROLL_RESPONSES,
+} from '../lib/motion/column-filter';
 import { withBase } from '../lib/base-path';
+import { buildGalleryImageSizes } from '../lib/responsive-images';
 import ResponsiveImage from './ResponsiveImage.astro';
 
 interface Props {
@@ -24,6 +28,7 @@ const {
   editable = false,
 } = Astro.props;
 const eager = desktopColumnStart || tabletColumnStart;
+const galleryImageSizes = buildGalleryImageSizes(item.image);
 ---
 
 <article
@@ -37,7 +42,7 @@ const eager = desktopColumnStart || tabletColumnStart;
   data-tablet-column-start={tabletColumnStart || undefined}
   data-motion-column
   data-motion-column-response={COLUMN_SCROLL_RESPONSES[desktopColumn - 1]}
-  data-motion-column-response-tablet={COLUMN_SCROLL_RESPONSES[tabletColumn - 1]}
+  data-motion-column-response-tablet={COMPACT_COLUMN_SCROLL_RESPONSES[tabletColumn - 1]}
   data-motion-reveal="clip"
   data-motion-delay={Math.min(index, 7) * .025}
   style="--home-offset:0px"
@@ -48,7 +53,7 @@ const eager = desktopColumnStart || tabletColumnStart;
       <div class="project-card__media-inner" data-card-media>
         <ResponsiveImage
           image={item.image}
-          sizes="(min-width: 1200px) 25vw, (min-width: 768px) 50vw, 100vw"
+          sizes={galleryImageSizes}
           eager={eager}
           priority={false}
           galleryPreload

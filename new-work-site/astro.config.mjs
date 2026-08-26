@@ -1,10 +1,16 @@
 import { defineConfig } from 'astro/config';
 import sitemap from '@astrojs/sitemap';
+import sanity from '@sanity/astro';
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadEnv } from 'vite';
 import { isIndexableCanonicalHtml } from './src/lib/seo.ts';
+import {
+  DEFAULT_SANITY_DATASET,
+  DEFAULT_SANITY_PROJECT_ID,
+  SANITY_API_VERSION,
+} from './src/lib/sanity-config.ts';
 import { PLAYER_FRAME_HOSTS, SANITY_CDN_HOSTS, isSafeEmail } from './shared/content-policy.ts';
 
 // Astro evaluates this file before exposing Vite's import.meta.env values. Load
@@ -17,6 +23,8 @@ const fileEnvironment = loadEnv(configMode, process.cwd(), '');
 const environmentValue = (key) => process.env[key] ?? fileEnvironment[key];
 
 const contentMode = environmentValue('PUBLIC_CONTENT_MODE') || 'prototype';
+const sanityProjectId = environmentValue('PUBLIC_SANITY_PROJECT_ID')?.trim() || DEFAULT_SANITY_PROJECT_ID;
+const sanityDataset = environmentValue('PUBLIC_SANITY_DATASET')?.trim() || DEFAULT_SANITY_DATASET;
 if (!['prototype', 'preview', 'production'].includes(contentMode)) {
   throw new Error('PUBLIC_CONTENT_MODE must be prototype, preview, or production.');
 }
@@ -38,12 +46,6 @@ const base = configuredBaseValue === '/'
 
 if (configuredContactEmail && !isSafeEmail(configuredContactEmail)) {
   throw new Error('PUBLIC_CONTACT_EMAIL must be a valid email address without line breaks.');
-}
-
-if (contentMode !== 'prototype') {
-  if (!environmentValue('PUBLIC_SANITY_PROJECT_ID') || !environmentValue('PUBLIC_SANITY_DATASET')) {
-    throw new Error(`${contentMode} content mode requires PUBLIC_SANITY_PROJECT_ID and PUBLIC_SANITY_DATASET.`);
-  }
 }
 
 if (contentMode === 'preview' && !environmentValue('SANITY_PREVIEW_TOKEN')) {
@@ -123,6 +125,12 @@ export default defineConfig({
   output: 'static',
   trailingSlash: 'never',
   integrations: [
+    sanity({
+      projectId: sanityProjectId,
+      dataset: sanityDataset,
+      apiVersion: SANITY_API_VERSION,
+      useCdn: false,
+    }),
     ...(isProductionContent ? [sitemap({ serialize: keepIndexableCanonicalPage })] : []),
     {
       name: 'new-work-security-headers',

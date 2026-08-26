@@ -104,7 +104,9 @@ const videoId = `short-loop-${block._key.replace(/[^a-zA-Z0-9_-]/gu, '-')}`;
     disposeShortLoops = () => {
       observer?.disconnect();
       unregister();
-      videos.forEach((video) => video.pause());
+      videos.forEach((video) => {
+        if (video.dataset.routeTransitionActive !== 'true') video.pause();
+      });
       disposeShortLoops = () => undefined;
     };
   };

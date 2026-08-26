@@ -1,8 +1,10 @@
 ---
+import ProjectOverlay from '../../components/project/ProjectOverlay.astro';
 import ProjectTemplateRouter from '../../components/project/ProjectTemplateRouter.astro';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { adjacentProjects, getSiteContent } from '../../lib/content';
 import { resolveProjectPresentation } from '../../lib/project-layout';
+import { PROJECT_HERO_IMAGE_SIZES } from '../../lib/responsive-images';
 import type { ProjectView, SiteContent } from '../../lib/types';
 
 export async function getStaticPaths() {
@@ -42,11 +44,19 @@ const schema = content.mode === 'production'
   pageClass="project-page"
   pageTheme={presentation.projectTheme}
   pageAccent={presentation.accentColor}
+  preloadImage={project.cover.poster}
+  preloadImageSizes={PROJECT_HERO_IMAGE_SIZES}
 >
-  <ProjectTemplateRouter
-    project={project}
-    mode={content.mode}
-    previous={previous}
-    next={next}
-  />
+  <ProjectOverlay
+    projectSlug={project.slug}
+    projectTitle={project.title}
+    projects={content.projects}
+  >
+    <ProjectTemplateRouter
+      project={project}
+      mode={content.mode}
+      previous={previous}
+      next={next}
+    />
+  </ProjectOverlay>
 </BaseLayout>

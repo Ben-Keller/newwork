@@ -122,11 +122,6 @@ try {
         '[data-about-person="michael"]',
         'about-michael-desktop-1440x1000',
       );
-      await captureAnchored(
-        desktopPage,
-        '[data-about-person="anjali"]',
-        'about-anjali-desktop-1440x1000',
-      );
     }
   }
   await desktopContext.close();
@@ -165,11 +160,6 @@ try {
           page,
           '[data-about-person="michael"]',
           `about-michael-mobile-${suffix}`,
-        );
-        await captureAnchored(
-          page,
-          '[data-about-person="anjali"]',
-          `about-anjali-mobile-${suffix}`,
         );
       }
     }

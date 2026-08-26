@@ -2,15 +2,36 @@
 import Manifesto from '../components/Manifesto.astro';
 import NotesStrip from '../components/NotesStrip.astro';
 import LogoIntro from '../components/LogoIntro.astro';
+import LogoMaskExperience from '../components/LogoMaskExperience.astro';
 import ProjectGrid from '../components/ProjectGrid.astro';
+import GalleryBackdropCapture from '../components/GalleryBackdropCapture.astro';
 import Reel from '../components/Reel.astro';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { withBase } from '../lib/base-path';
 import { getSiteContent } from '../lib/content';
+import { buildGalleryImageSizes } from '../lib/responsive-images';
 
 const content = await getSiteContent();
 const { settings, projects, notes, mode } = content;
 const homeProjects = mode === 'production' ? projects.filter((project) => project.featuredOnHome) : projects;
+const placeholderReelProject = projects.find((project) => project.slug === 'mercury-an-unexpected-life')
+  ?? projects.find((project) => Boolean(project.cover.previewVideo));
+const workReel = settings.reel.enabled
+  ? settings.reel
+  : {
+      enabled: Boolean(placeholderReelProject?.cover.previewVideo),
+      poster: placeholderReelProject?.cover.poster,
+      desktopSource: placeholderReelProject?.cover.previewVideo,
+      mobileSource: placeholderReelProject?.cover.previewVideo,
+      aspectRatio: '16 / 9',
+    };
+const preloadProject = homeProjects[0];
+const preloadImageSizes = preloadProject
+  ? buildGalleryImageSizes(preloadProject.cover.poster, {
+      cardAspect: preloadProject.cover.cardRatio === 'wideFeature' ? 3 / 2 : 4 / 5,
+      mobileSource: preloadProject.cover.mobilePoster,
+    })
+  : undefined;
 ---
 <BaseLayout
   content={content}
@@ -26,13 +47,365 @@ const homeProjects = mode === 'production' ? projects.filter((project) => projec
     sameAs: settings.socialLinks.map((link) => link.url),
   }}
   pageClass="home-page"
-  preloadImage={homeProjects[0]?.cover.poster}
-  preloadMobileImage={homeProjects[0]?.cover.mobilePoster}
-  preloadImageSizes="(min-width: 1200px) 25vw, (min-width: 768px) 50vw, 100vw"
+  preloadImage={preloadProject?.cover.poster}
+  preloadMobileImage={preloadProject?.cover.mobilePoster}
+  preloadImageSizes={preloadImageSizes}
 >
-  <LogoIntro siteName="New Work" projects={homeProjects} />
-  <ProjectGrid projects={homeProjects} mode={mode} />
-  <Manifesto text={settings.manifesto} />
-  <Reel reel={settings.reel} />
-  <NotesStrip notes={notes} mode={mode} />
+  <div class="logo-work-page" data-logo-work-page data-handoff="false" data-logo-page-ready="false">
+    <div class="logo-work-page__hero" data-logo-work-hero data-faded="false">
+      <LogoMaskExperience projects={homeProjects} />
+    </div>
+
+    <div class="logo-work-page__content" data-logo-work-content>
+      <div class="logo-work-page__title" data-logo-work-title>
+        <LogoIntro siteName={settings.workIntroName} projects={homeProjects} />
+      </div>
+      <ProjectGrid projects={homeProjects} mode={mode} />
+      <GalleryBackdropCapture />
+      <Manifesto text={settings.manifesto} />
+      <NotesStrip notes={notes} mode={mode} />
+      <Reel reel={workReel} />
+    </div>
+  </div>
+
+  <noscript>
+    <style is:global>
+      .logo-work-page__hero { display: none !important; }
+      .logo-work-page__content { opacity: 1 !important; pointer-events: auto !important; }
+      body.home-page .site-header { opacity: 1 !important; pointer-events: auto !important; transform: none !important; }
+    </style>
+  </noscript>
 </BaseLayout>
+
+<style>
+  .logo-work-page {
+    position: relative;
+  }
+
+  .logo-work-page__hero {
+    position: fixed;
+    z-index: 2;
+    inset: 0;
+    background: var(--logo-hero-background, #787878);
+    opacity: 1;
+    pointer-events: none;
+    transition: opacity 1200ms cubic-bezier(.22, 1, .36, 1);
+  }
+
+  .logo-work-page__hero[data-faded='true'],
+  .logo-work-page:has([data-work-gallery][data-gallery-restore='true']) .logo-work-page__hero {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .logo-work-page__title {
+    position: relative;
+    z-index: 5;
+  }
+
+  .logo-work-page__content {
+    position: relative;
+    z-index: 1;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 1200ms cubic-bezier(.22, 1, .36, 1);
+  }
+
+  .logo-work-page[data-handoff='true'] .logo-work-page__content,
+  .logo-work-page:has([data-work-gallery][data-gallery-restore='true']) .logo-work-page__content {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  :global(body.home-page .site-header) {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-.75rem);
+    transition:
+      opacity 1200ms cubic-bezier(.22, 1, .36, 1),
+      transform 1200ms cubic-bezier(.22, 1, .36, 1);
+  }
+
+  :global(body.home-page[data-logo-header-visible='true'] .site-header),
+  :global(body.home-page:has([data-work-gallery][data-gallery-restore='true']) .site-header) {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .logo-work-page__hero {
+      transition: none;
+    }
+
+    .logo-work-page__content {
+      transition: none;
+    }
+
+    :global(body.home-page .site-header) {
+      transition: none;
+    }
+  }
+</style>
+
+<script>
+  declare global {
+    interface Window {
+      __newWorkLogoPageCleanup?: () => void;
+    }
+  }
+
+  const initializeLogoWorkPage = () => {
+    window.__newWorkLogoPageCleanup?.();
+
+    const page = document.querySelector<HTMLElement>('[data-logo-work-page]');
+    const hero = page?.querySelector<HTMLElement>('[data-logo-work-hero]');
+    const content = page?.querySelector<HTMLElement>('[data-logo-work-content]');
+    const header = document.querySelector<HTMLElement>('[data-site-header]');
+    const footer = document.querySelector<HTMLElement>('[data-site-footer]');
+    if (!page || !hero || !content || !header) return;
+
+    const controller = new AbortController();
+    let handoffActive = false;
+    let wheelLocked = false;
+    let wheelReleaseTimer = 0;
+    let wheelLockStartedAt = 0;
+    let lastWheelEventAt = 0;
+    let touchStartY = 0;
+    let touchLocked = false;
+    let backgroundFrame = 0;
+    const backgroundCycleDuration = 60_000;
+    const backgroundCycleStartedAt = performance.now();
+    const backgroundStartingPhase = Math.random();
+    const backgroundStartHue = 60 * 35 / 71;
+    const backgroundEndHue = -240;
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const wheelQuietDelay = 180;
+    const wheelGestureGap = 120;
+    const wheelMinimumHold = 520;
+    const wheelMaximumHold = 900;
+    const lockedKeys = new Set<string>();
+    const restoreWorkOnLoad = (() => {
+      if (document.querySelector('[data-work-gallery][data-gallery-restore="true"]')) return true;
+      try {
+        return window.sessionStorage.getItem('new-work-restore-requested') === 'true';
+      } catch {
+        return false;
+      }
+    })();
+
+    const setHandoff = (active: boolean) => {
+      const wasActive = handoffActive;
+      handoffActive = active;
+      page.dataset.handoff = String(active);
+      hero.dataset.faded = String(active);
+      hero.toggleAttribute('inert', active);
+      hero.setAttribute('aria-hidden', String(active));
+      content.toggleAttribute('inert', !active);
+      content.setAttribute('aria-hidden', String(!active));
+      document.body.dataset.logoHeaderVisible = String(active);
+      header.toggleAttribute('inert', !active);
+      header.setAttribute('aria-hidden', String(!active));
+      footer?.toggleAttribute('inert', !active);
+      footer?.setAttribute('aria-hidden', String(!active));
+      if (wasActive && !active) window.dispatchEvent(new Event('new-work:logo-reveal'));
+    };
+
+    const automaticColor = (hue: number) => {
+      const normalizedHue = ((hue % 360) + 360) % 360;
+      const chroma = 71;
+      const secondary = Math.round(chroma * (1 - Math.abs((normalizedHue / 60) % 2 - 1)));
+      const section = Math.floor(normalizedHue / 60) % 6;
+      const channels = [
+        [chroma, secondary, 0],
+        [secondary, chroma, 0],
+        [0, chroma, secondary],
+        [0, secondary, chroma],
+        [secondary, 0, chroma],
+        [chroma, 0, secondary],
+      ][section] || [chroma, secondary, 0];
+      return '#' + channels.map((channel) => channel.toString(16).padStart(2, '0')).join('');
+    };
+
+    const animateBackground = (time: number) => {
+      backgroundFrame = 0;
+      const phase = (backgroundStartingPhase
+        + (time - backgroundCycleStartedAt) / backgroundCycleDuration) % 1;
+      const bounceProgress = 1 - Math.abs(phase * 2 - 1);
+      const hue = backgroundStartHue + (backgroundEndHue - backgroundStartHue) * bounceProgress;
+      const color = automaticColor(hue);
+      hero.style.setProperty('--logo-hero-background', color);
+      hero.dataset.backgroundMode = 'auto';
+      if (!reducedMotion) backgroundFrame = window.requestAnimationFrame(animateBackground);
+    };
+
+    const startAutomaticBackground = () => {
+      if (backgroundFrame) return;
+      if (reducedMotion) animateBackground(performance.now());
+      else backgroundFrame = window.requestAnimationFrame(animateBackground);
+    };
+
+    const releaseWheelLock = () => {
+      if (wheelReleaseTimer) window.clearTimeout(wheelReleaseTimer);
+      const elapsed = performance.now() - wheelLockStartedAt;
+      const minimumRemaining = Math.max(0, wheelMinimumHold - elapsed);
+      const maximumRemaining = Math.max(0, wheelMaximumHold - elapsed);
+      const releaseDelay = Math.min(maximumRemaining, Math.max(wheelQuietDelay, minimumRemaining));
+      if (releaseDelay <= 0) {
+        wheelLocked = false;
+        wheelReleaseTimer = 0;
+        return;
+      }
+      wheelReleaseTimer = window.setTimeout(() => {
+        wheelLocked = false;
+        wheelReleaseTimer = 0;
+      }, releaseDelay);
+    };
+
+    const handleWheel = (event: WheelEvent) => {
+      const eventAt = performance.now();
+      const beginsNewGesture = wheelLocked && eventAt - lastWheelEventAt >= wheelGestureGap;
+      lastWheelEventAt = eventAt;
+      const revealWork = !handoffActive && event.deltaY > 0;
+      const revealLogo = handoffActive && window.scrollY <= 0 && event.deltaY < 0;
+      if (beginsNewGesture && !revealWork && !revealLogo) {
+        wheelLocked = false;
+        if (wheelReleaseTimer) window.clearTimeout(wheelReleaseTimer);
+        wheelReleaseTimer = 0;
+        return;
+      }
+      if (wheelLocked) {
+        event.preventDefault();
+        if (revealWork || revealLogo) {
+          wheelLockStartedAt = performance.now();
+          setHandoff(revealWork);
+        }
+        releaseWheelLock();
+        return;
+      }
+      if (!revealWork && !revealLogo) return;
+      event.preventDefault();
+      wheelLocked = true;
+      wheelLockStartedAt = performance.now();
+      setHandoff(revealWork);
+      releaseWheelLock();
+    };
+
+    const handleTouchStart = (event: TouchEvent) => {
+      touchStartY = event.touches[0]?.clientY ?? 0;
+    };
+
+    const handleTouchMove = (event: TouchEvent) => {
+      if (touchLocked) {
+        event.preventDefault();
+        return;
+      }
+      const currentY = event.touches[0]?.clientY;
+      if (currentY === undefined) return;
+      const deltaY = touchStartY - currentY;
+      const revealWork = !handoffActive && deltaY > 4;
+      const revealLogo = handoffActive && window.scrollY <= 0 && deltaY < -4;
+      if (!revealWork && !revealLogo) return;
+      event.preventDefault();
+      touchLocked = true;
+      setHandoff(revealWork);
+    };
+
+    const releaseTouch = () => {
+      touchLocked = false;
+    };
+
+    const forwardScrollKeys = new Set(['ArrowDown', 'End', 'PageDown']);
+    const reverseScrollKeys = new Set(['ArrowUp', 'Home', 'PageUp']);
+    const initialHandoffKeys = new Set(['Space', 'Enter']);
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const isEditable = Boolean(target?.closest('input, textarea, select, [contenteditable="true"]'));
+      const revealNumber = /^[1-5]$/u.test(event.key) ? event.key : null;
+
+      if (revealNumber && !isEditable && !event.repeat && !event.metaKey && !event.ctrlKey && !event.altKey) {
+        event.preventDefault();
+        try {
+          window.sessionStorage.setItem('new-work-logo-reveal', revealNumber);
+        } catch {
+          // Reloading still falls back to reveal 1 if session storage is unavailable.
+        }
+        window.location.reload();
+        return;
+      }
+
+      if (lockedKeys.has(event.code)) {
+        event.preventDefault();
+        return;
+      }
+      const revealWork = !handoffActive
+        && !isEditable
+        && (
+          forwardScrollKeys.has(event.code)
+          || (initialHandoffKeys.has(event.code) && !event.shiftKey)
+        );
+      const revealLogo = handoffActive
+        && window.scrollY <= 0
+        && (reverseScrollKeys.has(event.code) || (event.code === 'Space' && event.shiftKey));
+      if (!revealWork && !revealLogo) return;
+      event.preventDefault();
+      lockedKeys.add(event.code);
+      setHandoff(revealWork);
+    };
+
+    const handleKeyUp = (event: KeyboardEvent) => {
+      lockedKeys.delete(event.code);
+    };
+
+    const handlePageClick = (event: MouseEvent) => {
+      if (handoffActive || event.button !== 0) return;
+      const target = event.target instanceof Element ? event.target : null;
+      // Interactive elements keep their own click behavior. Everything else
+      // releases the large-title view like the first downward scroll gesture.
+      if (target?.closest('a, button, input, textarea, select, label, summary, [contenteditable="true"]')) return;
+      event.preventDefault();
+      setHandoff(true);
+    };
+
+    const handleScrollFallback = () => {
+      if (handoffActive || window.scrollY <= 0) return;
+      setHandoff(true);
+      window.scrollTo(0, 0);
+    };
+
+    window.addEventListener('wheel', handleWheel, { passive: false, signal: controller.signal });
+    window.addEventListener('touchstart', handleTouchStart, { passive: true, signal: controller.signal });
+    window.addEventListener('touchmove', handleTouchMove, { passive: false, signal: controller.signal });
+    window.addEventListener('touchend', releaseTouch, { signal: controller.signal });
+    window.addEventListener('touchcancel', releaseTouch, { signal: controller.signal });
+    window.addEventListener('keydown', handleKeyDown, { signal: controller.signal });
+    window.addEventListener('keyup', handleKeyUp, { signal: controller.signal });
+    window.addEventListener('click', handlePageClick, { signal: controller.signal });
+    window.addEventListener('scroll', handleScrollFallback, { passive: true, signal: controller.signal });
+    page.dataset.logoPageReady = 'true';
+    startAutomaticBackground();
+    setHandoff(restoreWorkOnLoad);
+
+    window.__newWorkLogoPageCleanup = () => {
+      controller.abort();
+      if (wheelReleaseTimer) window.clearTimeout(wheelReleaseTimer);
+      if (backgroundFrame) window.cancelAnimationFrame(backgroundFrame);
+      delete page.dataset.handoff;
+      delete page.dataset.logoPageReady;
+      delete document.body.dataset.logoHeaderVisible;
+      content.removeAttribute('inert');
+      content.removeAttribute('aria-hidden');
+      hero.style.removeProperty('--logo-hero-background');
+      delete hero.dataset.backgroundMode;
+      header.removeAttribute('inert');
+      header.removeAttribute('aria-hidden');
+      footer?.removeAttribute('inert');
+      footer?.removeAttribute('aria-hidden');
+      delete window.__newWorkLogoPageCleanup;
+    };
+  };
+
+  initializeLogoWorkPage();
+  document.addEventListener('astro:page-load', initializeLogoWorkPage);
+  document.addEventListener('astro:before-swap', () => window.__newWorkLogoPageCleanup?.());
+</script>

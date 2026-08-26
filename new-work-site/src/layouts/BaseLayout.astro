@@ -2,11 +2,12 @@
 import { ClientRouter, fade } from 'astro:transitions';
 import Analytics from '../components/Analytics.astro';
 import MotionRuntime from '../components/MotionRuntime.astro';
+import OverlayScrollbar from '../components/OverlayScrollbar.astro';
 import SeoHead from '../components/SeoHead.astro';
 import SiteFooter from '../components/SiteFooter.astro';
 import SiteHeader from '../components/SiteHeader.astro';
 import SkipLink from '../components/SkipLink.astro';
-import { buildResponsiveSrcset } from '../lib/responsive-images';
+import { buildResponsiveAvifSrcset, buildResponsiveSrcset } from '../lib/responsive-images';
 import { withBase, withoutBase } from '../lib/base-path';
 import type { BrandAssetView, ImageView, ProjectTheme, SeoFields, SiteContent } from '../lib/types';
 import '../styles/brand.css';
@@ -25,6 +26,8 @@ interface Props {
   preloadImage?: ImageView;
   preloadMobileImage?: ImageView;
   preloadImageSizes?: string;
+  showSiteChrome?: boolean;
+  showSiteFooter?: boolean;
 }
 
 const {
@@ -40,9 +43,11 @@ const {
   preloadImage,
   preloadMobileImage,
   preloadImageSizes = '100vw',
+  showSiteChrome = true,
+  showSiteFooter = showSiteChrome,
 } = Astro.props;
 const { mode, settings, notes } = content;
-const headerSiteName = 'New Work Agency';
+const headerSiteName = settings.siteName;
 const suppliedBrandAsset: BrandAssetView = {
   src: withBase('/media/brand/new-black.svg'),
   width: 1641,
@@ -52,6 +57,19 @@ const wordmarkAsset = settings.wordmark ?? suppliedBrandAsset;
 const compactMarkAsset = settings.compactMark ?? wordmarkAsset;
 const brandTone = pageTheme === 'dark' ? 'light' : 'dark';
 const showNotes = settings.notesEnabled && notes.length > 0;
+const destinationHref = {
+  work: withBase('/'),
+  about: withBase('/about'),
+  notes: withBase('/notes'),
+  contact: withBase('/contact'),
+};
+const navigationItems = settings.navigation
+  .filter((item) => item.visible && (item.destination !== 'notes' || showNotes))
+  .map((item) => ({
+    href: destinationHref[item.destination],
+    label: item.label,
+    match: 'section' as const,
+  }));
 const galleryOrderToolsEnabled = false;
 const routePath = withoutBase(Astro.url.pathname).replace(/\/+$/u, '') || '/';
 const showFooterContact = routePath !== '/contact';
@@ -59,6 +77,11 @@ const footerPeople = settings.aboutPeople.map((person) => ({
   href: withBase(`/about#about-person-${person.projectOwner}`),
   label: person.name,
 }));
+const footerExploreLinks = settings.footer.exploreLinks.flatMap((link) => {
+  if (link.destination === 'notes' && !showNotes) return [];
+  const href = link.destination === 'external' ? link.url : destinationHref[link.destination];
+  return href ? [{href, label: link.label}] : [];
+});
 const routeTransition = fade({ duration: 160 });
 const safePageAccent = pageAccent && /^#[\da-f]{6}$/iu.test(pageAccent) ? pageAccent : undefined;
 const pageStyle = safePageAccent ? `--project-page-accent:${safePageAccent}` : undefined;
@@ -68,7 +91,12 @@ const themeColor = pageClass.includes('project-page')
     : safePageAccent || '#e8e8e4'
   : '#f7f6f2';
 const preloadSrcset = preloadImage ? buildResponsiveSrcset(preloadImage) : undefined;
+const preloadAvifSrcset = preloadImage ? buildResponsiveAvifSrcset(preloadImage) : undefined;
 const preloadMobileSrcset = preloadMobileImage ? buildResponsiveSrcset(preloadMobileImage) : undefined;
+const preloadMobileAvifSrcset = preloadMobileImage
+  ? buildResponsiveAvifSrcset(preloadMobileImage)
+  : undefined;
+const avifHref = (image: ImageView) => image.src.replace(/\.webp$/iu, '.avif');
 ---
 <!doctype html>
 <html lang="en" transition:animate={routeTransition}>
@@ -104,9 +132,10 @@ const preloadMobileSrcset = preloadMobileImage ? buildResponsiveSrcset(preloadMo
           <link
             rel="preload"
             as="image"
-            href={preloadMobileImage.src}
-            imagesrcset={preloadMobileSrcset}
+            href={preloadMobileAvifSrcset ? avifHref(preloadMobileImage) : preloadMobileImage.src}
+            imagesrcset={preloadMobileAvifSrcset || preloadMobileSrcset}
             imagesizes={preloadImageSizes}
+            type={preloadMobileAvifSrcset ? 'image/avif' : undefined}
             media="(max-width: 767px)"
             fetchpriority="high"
           />
@@ -114,9 +143,10 @@ const preloadMobileSrcset = preloadMobileImage ? buildResponsiveSrcset(preloadMo
         <link
           rel="preload"
           as="image"
-          href={preloadImage.src}
-          imagesrcset={preloadSrcset}
+          href={preloadAvifSrcset ? avifHref(preloadImage) : preloadImage.src}
+          imagesrcset={preloadAvifSrcset || preloadSrcset}
           imagesizes={preloadImageSizes}
+          type={preloadAvifSrcset ? 'image/avif' : undefined}
           media={preloadMobileImage ? '(min-width: 768px)' : undefined}
           fetchpriority="high"
         />
@@ -140,30 +170,44 @@ const preloadMobileSrcset = preloadMobileImage ? buildResponsiveSrcset(preloadMo
     data-page-theme={pageTheme}
     style={pageStyle}
   >
-    <SkipLink />
-    <SiteHeader
-      currentPath={routePath}
-      showNotes={showNotes}
-      siteName={headerSiteName}
-      wordmarkAsset={wordmarkAsset}
-      compactMarkAsset={compactMarkAsset}
-      tone={brandTone}
-      galleryEditing={galleryOrderToolsEnabled && mode !== 'production'}
-    />
+    {showSiteChrome ? <SkipLink /> : null}
+    {showSiteChrome ? (
+      <SiteHeader
+        currentPath={routePath}
+        showNotes={showNotes}
+        siteName={headerSiteName}
+        navItems={navigationItems}
+        wordmarkAsset={wordmarkAsset}
+        compactMarkAsset={compactMarkAsset}
+        tone={brandTone}
+        galleryEditing={galleryOrderToolsEnabled && mode !== 'production'}
+      />
+    ) : null}
     <main id="main-content" tabindex="-1" data-motion-root>
       <slot />
     </main>
-    <SiteFooter
-      siteName={headerSiteName}
-      contactEmail={settings.contactEmail}
-      links={settings.socialLinks}
-      people={footerPeople}
-      wordmarkAsset={wordmarkAsset}
-      tone={brandTone}
-      showContact={showFooterContact}
-      showNotes={showNotes}
-    />
-    <Analytics mode={mode} enabled={settings.analyticsEnabled} />
+    {showSiteFooter ? (
+      <SiteFooter
+        siteName={headerSiteName}
+        contactEmail={settings.contactEmail}
+        contactLabel={settings.footer.contactLabel}
+        links={settings.socialLinks}
+        people={footerPeople}
+        strapline={settings.footer.strapline}
+        exploreLinks={footerExploreLinks}
+        peopleHeading={settings.footer.peopleHeading}
+        exploreHeading={settings.footer.exploreHeading}
+        connectHeading={settings.footer.connectHeading}
+        copyrightLine={settings.footer.copyrightLine}
+        wordmarkAsset={wordmarkAsset}
+        tone={brandTone}
+        showContact={showFooterContact}
+        showNotes={showNotes}
+        showYear={settings.footer.showYear}
+      />
+    ) : null}
+    <Analytics mode={mode} />
+    <OverlayScrollbar />
     <MotionRuntime />
   </body>
 </html>

@@ -1,6 +1,10 @@
 ---
 import type { DevelopmentGalleryImage, DevelopmentGalleryPlaceholder } from '../content/local/michael-gallery';
 import { withBase } from '../lib/base-path';
+import {
+  GALLERY_PHOTO_DETAIL_IMAGE_SIZES,
+  GALLERY_PHOTO_PRIMARY_IMAGE_SIZES,
+} from '../lib/responsive-images';
 import ResponsiveImage from './ResponsiveImage.astro';
 
 interface Props {
@@ -26,12 +30,11 @@ const { item, placeholder, previous, next, previousTitle, nextTitle } = Astro.pr
     <figure
       class="gallery-photo__primary"
       transition:name={`gallery-${item.id}-media`}
-      data-motion-reveal="clip"
       data-gallery-photo-primary
     >
       <ResponsiveImage
         image={item.image}
-        sizes="(min-width: 1200px) 58vw, (min-width: 768px) 56vw, 100vw"
+        sizes={GALLERY_PHOTO_PRIMARY_IMAGE_SIZES}
         eager
         projectPoster
       />
@@ -54,7 +57,7 @@ const { item, placeholder, previous, next, previousTitle, nextTitle } = Astro.pr
     <div data-motion-parallax="2">
       <ResponsiveImage
         image={item.image}
-        sizes="(min-width: 1200px) 72vw, (min-width: 768px) 82vw, 100vw"
+        sizes={GALLERY_PHOTO_DETAIL_IMAGE_SIZES}
       />
     </div>
   </figure>

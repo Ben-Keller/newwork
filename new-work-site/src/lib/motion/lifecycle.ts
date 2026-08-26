@@ -51,7 +51,15 @@ const runtime: MotionRuntimeState = {
 
 const initializers = new Map<string, RouteMotionInitializer>();
 
+const POINTER_MOTION_SELECTOR = [
+  '[data-work-gallery]',
+  '[data-project-link] [data-card-media]',
+  '[data-gallery-link] [data-card-media]',
+].join(',');
+
 const routeKey = (): string => `${window.location.pathname}${window.location.search}`;
+const activeRouteNeedsPointerMotion = (): boolean =>
+  Boolean(runtime.activeRoot?.querySelector(POINTER_MOTION_SELECTOR));
 
 const syncEnvironmentAttributes = (): void => {
   document.documentElement.dataset.motionPreference = runtime.reducedMotion ? 'reduced' : 'full';
@@ -282,7 +290,7 @@ export const installMotionLifecycle = (): MotionCleanup => {
         || runtime.pointer.fine !== pointer.fine;
       runtime.pointer = pointer;
       syncEnvironmentAttributes();
-      if (changed) restartRoute();
+      if (changed && activeRouteNeedsPointerMotion()) restartRoute();
     }),
   );
 

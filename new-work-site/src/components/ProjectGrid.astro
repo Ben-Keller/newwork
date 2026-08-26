@@ -96,6 +96,18 @@ const tabletColumnStarts = tabletColumns.map((column, index) =>
 </section>
 
 <script>
+  import { navigate } from 'astro:transitions/client';
+  import {
+    cancelRouteVideo,
+    captureRouteVideo,
+    restoreRouteVideo,
+  } from '../lib/motion/route-video-continuity';
+  import {
+    persistMatchingVideo,
+    persistResponsiveImage,
+    supportsRouteMediaPersistence,
+  } from '../lib/motion/route-media-persistence';
+
   declare global {
     interface Window {
       __newWorkMasonryCleanup?: () => void;
@@ -103,13 +115,504 @@ const tabletColumnStarts = tabletColumns.map((column, index) =>
       __newWorkPopstatePending?: boolean;
       __newWorkGalleryOrderReady?: boolean;
       __newWorkGalleryRemoved?: Set<string>;
+      __newWorkPrepareGalleryReturn?: (origin: GalleryReturnOrigin) => void;
     }
   }
+
+  type GalleryReturnOrigin = {
+    slug?: string;
+    scrollY?: number;
+    historyIndex?: number;
+  };
 
   // Editorial source order changed after the original review shuffle. Keep
   // removals, but do not let that stale saved sequence override new placements.
   const galleryOrderStorageKey = 'new-work:gallery-order:v2';
   const galleryHiddenStorageKey = 'new-work:gallery-hidden:v1';
+  const galleryRouteTransitionStyleAttribute = 'data-gallery-route-transition-style';
+  const stillPhotoHandoffAttribute = 'data-photo-route-handoff';
+  const stillPhotoHandoffPersistKey = 'new-work-photo-route-handoff';
+  const detailPosterSizes = '(min-width: 1200px) 56vw, (min-width: 768px) 52vw, 100vw';
+  const detailPosterWaitLimit = 650;
+  const detailPosterCacheLimit = 8;
+
+  type DetailPosterRecord = {
+    image: HTMLImageElement;
+    ready: Promise<void>;
+  };
+
+  const detailPosterCache = new Map<string, DetailPosterRecord>();
+  const detailPosterQueue: HTMLAnchorElement[] = [];
+  const queuedDetailPosters = new Set<string>();
+  let activeDetailPosterWarms = 0;
+  let detailPosterObserver: IntersectionObserver | undefined;
+
+  const detailPosterKey = (link: HTMLAnchorElement): string => link.href;
+
+  const loadDetailPoster = (
+    link: HTMLAnchorElement,
+    priority: 'high' | 'low' = 'low',
+  ): Promise<void> => {
+    const key = detailPosterKey(link);
+    const existing = detailPosterCache.get(key);
+    if (existing) {
+      if (priority === 'high') existing.image.fetchPriority = 'high';
+      return existing.ready;
+    }
+
+    const sourceImage = link.querySelector<HTMLImageElement>('.responsive-image img');
+    const picture = sourceImage?.closest('picture');
+    if (!sourceImage || !picture) return Promise.resolve();
+
+    const desktopAvif = [...picture.querySelectorAll<HTMLSourceElement>('source[type="image/avif"]')]
+      .find((source) => !source.media);
+    const preload = new Image();
+    preload.alt = '';
+    preload.decoding = 'async';
+    preload.fetchPriority = priority;
+    preload.sizes = detailPosterSizes;
+    preload.srcset = desktopAvif?.srcset || sourceImage.srcset;
+    preload.src = sourceImage.src;
+
+    const ready = (async () => {
+      try {
+        await preload.decode();
+      } catch {
+        if (!preload.complete) {
+          await new Promise<void>((resolve) => {
+            const settle = () => resolve();
+            preload.addEventListener('load', settle, { once: true });
+            preload.addEventListener('error', settle, { once: true });
+          });
+        }
+      }
+    })();
+    while (detailPosterCache.size >= detailPosterCacheLimit) {
+      const oldestKey = detailPosterCache.keys().next().value as string | undefined;
+      if (!oldestKey) break;
+      detailPosterCache.delete(oldestKey);
+    }
+    detailPosterCache.set(key, { image: preload, ready });
+    return ready;
+  };
+
+  const pumpDetailPosterQueue = (): void => {
+    while (activeDetailPosterWarms < 2 && detailPosterQueue.length > 0) {
+      const link = detailPosterQueue.shift();
+      if (!link) continue;
+      const key = detailPosterKey(link);
+      if (!queuedDetailPosters.has(key)) continue;
+      queuedDetailPosters.delete(key);
+      if (detailPosterCache.has(key)) continue;
+      activeDetailPosterWarms += 1;
+      void loadDetailPoster(link).finally(() => {
+        activeDetailPosterWarms -= 1;
+        pumpDetailPosterQueue();
+      });
+    }
+  };
+
+  const queueDetailPoster = (link: HTMLAnchorElement): void => {
+    const key = detailPosterKey(link);
+    if (detailPosterCache.has(key) || queuedDetailPosters.has(key)) return;
+    queuedDetailPosters.add(key);
+    detailPosterQueue.push(link);
+    pumpDetailPosterQueue();
+  };
+
+  const waitForDetailPoster = async (link: HTMLAnchorElement): Promise<void> => {
+    const ready = loadDetailPoster(link, 'high');
+    await Promise.race([
+      ready,
+      new Promise<void>((resolve) => window.setTimeout(resolve, detailPosterWaitLimit)),
+    ]);
+  };
+
+  const preserveSelectedPreview = (link: HTMLAnchorElement): void => {
+    const video = link.querySelector<HTMLVideoElement>('[data-preview-video]');
+    if (!video) return;
+    const slug = link.dataset.projectSlug
+      || link.closest<HTMLElement>('[data-project-card]')?.dataset.galleryItemId;
+    if (!slug) return;
+
+    // Keep the live preview running until the old page is actually replaced.
+    // The project hero uses this same local loop, so its clock can continue
+    // from the last outgoing frame instead of restarting at zero.
+    captureRouteVideo(video, slug);
+    let persisted = false;
+    document.addEventListener('astro:before-swap', (event) => {
+      if (video.isConnected) captureRouteVideo(video, slug);
+      const target = event.newDocument.querySelector<HTMLVideoElement>(
+        '[data-project-hero-media][data-first-media="true"] video[data-short-loop]',
+      );
+      if (target) persisted = persistMatchingVideo(video, target, slug);
+    }, { once: true });
+    document.addEventListener('astro:after-swap', () => {
+      if (persisted && video.isConnected) {
+        cancelRouteVideo(video, slug);
+        video.dataset.routeVideoRestored = 'true';
+        return;
+      }
+      const target = document.querySelector<HTMLVideoElement>(
+        '[data-project-hero-media][data-first-media="true"] video[data-short-loop]',
+      );
+      if (target) void restoreRouteVideo(target, slug);
+    }, { once: true });
+  };
+
+  const preparePersistedStillPhoto = (link: HTMLAnchorElement): boolean => {
+    if (!supportsRouteMediaPersistence()) return false;
+    const source = link.querySelector<HTMLElement>('.project-card__media');
+    const slug = link.dataset.projectSlug
+      || link.closest<HTMLElement>('[data-project-card]')?.dataset.galleryItemId;
+    if (!source || !slug || !source.querySelector('.responsive-image')) return false;
+
+    document.addEventListener('astro:before-swap', (event) => {
+      const target = event.newDocument.querySelector<HTMLElement>(
+        '[data-project-hero-media][data-first-media="true"], [data-gallery-photo-primary]',
+      );
+      if (!target) return;
+      const persisted = persistResponsiveImage(source, target, slug);
+      if (persisted) {
+        source.dataset.routeTransitionSource = 'still-persisted';
+        target.dataset.routeTransitionTarget = 'still-persisted';
+      }
+    }, { once: true });
+    return true;
+  };
+
+  const prepareStillPhotoHandoff = (link: HTMLAnchorElement): void => {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const media = link.querySelector<HTMLElement>('.project-card__media');
+    const sourceImage = media?.querySelector<HTMLImageElement>('.responsive-image img');
+    const sourceInner = media?.querySelector<HTMLElement>('.project-card__media-inner');
+    if (!media || !sourceImage) return;
+
+    const sourceRect = media.getBoundingClientRect();
+    if (sourceRect.width <= 0 || sourceRect.height <= 0) return;
+
+    // Route snapshots are reliable for the video elements but inconsistent for
+    // responsive still pictures in some Chromium/WebKit builds. Move a real,
+    // decoded image element across the swap instead of asking the browser to
+    // manufacture a second still-image snapshot.
+    media.setAttribute('data-route-transition-source', 'still');
+    const sourceTransform = sourceInner
+      ? getComputedStyle(sourceInner).transform || 'none'
+      : 'none';
+    const sourceImageStyles = getComputedStyle(sourceImage);
+    const sourcePosition = sourceImageStyles.objectPosition || '50% 50%';
+    const sourceFit = sourceImageStyles.objectFit === 'fill'
+      ? 'cover'
+      : sourceImageStyles.objectFit;
+    const handoff = document.createElement('div');
+    handoff.setAttribute(stillPhotoHandoffAttribute, 'source');
+    handoff.setAttribute('data-astro-transition-persist', stillPhotoHandoffPersistKey);
+    handoff.setAttribute('aria-hidden', 'true');
+    Object.assign(handoff.style, {
+      position: 'fixed',
+      zIndex: '2147483000',
+      inset: 'auto',
+      left: `${sourceRect.left}px`,
+      top: `${sourceRect.top}px`,
+      width: `${sourceRect.width}px`,
+      height: `${sourceRect.height}px`,
+      overflow: 'hidden',
+      pointerEvents: 'none',
+      contain: 'layout paint style',
+      background: getComputedStyle(media).backgroundColor,
+      viewTransitionName: 'none',
+      willChange: 'left, top, width, height',
+    });
+
+    const image = document.createElement('img');
+    image.alt = '';
+    image.decoding = 'async';
+    // The departure frame must use the exact pixels currently painted in the
+    // gallery. The separately warmed detail candidate is useful for cache
+    // readiness, but substituting it here creates a one-frame source jump.
+    image.src = sourceImage.currentSrc || sourceImage.src;
+    Object.assign(image.style, {
+      display: 'block',
+      width: '100%',
+      height: '100%',
+      objectFit: sourceFit,
+      objectPosition: sourcePosition,
+      transform: sourceTransform,
+      transformOrigin: 'center',
+    });
+    handoff.append(image);
+    document.body.append(handoff);
+    media.style.visibility = 'hidden';
+
+    // Photos deliberately opt out of native route snapshots. A real image
+    // remains visible and moves after the swap; videos keep the native path.
+    document.documentElement.style.viewTransitionName = 'none';
+    document.querySelectorAll<HTMLElement>('[data-project-grid] .project-card__media')
+      .forEach((candidate) => { candidate.style.viewTransitionName = 'none'; });
+
+    let finished = false;
+    let destinationImage: HTMLImageElement | undefined;
+    let lockedTargetImage: HTMLImageElement | undefined;
+    let geometryFrame = 0;
+    let pageLoadFallback = 0;
+    const cleanup = (target?: HTMLElement): void => {
+      if (finished) return;
+      finished = true;
+      if (geometryFrame) cancelAnimationFrame(geometryFrame);
+      if (pageLoadFallback) window.clearTimeout(pageLoadFallback);
+      target?.style.removeProperty('visibility');
+      handoff.getAnimations().forEach((animation) => animation.cancel());
+      image.getAnimations().forEach((animation) => animation.cancel());
+      destinationImage?.getAnimations().forEach((animation) => animation.cancel());
+      handoff.remove();
+      const targetImage = lockedTargetImage;
+      if (targetImage?.isConnected) {
+        requestAnimationFrame(() => {
+          targetImage.style.removeProperty('transition');
+          targetImage.style.removeProperty('transform');
+          targetImage.style.removeProperty('opacity');
+        });
+      }
+      document.documentElement.style.removeProperty('view-transition-name');
+      document.querySelectorAll<HTMLElement>(
+        '[data-project-grid] .project-card__media, [data-project-hero-media], [data-gallery-photo-primary]',
+      ).forEach((candidate) => {
+        candidate.style.removeProperty('view-transition-name');
+        candidate.style.removeProperty('visibility');
+      });
+    };
+
+    document.addEventListener('astro:before-swap', (event) => {
+      const newDocument = (event as Event & { newDocument?: Document }).newDocument;
+      if (!newDocument) return;
+      newDocument.documentElement.style.viewTransitionName = 'none';
+      newDocument.querySelectorAll<HTMLElement>(
+        '[data-project-hero-media], [data-gallery-photo-primary]',
+      ).forEach((candidate) => { candidate.style.viewTransitionName = 'none'; });
+
+      const placeholder = newDocument.createElement('div');
+      placeholder.setAttribute('data-astro-transition-persist', stillPhotoHandoffPersistKey);
+      placeholder.hidden = true;
+      newDocument.body.append(placeholder);
+    }, { once: true });
+
+    document.addEventListener('astro:after-swap', () => {
+      if (!handoff.isConnected) document.body.append(handoff);
+      handoff.setAttribute(stillPhotoHandoffAttribute, 'waiting');
+      document.querySelectorAll<HTMLElement>(
+        `[data-astro-transition-persist="${stillPhotoHandoffPersistKey}"]`,
+      ).forEach((candidate) => {
+        if (candidate !== handoff) candidate.remove();
+      });
+
+      const target = document.querySelector<HTMLElement>(
+        '[data-project-hero-media][data-first-media="true"], [data-gallery-photo-primary]',
+      );
+      if (!target) {
+        cleanup();
+        return;
+      }
+      target.style.visibility = 'hidden';
+
+      let trackingStarted = false;
+      const startTracking = (): void => {
+        if (trackingStarted || finished) return;
+        trackingStarted = true;
+        if (pageLoadFallback) window.clearTimeout(pageLoadFallback);
+        handoff.setAttribute(stillPhotoHandoffAttribute, 'animating');
+        handoff.dataset.photoRouteLayout = 'ready';
+
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+        if (!target.isConnected || finished) {
+          cleanup(target);
+          return;
+        }
+        const targetImage = target.querySelector<HTMLImageElement>('img');
+        if (!targetImage) {
+          cleanup(target);
+          return;
+        }
+        // The photography template's <figure> also contains layout space below
+        // the picture. Handoff to the pixels the user can actually see, not to
+        // that larger semantic wrapper, or the image will snap when it is
+        // revealed at the end of the route transition.
+        const targetFrame = targetImage;
+        const initialTargetRect = targetFrame.getBoundingClientRect();
+        if (initialTargetRect.width <= 0 || initialTargetRect.height <= 0) {
+          cleanup(target);
+          return;
+        }
+
+        targetImage.loading = 'eager';
+        targetImage.fetchPriority = 'high';
+        const targetImageStyles = getComputedStyle(targetImage);
+        const targetPosition = targetImageStyles.objectPosition || '50% 50%';
+        const targetTransform = targetImageStyles.transform || 'none';
+        const targetFit = targetImageStyles.objectFit === 'fill'
+          ? 'cover'
+          : targetImageStyles.objectFit;
+        lockedTargetImage = targetImage;
+        targetImage.style.transition = 'none';
+        targetImage.style.transform = targetTransform;
+        targetImage.style.opacity = '1';
+
+        destinationImage = document.createElement('img');
+        destinationImage.alt = '';
+        destinationImage.decoding = 'async';
+        destinationImage.src = targetImage.currentSrc || targetImage.src;
+        Object.assign(destinationImage.style, {
+          position: 'absolute',
+          inset: '0',
+          display: 'block',
+          width: '100%',
+          height: '100%',
+          objectFit: targetFit,
+          objectPosition: sourcePosition,
+          opacity: '0',
+          transform: sourceTransform,
+          transformOrigin: 'center',
+        });
+        handoff.append(destinationImage);
+
+        let destinationReady = false;
+        void Promise.race([
+          Promise.all([
+            targetImage.decode().catch(() => undefined),
+            destinationImage.decode().catch(() => undefined),
+          ]),
+          new Promise<void>((resolve) => window.setTimeout(resolve, 1_400)),
+        ]).then(() => { destinationReady = true; });
+
+        image.animate([
+          { objectPosition: sourcePosition, transform: sourceTransform },
+          { objectPosition: targetPosition, transform: targetTransform },
+        ], {
+          duration: 900,
+          easing: 'cubic-bezier(.65, 0, .35, 1)',
+          fill: 'forwards',
+        });
+        // Keep the outgoing image fully opaque. Fading both layers at once
+        // briefly exposed the pale page background on photography routes and
+        // read as a light flash. The destination dissolves over a continuously
+        // covered source instead.
+        destinationImage.animate([
+          { objectPosition: sourcePosition, transform: sourceTransform },
+          { objectPosition: targetPosition, transform: targetTransform },
+        ], {
+          duration: 900,
+          easing: 'cubic-bezier(.65, 0, .35, 1)',
+          fill: 'forwards',
+        });
+        destinationImage.animate([
+          { opacity: 0, offset: 0 },
+          { opacity: 0, offset: .32 },
+          { opacity: 1, offset: 1 },
+        ], {
+          duration: 900,
+          easing: 'cubic-bezier(.65, 0, .35, 1)',
+          fill: 'forwards',
+        });
+
+        const sampleCurve = (value: number, first: number, second: number): number => (
+          ((1 - 3 * second + 3 * first) * value
+            + (3 * second - 6 * first)) * value
+            + 3 * first
+        ) * value;
+        const sampleSlope = (value: number, first: number, second: number): number => (
+          3 * (1 - 3 * second + 3 * first) * value * value
+          + 2 * (3 * second - 6 * first) * value
+          + 3 * first
+        );
+        const easeHandoff = (progress: number): number => {
+          let parameter = progress;
+          for (let iteration = 0; iteration < 6; iteration += 1) {
+            const slope = sampleSlope(parameter, .65, .35);
+            if (Math.abs(slope) < .0001) break;
+            parameter -= (sampleCurve(parameter, .65, .35) - progress) / slope;
+            parameter = Math.min(1, Math.max(0, parameter));
+          }
+          return sampleCurve(parameter, 0, 1);
+        };
+        const applyTrackedRect = (progress: number): boolean => {
+          if (!targetFrame.isConnected) return false;
+          const liveTarget = targetFrame.getBoundingClientRect();
+          if (liveTarget.width <= 0 || liveTarget.height <= 0) return false;
+          const interpolate = (start: number, end: number) => start + (end - start) * progress;
+          handoff.style.left = `${interpolate(sourceRect.left, liveTarget.left)}px`;
+          handoff.style.top = `${interpolate(sourceRect.top, liveTarget.top)}px`;
+          handoff.style.width = `${interpolate(sourceRect.width, liveTarget.width)}px`;
+          handoff.style.height = `${interpolate(sourceRect.height, liveTarget.height)}px`;
+          return true;
+        };
+
+        const startedAt = performance.now();
+        let settledAt = 0;
+        const trackDestination = (time: number): void => {
+          if (finished) return;
+          const linearProgress = Math.min(1, Math.max(0, (time - startedAt) / 900));
+          if (!applyTrackedRect(easeHandoff(linearProgress))) {
+            cleanup(target);
+            return;
+          }
+          if (linearProgress < 1 || !destinationReady) {
+            geometryFrame = requestAnimationFrame(trackDestination);
+            return;
+          }
+          applyTrackedRect(1);
+          if (!settledAt) {
+            settledAt = time;
+            handoff.setAttribute(stillPhotoHandoffAttribute, 'settled');
+          }
+          if (time - settledAt < 120) {
+            geometryFrame = requestAnimationFrame(trackDestination);
+            return;
+          }
+          cleanup(target);
+        };
+        geometryFrame = requestAnimationFrame(trackDestination);
+        }));
+      };
+
+      document.addEventListener('astro:page-load', startTracking, { once: true });
+      pageLoadFallback = window.setTimeout(startTracking, 700);
+    }, { once: true });
+
+    window.setTimeout(() => cleanup(), 4_500);
+  };
+
+  const setupDetailPosterWarmup = (): void => {
+    detailPosterObserver?.disconnect();
+    detailPosterObserver = undefined;
+    const grid = document.querySelector<HTMLElement>('[data-project-grid]');
+    if (!grid || !('IntersectionObserver' in window)) return;
+    detailPosterObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        const link = entry.target as HTMLAnchorElement;
+        if (!entry.isIntersecting) {
+          queuedDetailPosters.delete(detailPosterKey(link));
+          return;
+        }
+        const image = link.querySelector<HTMLImageElement>('img[data-gallery-image]');
+        if (image?.dataset.galleryImageReady === 'true') queueDetailPoster(link);
+      });
+    }, { rootMargin: '85% 0px', threshold: 0 });
+
+    // Project heroes are substantially larger than gallery tiles, so warm only
+    // those routes on approach. Photo pages still warm on direct interaction.
+    grid.querySelectorAll<HTMLAnchorElement>('[data-project-link]')
+      .forEach((link) => detailPosterObserver?.observe(link));
+  };
+
+  const queueNewlyReadyDetailPoster = (event: Event): void => {
+    const image = event.target instanceof HTMLImageElement ? event.target : undefined;
+    const link = image?.closest<HTMLAnchorElement>('[data-project-link], [data-gallery-link]');
+    if (!link || !link.matches('[data-project-link]')) return;
+    const bounds = link.getBoundingClientRect();
+    const margin = window.innerHeight * .85;
+    if (bounds.bottom > -margin && bounds.top < window.innerHeight + margin) {
+      queueDetailPoster(link);
+    }
+  };
 
   const getGalleryCards = (grid: HTMLElement): HTMLElement[] =>
     [...grid.querySelectorAll<HTMLElement>('[data-project-card]')];
@@ -132,6 +635,81 @@ const tabletColumnStarts = tabletColumns.map((column, index) =>
     } catch {
       return [];
     }
+  };
+
+  const prepareGalleryRouteTransition = (link: HTMLAnchorElement): void => {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const media = link.querySelector<HTMLElement>('.project-card__media');
+    if (!media) return;
+    const mediaTransitionName = getComputedStyle(media).viewTransitionName;
+    if (!mediaTransitionName || mediaTransitionName === 'none') return;
+    const mutedMedia = [...document.querySelectorAll<HTMLElement>(
+      '[data-project-grid] .project-card__media',
+    )].filter((candidate) => candidate !== media);
+    mutedMedia.forEach((candidate) => { candidate.style.viewTransitionName = 'none'; });
+
+    const pageTransitionName = getComputedStyle(document.documentElement).viewTransitionName;
+    const mediaName = CSS.escape(mediaTransitionName);
+    const pageName = pageTransitionName && pageTransitionName !== 'none'
+      ? CSS.escape(pageTransitionName)
+      : undefined;
+    const transitionCss = `
+      @media (prefers-reduced-motion: no-preference) {
+        ::view-transition-group(${mediaName}) {
+          animation-duration: 900ms;
+          animation-timing-function: cubic-bezier(.65, 0, .35, 1);
+        }
+        ::view-transition-image-pair(${mediaName}) {
+          isolation: auto;
+        }
+        ::view-transition-old(${mediaName}),
+        ::view-transition-new(${mediaName}) {
+          animation-duration: 900ms;
+          animation-timing-function: cubic-bezier(.65, 0, .35, 1);
+          animation-fill-mode: both;
+          mix-blend-mode: normal;
+        }
+        ${pageName ? `
+        ::view-transition-group(${pageName}) {
+          animation-duration: 520ms;
+          animation-timing-function: cubic-bezier(.45, 0, .2, 1);
+        }
+        ::view-transition-old(${pageName}),
+        ::view-transition-new(${pageName}) {
+          animation-duration: 520ms;
+          animation-timing-function: cubic-bezier(.45, 0, .2, 1);
+        }` : ''}
+      }
+    `;
+
+    const installStyle = (targetDocument: Document): void => {
+      targetDocument.head.querySelector(`[${galleryRouteTransitionStyleAttribute}]`)?.remove();
+      const style = targetDocument.createElement('style');
+      style.setAttribute(galleryRouteTransitionStyleAttribute, mediaTransitionName);
+      style.setAttribute(
+        'data-gallery-route-transition-kind',
+        link.querySelector('[data-preview-video]') ? 'motion' : 'still-persisted',
+      );
+      style.textContent = transitionCss;
+      targetDocument.head.append(style);
+    };
+    const removeStyle = (): void => {
+      document.head.querySelector(`[${galleryRouteTransitionStyleAttribute}]`)?.remove();
+      mutedMedia.forEach((candidate) => {
+        if (candidate.isConnected) candidate.style.removeProperty('view-transition-name');
+      });
+    };
+
+    installStyle(document);
+    document.addEventListener('astro:before-swap', (event) => {
+      const newDocument = (event as Event & { newDocument?: Document }).newDocument;
+      if (newDocument) installStyle(newDocument);
+    }, { once: true });
+    document.addEventListener('astro:after-swap', () => {
+      window.setTimeout(removeStyle, 1_000);
+    }, { once: true });
+    // Also clean up if navigation is cancelled before the router swaps pages.
+    window.setTimeout(removeStyle, 2_000);
   };
 
   const applyGalleryOrder = (grid: HTMLElement, order: string[]): void => {
@@ -184,15 +762,60 @@ const tabletColumnStarts = tabletColumns.map((column, index) =>
   };
 
   const setupWorkScroll = () => {
-    document.querySelectorAll<HTMLAnchorElement>('[data-project-link]:not([data-scroll-ready])').forEach((link) => {
+    document.querySelectorAll<HTMLAnchorElement>(
+      ':is([data-project-link], [data-gallery-link]):not([data-scroll-ready])',
+    ).forEach((link) => {
       link.dataset.scrollReady = 'true';
-      link.addEventListener('click', () => {
-        const slug = link.dataset.projectSlug;
+      link.addEventListener('pointerenter', () => { void loadDetailPoster(link, 'high'); }, { passive: true });
+      link.addEventListener('focus', () => { void loadDetailPoster(link, 'high'); });
+      link.addEventListener('touchstart', () => { void loadDetailPoster(link, 'high'); }, { passive: true });
+      link.addEventListener('click', async (event) => {
+        const plainNavigation = event.button === 0
+          && !event.metaKey
+          && !event.ctrlKey
+          && !event.shiftKey
+          && !event.altKey
+          && link.target !== '_blank';
+        if (!plainNavigation || link.dataset.navigationPending === 'true') return;
+
+        event.preventDefault();
+        link.dataset.navigationPending = 'true';
+        preserveSelectedPreview(link);
+        const isStillTransition = !link.querySelector('[data-preview-video]');
+        const usesPersistedStill = isStillTransition && supportsRouteMediaPersistence();
+        if (!isStillTransition || usesPersistedStill) prepareGalleryRouteTransition(link);
+
+        const slug = link.dataset.projectSlug
+          || link.closest<HTMLElement>('[data-project-card]')?.dataset.galleryItemId;
         if (slug) {
           // This route owns an exact gallery-origin restore. Prevent WebKit's
           // later native history pass from replacing that saved position.
           history.scrollRestoration = 'manual';
-          sessionStorage.setItem('new-work-origin', JSON.stringify({slug, scrollY: window.scrollY}));
+          const historyIndex = typeof history.state?.index === 'number'
+            ? history.state.index
+            : undefined;
+          sessionStorage.setItem('new-work-origin', JSON.stringify({
+            slug,
+            scrollY: window.scrollY,
+            historyIndex,
+          }));
+        }
+
+        await waitForDetailPoster(link);
+        if (isStillTransition) {
+          if (usesPersistedStill) preparePersistedStillPhoto(link);
+          else prepareStillPhotoHandoff(link);
+        }
+        try {
+          await navigate(link.href);
+        } catch {
+          window.location.assign(link.href);
+        } finally {
+          if (link.isConnected) {
+            link.removeAttribute('data-navigation-pending');
+            const video = link.querySelector<HTMLVideoElement>('[data-preview-video]');
+            if (video && slug) cancelRouteVideo(video, slug);
+          }
         }
       });
     });
@@ -212,8 +835,16 @@ const tabletColumnStarts = tabletColumns.map((column, index) =>
     sessionStorage.removeItem('new-work-restore-requested');
     try {
       const origin = JSON.parse(sessionStorage.getItem('new-work-origin') || '{}') as {slug?: string; scrollY?: number};
+      let restoreCancelled = false;
+      const cancelRestore = () => { restoreCancelled = true; };
+      const cancelEvents: Array<keyof WindowEventMap> = ['wheel', 'touchstart', 'pointerdown', 'keydown'];
+      cancelEvents.forEach((eventName) =>
+        window.addEventListener(eventName, cancelRestore, { passive: true, once: true }));
+      const cleanupRestore = () => cancelEvents.forEach((eventName) =>
+        window.removeEventListener(eventName, cancelRestore));
+
       const restore = () => {
-        if (!document.querySelector('[data-project-grid]')) return;
+        if (restoreCancelled || !document.querySelector('[data-project-grid]')) return;
         if (typeof origin.scrollY === 'number') {
           window.scrollTo({top: origin.scrollY, behavior: 'auto'});
           return;
@@ -222,15 +853,18 @@ const tabletColumnStarts = tabletColumns.map((column, index) =>
         card?.scrollIntoView({block: 'center', behavior: 'auto'});
       };
 
-      // Astro's router applies its own history position after the first page-load
-      // callback. Restore on the following paint so our saved gallery origin wins.
+      // Browsers may apply their native history position more than once around
+      // an animated route swap. Reassert briefly while the page settles, but
+      // stop immediately if the visitor begins interacting.
       requestAnimationFrame(() => requestAnimationFrame(restore));
+      [140, 420, 780].forEach((delay) => window.setTimeout(restore, delay));
+      window.setTimeout(cleanupRestore, 900);
     } catch {
       sessionStorage.removeItem('new-work-origin');
     }
   };
 
-  const setupEditorialGrid = () => {
+  const setupEditorialGrid = (immediate = false) => {
     window.__newWorkMasonryCleanup?.();
     const grid = document.querySelector<HTMLElement>('[data-project-grid]');
     if (!grid) return;
@@ -268,7 +902,8 @@ const tabletColumnStarts = tabletColumns.map((column, index) =>
       frame = window.requestAnimationFrame(layout);
     };
 
-    requestLayout();
+    if (immediate) layout();
+    else requestLayout();
     const resizeObserver = 'ResizeObserver' in window ? new ResizeObserver(requestLayout) : undefined;
     resizeObserver?.observe(grid);
     cards.forEach((card) => resizeObserver?.observe(card));
@@ -281,6 +916,25 @@ const tabletColumnStarts = tabletColumns.map((column, index) =>
       cleanups.forEach((cleanup) => cleanup());
       delete window.__newWorkMasonryCleanup;
     };
+  };
+
+  const prepareGalleryReturn = (origin: GalleryReturnOrigin): void => {
+    restoreGalleryOrder();
+    const gallery = document.querySelector<HTMLElement>('[data-work-gallery]');
+    const entrance = gallery?.querySelector<HTMLElement>('[data-gallery-entrance]');
+    if (!gallery || !entrance) return;
+
+    gallery.dataset.galleryRestore = 'true';
+    gallery.dataset.galleryEntrancePlayed = 'true';
+    gallery.style.setProperty('--gallery-pointer-x', '0px');
+    entrance.dataset.galleryEntranceState = 'settled';
+    entrance.style.removeProperty('transform');
+    entrance.style.removeProperty('will-change');
+    setupEditorialGrid(true);
+
+    if (typeof origin.scrollY === 'number') {
+      window.scrollTo({ top: origin.scrollY, left: 0, behavior: 'auto' });
+    }
   };
 
   const installGalleryOrderControls = (): void => {
@@ -405,12 +1059,22 @@ const tabletColumnStarts = tabletColumns.map((column, index) =>
     });
   }
 
+  window.__newWorkPrepareGalleryReturn = prepareGalleryReturn;
   restoreGalleryOrder();
   installGalleryOrderControls();
   setupWorkScroll();
+  setupDetailPosterWarmup();
   setupEditorialGrid();
   document.addEventListener('astro:page-load', restoreGalleryOrder);
   document.addEventListener('astro:page-load', setupWorkScroll);
-  document.addEventListener('astro:page-load', setupEditorialGrid);
-  document.addEventListener('astro:before-swap', () => window.__newWorkMasonryCleanup?.());
+  document.addEventListener('astro:page-load', setupDetailPosterWarmup);
+  document.addEventListener('astro:page-load', () => setupEditorialGrid());
+  document.addEventListener('new-work:gallery-image-ready', queueNewlyReadyDetailPoster);
+  document.addEventListener('astro:before-swap', () => {
+    window.__newWorkMasonryCleanup?.();
+    detailPosterObserver?.disconnect();
+    detailPosterObserver = undefined;
+    detailPosterQueue.length = 0;
+    queuedDetailPosters.clear();
+  });
 </script>

@@ -1,6 +1,7 @@
 ---
 import type { CaptionBlock, ContentMode } from '../../lib/types';
 import type { ProjectMediaBlock } from '../../lib/project-layout';
+import { PROJECT_HERO_IMAGE_SIZES } from '../../lib/responsive-images';
 import ProjectContentBlock from './ProjectContentBlock.astro';
 
 interface Props {
@@ -36,7 +37,7 @@ const captionIds = captions.map((caption) => `project-hero-caption-${safeKey(cap
     mode={mode}
     projectTitle={projectTitle}
     eager
-    sizes="(min-width: 1200px) 56vw, (min-width: 768px) 52vw, 100vw"
+    sizes={PROJECT_HERO_IMAGE_SIZES}
   />
   {captions.map((caption, index) => (
     <ProjectContentBlock

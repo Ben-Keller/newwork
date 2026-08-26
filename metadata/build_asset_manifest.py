@@ -51,69 +51,6 @@ OLIVER_GALLERY_SOURCES = {
     for source_key, item in OLIVER_SUPPLIED_FILMS.items()
 }
 
-ANJALI_SUPPLIED_FILMS = {
-    "anjali videos/what_whack_wears_case_study (1080p).mp4": {
-        "project": "Adobe — What Whack Wears",
-        "source_page": "https://arao.squarespace.com/new-page-10/",
-        "source_media_url": "https://vimeo.com/720040595",
-    },
-    "anjali videos/liev_schreiber_-_daydream_stella_artois (1080p).mp4": {
-        "project": "Stella Artois — Daydream",
-        "source_page": "https://arao.squarespace.com/stella-produced/",
-        "source_media_url": "https://vimeo.com/439413250",
-    },
-    "anjali videos/rakuten__duet (1080p).mp4": {
-        "project": "Rakuten — Duet",
-        "source_page": "https://arao.squarespace.com/rakuten-produced/",
-        "source_media_url": "https://vimeo.com/479336941",
-    },
-}
-
-ANJALI_GALLERY_SOURCES = {
-    "anjali/adobe-what-whack-wears-gallery-cut-08s.mp4": "anjali videos/what_whack_wears_case_study (1080p).mp4",
-    "anjali/stella-artois-daydream-gallery-cut-06s.mp4": "anjali videos/liev_schreiber_-_daydream_stella_artois (1080p).mp4",
-    "anjali/rakuten-duet-gallery-cut-08s.mp4": "anjali videos/rakuten__duet (1080p).mp4",
-}
-
-ANJALI_ASSETS = {
-    "anjali/anjali-adobe-portrait.webp": {
-        "project": "Adobe",
-        "kind_label": "Portfolio still",
-        "source_page": "https://arao.squarespace.com/new-page-10/",
-        "source_media_url": "https://images.squarespace-cdn.com/content/v1/56246b41e4b0a77217f66aed/1691454923058-QHE9SDX6KQVMAF0XIPHK/Screen+Shot+2023-08-07+at+2.33.06+PM.png?format=750w",
-        "derivation": "public portfolio rendition",
-        "reported_dimensions": "750×626",
-        "notes": "Public portfolio asset supplied through the original brief; confirm project credit and reuse rights.",
-    },
-    "anjali/anjali-stella-artois.webp": {
-        "project": "Stella Artois",
-        "kind_label": "Portfolio still",
-        "source_page": "https://arao.squarespace.com/stella-produced/",
-        "source_media_url": "https://images.squarespace-cdn.com/content/v1/56246b41e4b0a77217f66aed/1691430784833-K7H7SS36JTUK8ODGHKV9/Daydream+-+Stella+Artois+-+M.+Ward+Feat.+Alia.jpg?format=1000w",
-        "derivation": "public portfolio rendition",
-        "reported_dimensions": "1000×563",
-        "notes": "Public portfolio asset supplied through the original brief; confirm project credit and reuse rights.",
-    },
-    "anjali/anjali-rakuten.gif": {
-        "project": "Rakuten",
-        "kind_label": "Motion-derived still",
-        "source_page": "https://arao.squarespace.com/rakuten-produced/",
-        "source_media_url": "https://images.squarespace-cdn.com/content/v1/56246b41e4b0a77217f66aed/1691442725277-0I7ERC6OIE004151VQP5/rakuten.gif?format=1000w",
-        "derivation": "public portfolio rendition",
-        "reported_dimensions": "600×338",
-        "notes": "Static prototype derivative of the public portfolio GIF; obtain an approved motion master before publication.",
-    },
-    "anjali/anjali-rakuten-duet-frame.webp": {
-        "project": "Rakuten — Duet",
-        "kind_label": "Motion-derived still",
-        "source_page": "https://arao.squarespace.com/rakuten-produced/",
-        "source_media_url": "https://vimeo.com/479336941",
-        "derivation": "Still frame extracted from the owner-supplied film at 14 seconds",
-        "reported_dimensions": "960×540",
-        "notes": "Owner-supplied for this build; confirm project credit and final web-use approval before production.",
-    },
-}
-
 
 def md_url(value: str) -> str:
     match = re.search(r"\[[^]]+\]\((https?://[^)]+)\)", value)
@@ -204,21 +141,6 @@ def parse_oliver() -> dict[str, dict[str, str]]:
     return mapping
 
 
-def parse_anjali() -> dict[str, dict[str, str]]:
-    supplied = {
-        source_key: {
-            **item,
-            "kind_label": "Owner-supplied source film",
-            "derivation": "Owner-supplied local film",
-            "reported_dimensions": "",
-            "notes": "Supplied for this build; full project playback uses Vimeo and the local master stays outside public.",
-            "rights_status": "owner-review",
-        }
-        for source_key, item in ANJALI_SUPPLIED_FILMS.items()
-    }
-    return ANJALI_ASSETS | supplied
-
-
 def media_info(path: Path) -> tuple[str, str, str, str]:
     suffix = path.suffix.lower().lstrip(".")
     if suffix in {"mp4", "mov", "webm"}:
@@ -252,13 +174,6 @@ def source_key_for(relative: Path) -> tuple[str, str]:
         return "/".join(parts[2:]), ""
     if parts[:3] == ("assets", "web-ready", "images"):
         key = "/".join(parts[3:])
-        if key in ANJALI_ASSETS and key != "anjali/anjali-rakuten.gif":
-            source_candidate = ROOT / "assets" / "source" / key
-            derived = str(source_candidate.relative_to(ROOT)) if source_candidate.exists() else ""
-            return key, derived
-        if key == "anjali/anjali-rakuten.webp":
-            source_key = "anjali/anjali-rakuten.gif"
-            return source_key, f"assets/source/{source_key}"
         candidate = ROOT / "assets" / "source" / key
         if candidate.exists():
             return key, str(candidate.relative_to(ROOT))
@@ -280,7 +195,7 @@ def source_key_for(relative: Path) -> tuple[str, str]:
                 return key, str(candidate.relative_to(ROOT))
     if parts[:3] == ("assets", "web-ready", "video-previews"):
         key = "/".join(parts[3:])
-        supplied_source = OLIVER_GALLERY_SOURCES.get(key) or ANJALI_GALLERY_SOURCES.get(key)
+        supplied_source = OLIVER_GALLERY_SOURCES.get(key)
         if supplied_source:
             return supplied_source, f"assets/source/{supplied_source}"
         candidate = ROOT / "assets" / "source" / key
@@ -289,7 +204,7 @@ def source_key_for(relative: Path) -> tuple[str, str]:
 
 
 def main() -> None:
-    provenance = parse_michael() | parse_oliver() | parse_anjali()
+    provenance = parse_michael() | parse_oliver()
     rows = []
     for base in (ROOT / "assets" / "source", ROOT / "assets" / "web-ready"):
         for path in sorted(
@@ -301,7 +216,7 @@ def main() -> None:
             item = provenance.get(key, {})
             person = next(
                 (
-                    name for name in ("michael", "oliver", "anjali")
+                    name for name in ("michael", "oliver")
                     if any(part == name or part.startswith(f"{name} ") for part in relative.parts)
                 ),
                 "oliver",

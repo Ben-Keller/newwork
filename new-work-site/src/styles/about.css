@@ -127,7 +127,7 @@
     max-width: 37rem;
   }
 
-  :is(.about-person--michael, .about-person--anjali) .about-person__copy {
+  .about-person--michael .about-person__copy {
     grid-column: 9 / -1;
   }
 
@@ -178,7 +178,7 @@
     background: #fff;
   }
 
-  :is(.about-person--michael, .about-person--anjali) .about-person__media {
+  .about-person--michael .about-person__media {
     grid-column: 1 / span 8;
   }
 
@@ -250,30 +250,6 @@
   .about-person--michael .about-work--5 {
     grid-area: 5 / 8 / 9 / 13;
     --caption-x: 74%;
-    --caption-y: 72%;
-  }
-
-  .about-person--anjali .about-work--1 {
-    grid-area: 1 / 1 / 5 / 8;
-    --caption-x: 4%;
-    --caption-y: 6%;
-  }
-
-  .about-person--anjali .about-work--2 {
-    grid-area: 1 / 8 / 5 / 13;
-    --caption-x: 70%;
-    --caption-y: 6%;
-  }
-
-  .about-person--anjali .about-work--3 {
-    grid-area: 5 / 1 / 9 / 6;
-    --caption-x: 4%;
-    --caption-y: 72%;
-  }
-
-  .about-person--anjali .about-work--4 {
-    grid-area: 5 / 6 / 9 / 13;
-    --caption-x: 69%;
     --caption-y: 72%;
   }
 
@@ -445,11 +421,11 @@
     grid-column: 5 / -1;
   }
 
-  :is(.about-person--michael, .about-person--anjali) .about-person__copy {
+  .about-person--michael .about-person__copy {
     grid-column: 7 / -1;
   }
 
-  :is(.about-person--michael, .about-person--anjali) .about-person__media {
+  .about-person--michael .about-person__media {
     grid-column: 1 / span 6;
   }
 

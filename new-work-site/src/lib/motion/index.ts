@@ -5,6 +5,7 @@ export type { PointerCapabilities } from './pointer-capability';
 export { prefersReducedData } from './reduced-data';
 export {
   COLUMN_SCROLL_RESPONSES,
+  COMPACT_COLUMN_SCROLL_RESPONSES,
   columnLagOffset,
   filterColumnScroll,
   frameAdjustedColumnAlpha,

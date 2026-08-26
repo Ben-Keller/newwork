@@ -7,6 +7,15 @@ export const COLUMN_SCROLL_RESPONSES = Object.freeze([
   0.110,
 ] as const);
 
+// With only two visible tracks, subtle desktop coefficients collapse into an
+// almost imperceptible pair. Preserve the same target and bounded first-order
+// filter, but widen the response contrast so starts, stops, and reversals read
+// clearly on tablet and mobile.
+export const COMPACT_COLUMN_SCROLL_RESPONSES = Object.freeze([
+  0.180,
+  0.050,
+] as const);
+
 export const frameAdjustedColumnAlpha = (
   response: number,
   deltaSeconds: number,

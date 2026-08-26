@@ -1,6 +1,6 @@
 # New Work portfolio
 
-An Astro 7 production portfolio with a kinetic 4/2/2 editorial gallery, four differentiated still/motion project templates, Astro shared transitions, a lazily loaded GSAP motion layer, a typed local/Sanity adapter, Sanity Studio 6, and Cloudflare Pages configuration. The checked-in fixture content is an internal prototype working set: the whole set is understood to need content refinement, is blocked from indexing, and is not cleared for public use.
+An Astro 7 production portfolio with a kinetic 4/2/2 editorial gallery, four differentiated still/motion project templates, Astro shared transitions, a lazily loaded GSAP motion layer, a typed local/Sanity adapter, a sibling standalone Sanity Studio 6, and Cloudflare Pages configuration. The checked-in fixture content is an internal prototype working set: the whole set is understood to need content refinement, is blocked from indexing, and is not cleared for public use.
 
 The current visual direction draws on mid-century print advertising and contemporary type specimens: a warm paper ground with restrained grain, dense black display type, hard rules and numbered captions, with interactive action strips and section markers kept strictly black and white. It deliberately avoids gradients, rounded cards, shadows, and copied reference artwork.
 
@@ -43,9 +43,10 @@ The prototype deliberately omits both a page-wide disclaimer bar and per-item re
 | `pnpm build` | Regenerate attribution data and create the static site in `dist/`. |
 | `pnpm preview` | Preview the completed static build locally. |
 | `pnpm content:attribution` | Regenerate `src/content/local/asset-attribution.json` from the copied asset manifest. |
-| `pnpm sanity:dev` | Start Sanity Studio locally on port 3333. |
-| `pnpm sanity:seed` | Idempotently upload/map fixture assets and merge deterministic seed documents with preservation-first defaults. |
+| `npm --prefix ../studio-new-work run dev` | Start the standalone Sanity Studio on port 3333. |
+| `pnpm sanity:seed` | Idempotently upload/map fixture assets and merge source-matched seed documents with preservation-first defaults. |
 | `pnpm sanity:seed:dry-run` | Produce the proposed document/asset plan without uploads or dataset writes. |
+| `pnpm sanity:typegen` | Extract the Studio schema and regenerate query-aware frontend types. |
 
 For a first Playwright run, install the configured browser if it is not already present:
 
@@ -62,9 +63,9 @@ The same view types in `src/lib/types.ts` feed both content sources. The source 
 
 | Mode | Source and behavior |
 |---|---|
-| `prototype` | Uses `src/content/local/*.json`; returns all 19 provisional projects in `homeOrder` even though their public flags are deliberately false; renders without review-marker chrome; forces site-wide `noindex`; does not generate the production sitemap. |
-| `preview` | Requires Sanity identifiers plus the server-only `SANITY_PREVIEW_TOKEN`; reads the draft-aware preview perspective without page overlays and forces site-wide `noindex`. Host this only behind access control. |
-| `production` | Requires `PUBLIC_SANITY_PROJECT_ID` and `PUBLIC_SANITY_DATASET`; fetches the published Sanity perspective; excludes hidden, future, review-blocked, approval-blocked, incomplete, and placeholder media records; generates only approved static routes. |
+| `prototype` | Uses `src/content/local/*.json`; returns all 16 provisional projects in `homeOrder` even though their public flags are deliberately false; renders without review-marker chrome; forces site-wide `noindex`; does not generate the production sitemap. |
+| `preview` | Requires the server-only `SANITY_PREVIEW_TOKEN`; reads the draft-aware preview perspective without page overlays and forces site-wide `noindex`. Host this only behind access control. |
+| `production` | Fetches the published perspective from project `7un4plyu`, dataset `production`; excludes hidden, future, review-blocked, approval-blocked, incomplete, and placeholder media records; generates only approved static routes. |
 
 Unknown mode names fail configuration. Preview and production have **no fixture fallback**. Missing Sanity configuration, a missing preview token, an unreachable API, or a failed query must fail the build instead of presenting provisional content as approved work.
 
@@ -72,9 +73,8 @@ Before any public build, set all of these explicitly in the build environment:
 
 ```dotenv
 PUBLIC_CONTENT_MODE=production
-PUBLIC_SANITY_PROJECT_ID=your-project-id
+PUBLIC_SANITY_PROJECT_ID=7un4plyu
 PUBLIC_SANITY_DATASET=production
-SANITY_API_VERSION=2026-08-01
 PUBLIC_SITE_URL=https://www.example.com
 ```
 
@@ -86,9 +86,9 @@ PUBLIC_SITE_URL=https://www.example.com
 
 - `SANITY_WRITE_TOKEN` is a server-side seed credential. Keep it in a local secret store or protected CI variable, rotate it after the initial import if practical, and never prefix it with `PUBLIC_`.
 - `SANITY_PREVIEW_TOKEN` is reserved for a protected preview workflow. It is also secret and must never reach browser code or public build logs.
-- `SANITY_STUDIO_PROJECT_ID` and `SANITY_STUDIO_DATASET` select the Studio target. They are identifiers, not authorizing credentials.
+- `PUBLIC_SANITY_PROJECT_ID` and `PUBLIC_SANITY_DATASET` are non-secret frontend identifiers. The app defaults to `7un4plyu` and `production`, but explicit build variables remain useful for auditable deployments.
 - `PUBLIC_CONTACT_EMAIL` can temporarily override an approved contact address at build time.
-- Analytics remains off by default. The Cloudflare beacon loads only when all three gates are present: production content mode, the approved Studio toggle, and `PUBLIC_CLOUDFLARE_ANALYTICS_TOKEN`. Do not enable any of them until privacy approval is recorded.
+- Analytics remains off by default. The Cloudflare beacon loads only in production mode when `PUBLIC_CLOUDFLARE_ANALYTICS_TOKEN` is set. Do not add the token until privacy approval is recorded.
 - Commit `.env.example`; never commit `.env` or token values.
 
 ## Local fixtures and media
@@ -109,7 +109,7 @@ assets/web-ready/images/example.webp
 
 Michael's expanded review library follows the same convention. The 24 untouched portfolio renditions live under `../assets/source/michael/portfolio-expansion/`; normalized WebP review copies live under `../assets/web-ready/images/michael/portfolio-expansion/` and `public/media/images/michael/portfolio-expansion/`. The manifest records the original portfolio URL, dimensions, derivation, checksum, and publication blockers for each source/derivative pair. Prototype mode interleaves these images as unnamed Michael portfolio tiles for visual curation; they link only to Michael's About profile, make no project or credit claims, and are excluded entirely from production until their identity, rights, accessibility treatment, and approved masters are confirmed.
 
-Keep project `_id` values, block `_key` values, provenance, and every safety flag stable. In particular, never discard or auto-clear:
+Keep fixture source IDs, block `_key` values, provenance, and every safety flag stable. The importer stores a fixture source ID as hidden `legacyId` metadata and lets Sanity assign the public document `_id`. In particular, never discard or auto-clear:
 
 - `needsReview`
 - `doNotPublishWithoutExplicitApproval`
@@ -122,25 +122,22 @@ Keep project `_id` values, block `_key` values, provenance, and every safety fla
 
 Every fixture project also carries two deterministic `textNote` blocks as prototype layout copy. They intentionally use raw `body` strings so the seed importer can convert them to Portable Text, and both `needsReview` and `prototypeOnly` must remain `true` until an editor replaces and approves the copy in Sanity.
 
-The three `aboutPeople` fixture entries work the same way and are ordered Michael, Oliver, then Anjali Rao; About and the footer People directory both consume that single order. Michael and Oliver retain unmistakable Lorem Ipsum role/biography copy and derive five supporting visuals from owner-matched projects. Anjali Rao uses the supplied display name and concise provisional biography; her Adobe, Stella Artois “Daydream,” and Rakuten entries exist as full owner-matched project records in the Work collection, while the About composition retains a fourth alternate crop of the supplied Rakuten media. The three supplied Anjali source films remain outside `public/`; their silent gallery cuts live under `assets/web-ready/video-previews/anjali/`, while full project playback uses the Vimeo embeds already published on Anjali's portfolio pages (Adobe `720040595`, Stella Artois `439413250`, Rakuten `479336941`). Every profile remains review-gated; Anjali and each of her projects/portfolio source records additionally carry the explicit-approval block. Keep canonical `../content/site-settings.json` identical to the app-local mirror. The seed importer prefers the canonical file; the prototype runtime reads the app-local file.
+The two `aboutPeople` fixture entries are ordered Michael, then Oliver; About and the footer People directory both consume that single order. Both profiles retain unmistakable Lorem Ipsum role/biography copy and derive five supporting visuals from owner-matched projects. Every profile remains review-gated. Keep canonical `../content/site-settings.json` identical to the app-local mirror. The seed importer prefers the canonical file; the prototype runtime reads the app-local file.
 
 Changing `visible` in a fixture does not authorize publication. Local fixtures are for internal composition and behavior review only.
 
 ## Connect Sanity
 
-### 1. Create the local environment
+### 1. Confirm the local environment
 
-Create or choose the owner-controlled Sanity project and dataset, then fill the Studio and public identifiers in `.env`:
+The standalone Studio in `../studio-new-work` and this Astro app are configured for the same target. The public values can be kept explicit in `.env`:
 
 ```dotenv
-SANITY_STUDIO_PROJECT_ID=your-project-id
-SANITY_STUDIO_DATASET=production
-PUBLIC_SANITY_PROJECT_ID=your-project-id
+PUBLIC_SANITY_PROJECT_ID=7un4plyu
 PUBLIC_SANITY_DATASET=production
-SANITY_API_VERSION=2026-08-01
 ```
 
-For local Studio access, add the Studio origin (normally `http://localhost:3333`) to the Sanity project's CORS origins with credentials enabled. Add the final Studio origin separately if Studio is later hosted.
+The Studio is standalone and is never mounted in Astro. For local Studio access, add its origin (normally `http://localhost:3333`) to the Sanity project's CORS origins with credentials enabled. Add a final Studio origin separately if the Studio is later hosted.
 
 ### 2. Seed safely
 
@@ -157,7 +154,7 @@ pnpm sanity:seed:dry-run
 pnpm sanity:seed
 ```
 
-The importer is designed to be idempotent. It uses deterministic document IDs, preserves block keys and internal safety metadata, reuses uploaded assets when possible, and creates provisional records with `visible=false` and `needsReview=true`. It must never promote seed content automatically.
+The importer is designed to be idempotent. It matches records by hidden `legacyId` metadata (with type-and-slug fallback), lets Sanity generate IDs for new projects and notes, preserves block keys and internal safety metadata, reuses uploaded assets when possible, and creates provisional records with `visible=false` and `needsReview=true`. It must never promote seed content automatically.
 
 The default `preserve` update policy is intentionally editorial-first:
 
@@ -187,14 +184,19 @@ The dry run accepts `SANITY_PREVIEW_TOKEN` for read-only comparison when present
 ### 3. Use Studio
 
 ```sh
-pnpm sanity:dev
+cd ../studio-new-work
+npm run dev
 ```
 
-Sanity's development server defaults to port 3333; this Studio is configured at `/studio`. The editorial desk contains:
+Sanity's development server defaults to port 3333. The client-facing editorial desk contains:
 
-- **Site Settings** for the visible name, identity assets, concise copy, ordered people profiles, contact details, Reel, Notes, SEO, and analytics toggles.
-- **Projects** views for home order, review status, visible records, approval-blocked work, and all projects.
-- **Notes** for optional behind-the-work entries.
+- **Start here** for shortcuts, review counts, and the publishing checklist.
+- **Work page** for opening copy, the drag-to-order project gallery, the optional Reel, and page SEO.
+- **Projects** for project pages grouped by editorial state.
+- **Asset library** for reusable media, descriptions, credits, rights, and related projects.
+- **About page**, **Contact page**, **Footer**, and **Brand & navigation** for their dedicated website areas.
+
+System metadata, imported provenance, legacy fields, Notes, comments, releases, scheduled drafts, tasks, and singleton delete/duplicate actions are hidden from the routine client workflow. Analytics is deployment-controlled and is not an editable Studio field.
 
 Project presentation is editable independently from its ordered content blocks. The supported home composition, theme, title/hero, layout-variant, and motion-intensity fields—and their safe legacy fallbacks—are documented in [`docs/PRESENTATION_MODEL.md`](docs/PRESENTATION_MODEL.md).
 
@@ -202,7 +204,7 @@ On project pages, the same cover used by the home gallery appears once in the op
 
 The portfolio is presented as an open-ended, non-ranked selection. Project detail pages intentionally omit position labels, collection totals, and index-style reading progress; About portfolio media likewise omits item numbers, totals, and category labels. Previous/next controls remain browsing paths only and do not communicate a fixed sequence.
 
-On the About page, each profile’s supporting media forms one fixed-footprint rectangular mosaic: five regions for Oliver and Michael and four for Anjali, with a different orthogonal partition for each person. The curated selections alternate motion, portrait, product, bright, and dark frames rather than merely taking the first five projects; Anjali’s fourth tile is a tight alternate crop of her darker Rakuten work. Narrow white gutters separate every tile. Fine-pointer hover and keyboard focus scale the emphasized image subtly inside its unchanged rectangle; no gallery uses angled, polygonal, or notched cropping. Reduced-motion and no-JavaScript modes retain the complete static composition. Titles and clients appear only as direct hover/focus captions, without a category label, item number, people/work total, or completeness claim, and the imagery is never presented as portraiture. About and Contact open directly with their eyebrow/title and contain no `Information` or page-fraction bar. Public GROQ and the typed adapter both remove provisional profiles individually, and the derived production media set contains only projects that passed the normal publication and asset-safety gates.
+On the About page, each profile’s supporting media forms one fixed-footprint, five-region rectangular mosaic, with a different orthogonal partition for Michael and Oliver. The curated selections alternate motion, portrait, product, bright, and dark frames rather than merely taking the first five projects. Narrow white gutters separate every tile. Fine-pointer hover and keyboard focus scale the emphasized image subtly inside its unchanged rectangle; no gallery uses angled, polygonal, or notched cropping. Reduced-motion and no-JavaScript modes retain the complete static composition. Titles and clients appear only as direct hover/focus captions, without a category label, item number, people/work total, or completeness claim, and the imagery is never presented as portraiture. About and Contact open directly with their eyebrow/title and contain no `Information` or page-fraction bar. Public GROQ and the typed adapter both remove provisional profiles individually, and the derived production media set contains only projects that passed the normal publication and asset-safety gates.
 
 ### 4. Approve a project deliberately
 
@@ -259,9 +261,8 @@ Set production variables in **Settings → Environment variables** using the pro
 ```dotenv
 NODE_VERSION=22.22.1
 PUBLIC_CONTENT_MODE=production
-PUBLIC_SANITY_PROJECT_ID=your-project-id
+PUBLIC_SANITY_PROJECT_ID=7un4plyu
 PUBLIC_SANITY_DATASET=production
-SANITY_API_VERSION=2026-08-01
 PUBLIC_SITE_URL=https://www.example.com
 ```
 
@@ -284,7 +285,7 @@ Static content changes require a new build. Configure the hook without committin
 5. Use the Cloudflare deploy-hook URL, enable create/update/delete, leave draft/version events disabled, and filter to:
 
    ```groq
-   _type in ["siteSettings", "project", "note"]
+   _type in ["siteSettings", "workPage", "aboutPage", "contactPage", "footerSettings", "project", "mediaItem", "note"]
    ```
 
 6. Publish a harmless reviewed change, confirm a single Pages deployment starts, and inspect its build log and deployed content.
@@ -361,7 +362,7 @@ Before changing `PUBLIC_CONTENT_MODE` to production or connecting a public domai
 - privacy approval before analytics or a contact-form processor is enabled;
 - a completed `VERIFICATION.md` with automated and manual results.
 
-The Chanel-labelled test image has a heightened explicit-approval block. Oliver's five gallery previews now use real owner-supplied footage, while their full-player references and final web-use approval still require confirmation. Michael's included loops are working derivatives, not source masters. Anjali's Adobe, Stella Artois “Daydream,” and Rakuten records appear in the internal Work prototype and remain blocked until metadata, credits, rights, and approved masters are confirmed.
+The Chanel-labelled test image has a heightened explicit-approval block. Oliver's five gallery previews now use real owner-supplied footage, while their full-player references and final web-use approval still require confirmation. Michael's included loops are working derivatives, not source masters.
 
 Record decisions in Sanity's internal fields or the production asset tracker. Do not treat the fixture JSON, copied manifest, or this repository as the final clearance record.
 
@@ -369,6 +370,6 @@ The working-set register is in [`docs/CONTENT_READINESS.md`](docs/CONTENT_READIN
 
 ## Verification
 
-The unit suite is in `tests/unit/`; the browser suite is in `tests/e2e/`. It covers the 19-project order, production safety filters, adjacent-project navigation, fixture media mapping, exact responsive grid columns, key routes, still and motion templates, disabled optional modules, mobile-menu focus behavior, reduced motion, no-JavaScript content, failed-media resilience, overflow, prototype safeguards, the five-second non-blocking title stage, visibility-triggered preview autoplay, and device-bounded preview concurrency. Representative captures live in `artifacts/qa/`.
+The unit suite is in `tests/unit/`; the browser suite is in `tests/e2e/`. It covers the 16-project order, production safety filters, adjacent-project navigation, fixture media mapping, exact responsive grid columns, key routes, still and motion templates, disabled optional modules, mobile-menu focus behavior, reduced motion, no-JavaScript content, failed-media resilience, overflow, prototype safeguards, the five-second non-blocking title stage, visibility-triggered preview autoplay, and device-bounded preview concurrency. Representative captures live in `artifacts/qa/`.
 
 Complete the command and visual matrix in `VERIFICATION.md` on the final commit. A browser binary or external service being unavailable must be recorded as **NOT RUN** or **BLOCKED**, never inferred as passing.

@@ -4,9 +4,6 @@
 4a934d30cd78a3f66ffa7650034190b7aa819a28f233543a7076667732db2f37  ./README.md
 bc15c996a7755249e1ffac7552070f8465d1dfcd29e3e438f8e8a85a9c157bd7  ./VERIFICATION.md
 519e0d97a928fb50154ae5cda07a93d96445383622908adf03420d664c9896be  ./assets/ASSET_INDEX.html
-4b078310ac764a0c25018e30a704faf7d703ff988451e4895ab84de694b4df7a  ./assets/source/anjali/anjali-adobe-portrait.webp
-ea987040f382a79e96ae5bd0662eecb7f927e4eb9a6ac8f06c755a1a8e8f96d5  ./assets/source/anjali/anjali-rakuten.gif
-e2ecb13696e435d216e0516e7306384b1e199bb0e64a805397858e8ec88e4d5a  ./assets/source/anjali/anjali-stella-artois.webp
 761b36cbece92988ac9e1636231a8ea918c94662b64fbfa9fcb2c9fa6740f159  ./assets/source/michael/michael_arc_product.webp
 06d9d3e90108882c5adbc381641370588efac135cdd6b8483e50dc8aa0dc18b0  ./assets/source/michael/michael_brava.gif
 a37a2542d23afc820a0478d0f89c0ee343a329ad3f3ab137877ac3f78846840c  ./assets/source/michael/michael_brava_clip.mp4
@@ -59,9 +56,6 @@ f3f7165b762eefd9ef1a56b156182a9eabe49884768ad798b5b2ef113050f1c2  ./assets/sourc
 24253f076d94de1aa81b5d7bd254727df0c67d08e577242d903adc3aa7396b9e  ./assets/source/oliver/tour-de-france/still-frame-61.png
 a7290ef19e4f5df5392ec04d23ec7030286da917636e3158522123ff79125825  ./assets/source/oliver/tour-de-france/still-frame-62.png
 f1d62654e5676f32bf8985d402c4475536b28cde99dcef79215a4b8719d16c55  ./assets/source/oliver/tour-de-france/still-frame-63.png
-4b078310ac764a0c25018e30a704faf7d703ff988451e4895ab84de694b4df7a  ./assets/web-ready/images/anjali/anjali-adobe-portrait.webp
-f38603dc9396ce975626f0cde275fd635810aa72906ba4faa942839a8b458d26  ./assets/web-ready/images/anjali/anjali-rakuten.webp
-e2ecb13696e435d216e0516e7306384b1e199bb0e64a805397858e8ec88e4d5a  ./assets/web-ready/images/anjali/anjali-stella-artois.webp
 815fc42a84151e404e70b17625cbd04fcd30df6bf38b23a723717d29681a5fab  ./assets/web-ready/images/michael/michael_arc_product.webp
 57983576898014ef99527f5060598377a6773206ed399ea9d8b34f97c27aac26  ./assets/web-ready/images/michael/michael_brava-poster.webp
 57ed3d85e7cff745f8100b9fd83085970dc247d341515ecaf8e6ebb74200e4aa  ./assets/web-ready/images/michael/michael_chanel_test.webp
