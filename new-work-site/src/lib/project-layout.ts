@@ -11,12 +11,6 @@ import type {
   TitleTreatment,
 } from './types';
 
-const layoutVariants = new Set<ProjectLayoutVariant>([
-  'cinematic',
-  'photoEssay',
-  'campaign',
-  'experimental',
-]);
 const projectThemes = new Set<ProjectTheme>(['light', 'warm', 'dark', 'accent']);
 const titleTreatments = new Set<TitleTreatment>(['standard', 'stacked', 'oversized', 'split']);
 const heroTreatments = new Set<HeroTreatment>(['contained', 'fullViewport', 'split', 'masked']);
@@ -212,11 +206,44 @@ export const splitProjectContent = (
   };
 };
 
-const inferLayoutVariant = (project: ProjectView): ProjectLayoutVariant => {
-  if (project.types.includes('Campaign')) return 'campaign';
-  if (project.types.includes('Film')) return 'cinematic';
-  if (project.types.includes('Photography')) return 'photoEssay';
-  return 'campaign';
+/**
+ * A photo doorway changes only the presentation order. The Work document and
+ * its URL identity stay the same: the clicked photo becomes the hero and the
+ * rest of the set follows beneath it.
+ */
+export const selectWorkPhoto = (project: ProjectView, requestedPhotoId?: string): ProjectView => {
+  if (project.template !== 'photo' || project.photos.length === 0) return project;
+  const selected = project.photos.find((photo) => photo.id === requestedPhotoId)
+    || project.photos.find((photo) => photo.id === project.defaultPhotoId)
+    || project.photos[0];
+  if (!selected) return project;
+
+  const photoSources = new Set(project.photos.map((photo) => photo.image.src));
+  const authoredBlocks = project.contentBlocks.filter((block) => {
+    if (!isSingleImageBlock(block)) return true;
+    return !photoSources.has(block.image.src);
+  });
+  const photoBlocks: ContentBlockView[] = project.photos
+    .filter((photo) => photo.id !== selected.id)
+    .map((photo, index) => ({
+      _key: `${project.slug}-photo-${photo.id}`,
+      _type: index % 3 === 0 ? 'fullBleedImage' : 'containedImage',
+      image: photo.image,
+      ...(index % 3 === 0 ? {} : {width: index % 2 === 0 ? 'wide' : 'medium', alignment: 'center'}),
+    } as ContentBlockView));
+
+  return {
+    ...project,
+    defaultPhotoId: selected.id,
+    cover: {
+      ...project.cover,
+      poster: selected.image,
+      mediaType: 'still',
+      previewVideo: undefined,
+      previewPosterOverride: undefined,
+    },
+    contentBlocks: [...photoBlocks, ...authoredBlocks],
+  };
 };
 
 const defaultTitleTreatment = (variant: ProjectLayoutVariant): TitleTreatment => {
@@ -235,9 +262,11 @@ const defaultHeroTreatment = (variant: ProjectLayoutVariant): HeroTreatment => {
 
 export const resolveProjectPresentation = (project: ProjectView): ProjectPresentation => {
   const raw = project as unknown as Record<string, unknown>;
-  const layoutVariant = layoutVariants.has(raw.layoutVariant as ProjectLayoutVariant)
-    ? raw.layoutVariant as ProjectLayoutVariant
-    : inferLayoutVariant(project);
+  const layoutVariant: ProjectLayoutVariant = project.template === 'photo'
+    ? 'photoEssay'
+    : project.template === 'featured'
+      ? 'campaign'
+      : 'cinematic';
   const accentColor = hasText(raw.accentColor) && /^#[\da-f]{6}$/iu.test(raw.accentColor)
     ? raw.accentColor
     : undefined;

@@ -1,0 +1,58 @@
+name: Deploy Sanity Studio
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - studio-new-work/**
+      - new-work-site/sanity/**
+      - .github/workflows/deploy-studio.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Never cancel an in-flight Studio/schema upload. Later pushes wait their turn.
+concurrency:
+  group: sanity-studio-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Validate schema and deploy Studio
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: studio-new-work/package-lock.json
+
+      - name: Install Studio dependencies
+        working-directory: studio-new-work
+        run: npm ci
+
+      - name: Extract schema and regenerate frontend query types
+        working-directory: studio-new-work
+        run: npm run typegen
+
+      - name: Require generated schema and query types to be committed
+        run: >-
+          git diff --exit-code --
+          studio-new-work/schema.json
+          new-work-site/src/sanity.types.ts
+
+      - name: Build standalone Studio
+        working-directory: studio-new-work
+        run: npm run build
+
+      - name: Deploy Studio and require schema upload
+        working-directory: studio-new-work
+        run: npm run deploy:ci
+        env:
+          SANITY_AUTH_TOKEN: ${{ secrets.SANITY_AUTH_TOKEN }}

@@ -10,6 +10,7 @@
   "scripts": {
     "brand:social": "node scripts/generate-social-share.mjs",
     "dev": "astro dev",
+    "dev:cms": "PUBLIC_CONTENT_MODE=production PUBLIC_SITE_URL=https://local.new-work.invalid astro dev",
     "typecheck": "astro check",
     "lint": "eslint .",
     "test": "vitest run",
@@ -39,13 +40,15 @@
     "astro": "^7.2.1",
     "astro-portabletext": "^1.0.0",
     "groq": "^6.10.1",
-    "gsap": "^3.15.0"
+    "gsap": "^3.15.0",
+    "three": "0.185.0"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.4",
     "@axe-core/playwright": "^4.13.0",
     "@playwright/test": "^1.56.1",
     "@types/node": "^24.10.0",
+    "@types/three": "^0.185.0",
     "@vitest/coverage-v8": "^4.0.4",
     "eslint": "^9.39.1",
     "eslint-plugin-astro": "^1.5.0",

@@ -15,8 +15,17 @@ const { targetId, showFullscreen = true, showMute = true } = Astro.props;
     <MediaControlIcon name="play" />
     <MediaControlIcon name="pause" />
   </button>
-  {showMute ? <button type="button" data-video-mute aria-label="Unmute video">Sound on</button> : null}
-  {showFullscreen ? <button type="button" data-video-fullscreen>Full screen</button> : null}
+  {showMute ? (
+    <button type="button" data-video-mute data-video-muted="true" aria-label="Unmute video">
+      <MediaControlIcon name="volume-on" />
+      <MediaControlIcon name="volume-off" />
+    </button>
+  ) : null}
+  {showFullscreen ? (
+    <button type="button" data-video-fullscreen aria-label="Enter full screen">
+      <MediaControlIcon name="fullscreen" />
+    </button>
+  ) : null}
   <span class="sr-only" data-video-status aria-live="polite"></span>
 </div>
 
@@ -49,7 +58,7 @@ const { targetId, showFullscreen = true, showMute = true } = Astro.props;
           playButton.setAttribute('aria-label', video.paused ? 'Play video' : 'Pause video');
         }
         if (muteButton) {
-          muteButton.textContent = video.muted ? 'Sound on' : 'Mute';
+          muteButton.dataset.videoMuted = String(video.muted);
           muteButton.setAttribute('aria-label', video.muted ? 'Unmute video' : 'Mute video');
         }
       };

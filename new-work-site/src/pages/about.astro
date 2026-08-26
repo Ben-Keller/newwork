@@ -1,15 +1,35 @@
 ---
-import AboutContent from '../components/AboutContent.astro';
+import ReelExperience from '../components/ReelExperience.astro';
 import BaseLayout from '../layouts/BaseLayout.astro';
+import { withBase } from '../lib/base-path';
 import { getSiteContent } from '../lib/content';
+import '../styles/reel-experience.css';
+
 const content = await getSiteContent();
+const reelPage = content.settings.reelPage;
+
+if (content.mode !== 'prototype' && !reelPage.enabled) {
+  return Astro.redirect(withBase('/'), 302);
+}
+
+const ctaHref = reelPage.ctaDestination === 'work'
+  ? withBase('/')
+  : withBase('/contact');
 ---
+
 <BaseLayout
   content={content}
   title="About"
-  description={content.settings.defaultSeo.metaDescription}
-  seo={content.settings.aboutSeo}
-  pageClass="utility-page about-page"
+  description="Lorem ipsum dolor sit amet, consectetur adipiscing elit."
+  seo={{
+    ...reelPage.seo,
+    metaTitle: 'About — New Work Agency',
+    metaDescription: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
+  }}
+  pageClass="reel-page about-page"
 >
-  <AboutContent settings={content.settings} projects={content.projects} />
+  <ReelExperience
+    assetBase={withBase('/')}
+    ctaHref={ctaHref}
+  />
 </BaseLayout>

@@ -73,8 +73,14 @@ const backdropProjects = [...projects]
     restoreRouteVideo,
   } from '../../lib/motion/route-video-continuity';
   import {
+    animatePersistedRouteMedia,
+    captureRouteMediaHandoff,
+    disableRouteMediaSnapshots,
     persistMatchingVideo,
     persistResponsiveImage,
+    restoreRouteMediaSnapshots,
+    routeVideoIsVisiblyPlaying,
+    skipRouteSnapshotTransition,
     supportsRouteMediaPersistence,
   } from '../../lib/motion/route-media-persistence';
 
@@ -146,11 +152,98 @@ const backdropProjects = [...projects]
   };
 
   const isStillReturnMedia = (sourceMedia?: HTMLElement | null): boolean => Boolean(
-    sourceMedia?.matches('[data-gallery-photo-primary]')
-    || sourceMedia?.dataset.projectBlock === 'heroImage'
+    sourceMedia?.dataset.projectBlock === 'heroImage'
     || sourceMedia?.dataset.projectBlock === 'fullBleedImage'
     || sourceMedia?.dataset.projectBlock === 'containedImage',
   );
+
+  const preparePersistentProjectReturn = (
+    overlay: HTMLElement,
+    origin: GalleryReturnOrigin,
+    sourceMedia: HTMLElement,
+  ): boolean => {
+    const activeSlug = overlay.dataset.projectSlug;
+    if (
+      !supportsRouteMediaPersistence()
+      || !activeSlug
+      || origin.slug !== activeSlug
+    ) return false;
+
+    const sourceVideoCandidate = sourceMedia.querySelector<HTMLVideoElement>('video[data-short-loop]');
+    const sourceVideo = routeVideoIsVisiblyPlaying(sourceVideoCandidate)
+      ? sourceVideoCandidate
+      : undefined;
+    const sourceImage = sourceVideo
+      ? undefined
+      : sourceMedia.querySelector<HTMLElement>('.responsive-image');
+    const imageHandoff = sourceImage
+      ? captureRouteMediaHandoff(sourceImage)
+      : undefined;
+    const videoHandoff = sourceVideo
+      ? captureRouteMediaHandoff(sourceVideo)
+      : undefined;
+    if (!imageHandoff && !videoHandoff) return false;
+
+    overlay.dataset.overlayReturnTransition = 'true';
+    sessionStorage.setItem(galleryRestoreRequestKey, 'true');
+    if (sourceVideo) captureRouteVideo(sourceVideo, activeSlug);
+    disableRouteMediaSnapshots(document);
+
+    let persistedImage: HTMLElement | undefined;
+    let persistedVideo = false;
+    document.addEventListener('astro:before-swap', (event) => {
+      if (sourceVideo?.isConnected) captureRouteVideo(sourceVideo, activeSlug);
+      const targetMedia = event.newDocument.querySelector<HTMLElement>(
+        `[data-gallery-item-id="${CSS.escape(activeSlug)}"] .project-card__media`,
+      );
+      if (sourceImage && targetMedia) {
+        persistedImage = persistResponsiveImage(sourceImage, targetMedia, activeSlug, event);
+      }
+      const targetVideo = targetMedia?.querySelector<HTMLVideoElement>('[data-preview-video]');
+      if (sourceVideo && targetVideo) {
+        persistedVideo = persistMatchingVideo(sourceVideo, targetVideo, activeSlug, event);
+      }
+
+      const gallery = event.newDocument.querySelector<HTMLElement>('[data-work-gallery]');
+      const entrance = gallery?.querySelector<HTMLElement>('[data-gallery-entrance]');
+      if (gallery) {
+        gallery.dataset.galleryRestore = 'true';
+        gallery.dataset.galleryEntrancePlayed = 'true';
+      }
+      if (entrance) entrance.dataset.galleryEntranceState = 'settled';
+
+      if (persistedImage || persistedVideo) {
+        disableRouteMediaSnapshots(event.newDocument);
+        skipRouteSnapshotTransition(event);
+      }
+    }, { once: true });
+
+    document.addEventListener('astro:after-swap', () => {
+      settleIncomingGallery(origin);
+      if (persistedImage) {
+        animatePersistedRouteMedia(persistedImage, imageHandoff, activeSlug);
+      }
+      if (persistedVideo && sourceVideo) {
+        cancelRouteVideo(sourceVideo, activeSlug);
+        sourceVideo.dataset.routeVideoRestored = 'true';
+        animatePersistedRouteMedia(sourceVideo, videoHandoff, activeSlug, 1);
+        const resumePlayback = sourceVideo.dataset.routeMediaWasPlaying === 'true';
+        sourceVideo.removeAttribute('data-route-media-was-playing');
+        if (resumePlayback && sourceVideo.paused) void sourceVideo.play().catch(() => undefined);
+      } else if (sourceVideo) {
+        const targetVideo = document.querySelector<HTMLVideoElement>(
+          `[data-gallery-item-id="${CSS.escape(activeSlug)}"] [data-preview-video]`,
+        );
+        if (targetVideo) void restoreRouteVideo(targetVideo, activeSlug);
+      }
+      restoreRouteMediaSnapshots();
+    }, { once: true });
+
+    window.setTimeout(() => {
+      if (document.querySelector('[data-project-overlay]')) restoreRouteMediaSnapshots();
+    }, 2_000);
+    return true;
+  };
 
   const prepareStillPhotoReturnHandoff = (
     overlay: HTMLElement,
@@ -219,7 +312,7 @@ const backdropProjects = [...projects]
 
     document.documentElement.style.viewTransitionName = 'none';
     overlay.querySelectorAll<HTMLElement>(
-      '[data-project-hero-media], [data-gallery-photo-primary], .related-projects__media',
+      '[data-project-hero-media], .related-projects__media',
     ).forEach((candidate) => { candidate.style.viewTransitionName = 'none'; });
 
     let finished = false;
@@ -257,7 +350,7 @@ const backdropProjects = [...projects]
       }
       document.documentElement.style.removeProperty('view-transition-name');
       document.querySelectorAll<HTMLElement>(
-        '[data-project-grid] .project-card__media, [data-project-hero-media], [data-gallery-photo-primary]',
+        '[data-project-grid] .project-card__media, [data-project-hero-media]',
       ).forEach((candidate) => {
         candidate.style.removeProperty('view-transition-name');
         candidate.style.removeProperty('visibility');
@@ -278,6 +371,7 @@ const backdropProjects = [...projects]
       newDocument.documentElement.style.viewTransitionName = 'none';
       newDocument.querySelectorAll<HTMLElement>('[data-project-grid] .project-card__media')
         .forEach((candidate) => { candidate.style.viewTransitionName = 'none'; });
+      skipRouteSnapshotTransition(event);
 
       const placeholder = newDocument.createElement('div');
       placeholder.setAttribute('data-astro-transition-persist', stillPhotoReturnPersistKey);
@@ -488,8 +582,9 @@ const backdropProjects = [...projects]
 
     const activeSlug = overlay.dataset.projectSlug;
     const sourceMedia = overlay.querySelector<HTMLElement>(
-      '[data-project-hero-media][data-first-media="true"], [data-gallery-photo-primary]',
+      '[data-project-hero-media][data-first-media="true"]',
     );
+    if (sourceMedia && preparePersistentProjectReturn(overlay, origin, sourceMedia)) return;
     const isStill = isStillReturnMedia(sourceMedia);
     const usesPersistedStill = Boolean(isStill && sourceMedia && supportsRouteMediaPersistence());
     if (
@@ -584,7 +679,7 @@ const backdropProjects = [...projects]
         const target = newDocument.querySelector<HTMLElement>(
           `[data-gallery-item-id="${CSS.escape(activeSlug)}"] .project-card__media`,
         );
-        if (target && persistResponsiveImage(sourceMedia, target, activeSlug)) {
+        if (target && persistResponsiveImage(sourceMedia, target, activeSlug, event)) {
           sourceMedia.dataset.projectReturnSource = 'still-persisted';
           target.dataset.routeTransitionTarget = 'still-persisted';
         }
@@ -593,7 +688,7 @@ const backdropProjects = [...projects]
         const targetVideo = newDocument.querySelector<HTMLVideoElement>(
           `[data-gallery-item-id="${CSS.escape(activeSlug)}"] [data-preview-video]`,
         );
-        if (targetVideo) persistedVideo = persistMatchingVideo(sourceVideo, targetVideo, activeSlug);
+        if (targetVideo) persistedVideo = persistMatchingVideo(sourceVideo, targetVideo, activeSlug, event);
       }
       const gallery = newDocument.querySelector<HTMLElement>('[data-work-gallery]');
       const entrance = gallery?.querySelector<HTMLElement>('[data-gallery-entrance]');

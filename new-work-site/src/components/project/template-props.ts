@@ -8,6 +8,7 @@ export interface ProjectTemplateProps {
   heroCaptions: CaptionBlock[];
   blocks: ContentBlockView[];
   presentation: ProjectPresentation;
+  routeTransitionId?: string;
   previous?: ProjectView;
   next?: ProjectView;
 }

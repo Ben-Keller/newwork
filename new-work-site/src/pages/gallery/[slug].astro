@@ -1,82 +1,29 @@
 ---
-import GalleryPhotoPage from '../../components/GalleryPhotoPage.astro';
-import ProjectOverlay from '../../components/project/ProjectOverlay.astro';
-import BaseLayout from '../../layouts/BaseLayout.astro';
-import { excludedWorkGalleryItemIds } from '../../content/local/gallery-curation';
-import {
-  developmentGalleryPlaceholder,
-  michaelDevelopmentGallery,
-  type DevelopmentGalleryImage,
-} from '../../content/local/michael-gallery';
-import { getSiteContent } from '../../lib/content';
-import { GALLERY_PHOTO_PRIMARY_IMAGE_SIZES } from '../../lib/responsive-images';
-import type { SiteContent } from '../../lib/types';
-import '../../styles/gallery-photo.css';
+import { michaelPhotoWork } from '../../content/local/michael-gallery';
+import { withBase } from '../../lib/base-path';
 
-export async function getStaticPaths() {
-  const content = await getSiteContent();
-  if (content.mode === 'production') return [];
-
-  const visibleItems = michaelDevelopmentGallery.filter((item) => !excludedWorkGalleryItemIds.has(item.id));
-
-  return michaelDevelopmentGallery.map((item, index) => {
-    const visibleIndex = visibleItems.findIndex((candidate) => candidate.id === item.id);
-    const previous = visibleIndex > 0 ? visibleItems[visibleIndex - 1] : undefined;
-    const next = visibleIndex >= 0 && visibleIndex < visibleItems.length - 1 ? visibleItems[visibleIndex + 1] : undefined;
-    const placeholderFor = (candidate?: DevelopmentGalleryImage) => candidate
-      ? developmentGalleryPlaceholder(michaelDevelopmentGallery.findIndex((source) => source.id === candidate.id)).title
-      : undefined;
-    return {
-      params: { slug: item.id },
-      props: {
-        item,
-        placeholder: developmentGalleryPlaceholder(index),
-        previous,
-        next,
-        previousTitle: placeholderFor(previous),
-        nextTitle: placeholderFor(next),
-        content,
-      },
-    };
-  });
+export function getStaticPaths() {
+  return michaelPhotoWork.photos.map((photo) => ({
+    params: {slug: photo.id},
+    props: {photoId: photo.id},
+  }));
 }
 
-interface Props {
-  item: DevelopmentGalleryImage;
-  placeholder: ReturnType<typeof developmentGalleryPlaceholder>;
-  previous?: DevelopmentGalleryImage;
-  next?: DevelopmentGalleryImage;
-  previousTitle?: string;
-  nextTitle?: string;
-  content: SiteContent;
-}
-
-const { item, placeholder, previous, next, previousTitle, nextTitle, content } = Astro.props;
+interface Props { photoId: string }
+const { photoId } = Astro.props;
+const target = withBase(`/work/${michaelPhotoWork.slug}/${photoId}`);
 ---
 
-<BaseLayout
-  content={content}
-  title={`${placeholder.title} — Michael`}
-  description={placeholder.description}
-  seo={{ noIndex: true }}
-  kind="project"
-  pageClass="project-page gallery-photo-page"
-  pageTheme="warm"
-  preloadImage={item.image}
-  preloadImageSizes={GALLERY_PHOTO_PRIMARY_IMAGE_SIZES}
->
-  <ProjectOverlay
-    projectSlug={item.id}
-    projectTitle={placeholder.title}
-    projects={content.projects}
-  >
-    <GalleryPhotoPage
-      item={item}
-      placeholder={placeholder}
-      previous={previous}
-      next={next}
-      previousTitle={previousTitle}
-      nextTitle={nextTitle}
-    />
-  </ProjectOverlay>
-</BaseLayout>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="refresh" content={`0;url=${target}`} />
+    <link rel="canonical" href={target} />
+    <title>Work moved</title>
+  </head>
+  <body>
+    <p><a href={target}>Continue to this Work page</a></p>
+    <script is:inline define:vars={{target}}>window.location.replace(target);</script>
+  </body>
+</html>

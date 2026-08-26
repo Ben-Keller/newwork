@@ -77,11 +77,11 @@ export const mediaItem = defineType({
       validation: (Rule) => Rule.unique(),
     }),
     defineField({
-      name: 'projects',
-      title: 'Related projects',
+      name: 'works',
+      title: 'Related Work',
       type: 'array',
       group: 'usage',
-      of: [defineArrayMember({type: 'reference', to: [{type: 'project'}]})],
+      of: [defineArrayMember({type: 'reference', to: [{type: 'work'}]})],
       validation: (Rule) => Rule.unique(),
     }),
     ...rightsApprovalFields,
@@ -97,12 +97,12 @@ export const mediaItem = defineType({
     return true
   }),
   preview: {
-    select: {title: 'title', kind: 'kind', image: 'image', poster: 'poster', approval: 'rightsApprovalStatus', projects: 'projects', alt: 'alt', decorative: 'decorative'},
-    prepare: ({title, kind, image, poster, approval, projects, alt, decorative}) => ({
+    select: {title: 'title', kind: 'kind', image: 'image', poster: 'poster', approval: 'rightsApprovalStatus', works: 'works', alt: 'alt', decorative: 'decorative'},
+    prepare: ({title, kind, image, poster, approval, works, alt, decorative}) => ({
       title: title || 'Untitled asset',
       subtitle: [
         kind === 'video' ? 'Video' : kind === 'file' ? 'File' : 'Image',
-        Array.isArray(projects) && projects.length ? `${projects.length} project${projects.length === 1 ? '' : 's'}` : 'Not assigned',
+        Array.isArray(works) && works.length ? `${works.length} Work item${works.length === 1 ? '' : 's'}` : 'Not assigned',
         kind !== 'file' && decorative !== true && !alt ? 'Needs description' : undefined,
         approval === 'expired' ? 'Rights expired' : undefined,
       ].filter(Boolean).join(' · '),

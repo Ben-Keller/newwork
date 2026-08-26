@@ -7,8 +7,10 @@ export const presentationResolve: PresentationPluginOptions['resolve'] = {
       message: 'Open the Work page preview',
       tone: 'positive',
     }),
-    aboutPage: defineLocations({
+    reelPage: defineLocations({
       locations: [{title: 'About page', href: '/about'}],
+      message: 'Open the About page preview',
+      tone: 'positive',
     }),
     contactPage: defineLocations({
       locations: [{title: 'Contact page', href: '/contact'}],
@@ -27,12 +29,12 @@ export const presentationResolve: PresentationPluginOptions['resolve'] = {
         {title: 'Contact page', href: '/contact'},
       ],
     }),
-    project: defineLocations({
+    work: defineLocations({
       select: {title: 'title', slug: 'slug.current'},
       resolve: (document) => ({
         locations: document?.slug
           ? [
-              {title: document.title || 'Project page', href: `/work/${document.slug}`},
+              {title: document.title || 'Work page', href: `/work/${document.slug}`},
               {title: 'Work page gallery', href: '/'},
             ]
           : [{title: 'Work page gallery', href: '/'}],

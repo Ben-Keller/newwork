@@ -154,6 +154,25 @@ test.describe('logo mask study', () => {
     expect(Math.abs(placement.right - placement.gutter)).toBeLessThan(1);
   });
 
+  test('tightens and subtly compresses the title in wide, short viewports', async ({ page }) => {
+    await page.setViewportSize({ width: 1_470, height: 777 });
+    await page.goto('/');
+    await expectLogoPageReady(page);
+
+    const experience = page.locator('[data-logo-mask-experience]');
+    const maskedTitle = page.locator('.logo-mask-stage__single');
+    const layout = await experience.evaluate((element) => {
+      const styles = getComputedStyle(element);
+      return {
+        paddingTop: Number.parseFloat(styles.paddingTop),
+        paddingLeft: Number.parseFloat(styles.paddingLeft),
+      };
+    });
+
+    expect(layout.paddingTop).toBeLessThan(layout.paddingLeft);
+    await expect(maskedTitle).toHaveCSS('transform', /matrix\(1, 0, 0, 0\.94, 0, 0\)/u);
+  });
+
   test('uses the first scroll gesture for the crossfade, then scrolls normally', async ({ page }, testInfo) => {
     const mobile = testInfo.project.name.startsWith('mobile-');
     await page.goto('/');

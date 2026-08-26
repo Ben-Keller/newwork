@@ -1,0 +1,25 @@
+---
+import WorkDetailPage from '../../../components/WorkDetailPage.astro';
+import { getSiteContent } from '../../../lib/content';
+import type { ProjectView, SiteContent } from '../../../lib/types';
+
+export async function getStaticPaths() {
+  const content = await getSiteContent();
+  return content.projects.flatMap((work) => work.template === 'photo'
+    ? work.photos.map((photo) => ({
+        params: {slug: work.slug, photo: photo.id},
+        props: {work, selectedPhotoId: photo.id, content},
+      }))
+    : []);
+}
+
+interface Props {
+  work: ProjectView;
+  selectedPhotoId: string;
+  content: SiteContent;
+}
+
+const { work, selectedPhotoId, content } = Astro.props;
+---
+
+<WorkDetailPage work={work} selectedPhotoId={selectedPhotoId} content={content} />

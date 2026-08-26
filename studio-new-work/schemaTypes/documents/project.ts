@@ -4,7 +4,7 @@ import {
   PUBLIC_MEDIA_BLOCK_TYPES,
   hasAssetReference,
   isRecord,
-  projectPublicationError,
+  workPublicationError,
   warningForMissing,
   wordCount,
 } from '../validation'
@@ -16,7 +16,7 @@ async function isUniqueSlug(slug: string | undefined, context: ValidationContext
   if (!slug) return true
   const documentId = String(context.document?._id ?? '').replace(/^drafts\./u, '')
   const duplicateCount = await context.getClient({apiVersion: SANITY_API_VERSION}).fetch(
-    `count(*[_type == "project" && slug.current == $slug && !(_id in [$publishedId, $draftId])])`,
+    `count(*[_type == "work" && slug.current == $slug && !(_id in [$publishedId, $draftId])])`,
     {slug, publishedId: documentId, draftId: `drafts.${documentId}`},
   ) as number
   return duplicateCount === 0
@@ -26,21 +26,21 @@ async function duplicateHomeOrderWarning(value: number | undefined, context: Val
   if (typeof value !== 'number') return true
   const documentId = String(context.document?._id ?? '').replace(/^drafts\./u, '')
   const duplicateCount = await context.getClient({apiVersion: SANITY_API_VERSION}).fetch(
-    `count(*[_type == "project" && homeOrder == $homeOrder && !(_id in [$publishedId, $draftId])])`,
+    `count(*[_type == "work" && homeOrder == $homeOrder && !(_id in [$publishedId, $draftId])])`,
     {homeOrder: value, publishedId: documentId, draftId: `drafts.${documentId}`},
   ) as number
-  return duplicateCount === 0 ? true : 'Another project uses this home order.'
+  return duplicateCount === 0 ? true : 'Another Work item uses this home order.'
 }
 
-export const project = defineType({
-  name: 'project',
-  title: 'Project',
+export const work = defineType({
+  name: 'work',
+  title: 'Work',
   type: 'document',
   icon: ProjectsIcon,
   groups: [
-    {name: 'overview', title: 'Project details', default: true},
-    {name: 'card', title: 'Gallery card'},
-    {name: 'page', title: 'Project page'},
+    {name: 'overview', title: 'Work details', default: true},
+    {name: 'card', title: 'Work-page card'},
+    {name: 'page', title: 'Work page'},
     {name: 'credits', title: 'Credits'},
     {name: 'publishing', title: 'Approval & publishing'},
     {name: 'seo', title: 'Search & sharing'},
@@ -51,7 +51,7 @@ export const project = defineType({
     {
       name: 'artDirection',
       title: 'Advanced art direction',
-      description: 'Use these overrides only when the standard project-page preset is not sufficient.',
+      description: 'Use these overrides only when the standard Work-page template is not sufficient.',
       options: {collapsible: true, collapsed: true},
     },
     {
@@ -116,6 +116,20 @@ export const project = defineType({
       options: {list: ['Film', 'Photography', 'Campaign', 'Animation', 'BTS']},
       validation: (Rule) => Rule.required().min(1).unique(),
     }),
+    defineField({
+      name: 'template',
+      title: 'Page template',
+      type: 'string',
+      group: 'overview',
+      description: 'Photo reorders a photoshoot around the clicked image. Video leads with film. Featured is the longer editorial layout.',
+      options: {list: [
+        {title: 'Photo', value: 'photo'},
+        {title: 'Video', value: 'video'},
+        {title: 'Featured', value: 'featured'},
+      ], layout: 'radio'},
+      initialValue: 'video',
+      validation: (Rule) => Rule.required(),
+    }),
     defineField({name: 'role', title: 'Role', type: 'string', group: 'overview', validation: (Rule) => Rule.max(120)}),
     defineField({
       name: 'contributors',
@@ -149,13 +163,58 @@ export const project = defineType({
       type: 'coverMedia',
       group: 'card',
       validation: (Rule) => Rule.custom((value, context) => {
-        const document = context.document as {editorialStatus?: string; visible?: boolean; featuredOnHome?: boolean}
+        const document = context.document as {editorialStatus?: string; visible?: boolean; featuredOnHome?: boolean; template?: string; defaultPhoto?: {_ref?: string}}
         const publicProject = document?.editorialStatus === 'approved' ||
           (document?.editorialStatus === undefined && (document?.visible === true || document?.featuredOnHome === true))
         if (!publicProject) return true
+        if (document?.template === 'photo' && document.defaultPhoto?._ref) return true
         return isRecord(value) && hasAssetReference(value.poster)
           ? true
-          : 'A visible or featured project requires a cover poster.'
+          : 'A visible or featured Work requires a cover poster (or a default photo for the Photo template).'
+      }),
+    }),
+    defineField({
+      name: 'photos',
+      title: 'Photoshoot images',
+      type: 'array',
+      group: 'page',
+      description: 'Add every image in this photoshoot. Any of these can be used as a Work-page doorway.',
+      hidden: ({document}) => document?.template !== 'photo',
+      of: [defineArrayMember({
+        type: 'reference',
+        to: [{type: 'mediaItem'}],
+        options: {disableNew: false, filter: 'kind == "image"'},
+      })],
+      validation: (Rule) => [
+        Rule.unique(),
+        Rule.custom((value, context) => {
+          const document = context.document as {template?: string; editorialStatus?: string}
+          if (document?.template !== 'photo' || document.editorialStatus !== 'approved') return true
+          return Array.isArray(value) && value.length >= 2
+            ? true
+            : 'An approved Photo Work needs at least two photos.'
+        }),
+      ],
+    }),
+    defineField({
+      name: 'defaultPhoto',
+      title: 'Default featured photo',
+      type: 'reference',
+      group: 'page',
+      description: 'Used when someone opens this Work directly. A clicked gallery photo overrides it for that visit.',
+      to: [{type: 'mediaItem'}],
+      options: {disableNew: true, filter: 'kind == "image"'},
+      hidden: ({document}) => document?.template !== 'photo',
+      validation: (Rule) => Rule.custom((value, context) => {
+        const document = context.document as {template?: string; editorialStatus?: string; photos?: Array<{_ref?: string}>}
+        if (document?.template !== 'photo') return true
+        const ref = isRecord(value) && typeof value._ref === 'string' ? value._ref : undefined
+        if (!ref) return document.editorialStatus === 'approved'
+          ? 'Choose the default featured photo before approving this Work.'
+          : true
+        return document.photos?.some((photo) => photo?._ref === ref)
+          ? true
+          : 'The default featured photo must also be in Photoshoot images.'
       }),
     }),
     defineField({
@@ -163,7 +222,7 @@ export const project = defineType({
       title: 'Project page sections',
       type: 'array',
       group: 'page',
-      description: 'Add sections, then drag them into the order they should appear on the project page.',
+      description: 'Add sections, then drag them into the order they should appear on the Work page.',
       of: [
         defineArrayMember({type: 'heroImage'}),
         defineArrayMember({type: 'heroVideo'}),
@@ -178,13 +237,14 @@ export const project = defineType({
       ],
       validation: (Rule) => Rule.custom((value, context) => {
         const blocks = Array.isArray(value) ? value : []
-        const document = context.document as {editorialStatus?: string; visible?: boolean}
+        const document = context.document as {editorialStatus?: string; visible?: boolean; template?: string; photos?: unknown[]}
         const publicProject = document?.editorialStatus === 'approved' ||
           (document?.editorialStatus === undefined && document?.visible === true)
         if (!publicProject) return true
+        if (document?.template === 'photo' && Array.isArray(document.photos) && document.photos.length >= 2) return true
         return blocks.some((block) => isRecord(block) && PUBLIC_MEDIA_BLOCK_TYPES.has(String(block._type)))
           ? true
-          : 'A public project requires at least one media block.'
+          : 'A public Work requires at least one media block.'
       }),
     }),
     defineField({
@@ -210,7 +270,7 @@ export const project = defineType({
       group: 'advanced',
       fieldset: 'legacyGallery',
       initialValue: false,
-      deprecated: {reason: 'Add and order this project from Work page → Project gallery.'},
+      deprecated: {reason: 'Add and order this Work item from Work page → Work gallery.'},
     }),
     defineField({
       name: 'homeOrder',
@@ -219,7 +279,7 @@ export const project = defineType({
       group: 'advanced',
       fieldset: 'legacyGallery',
       description: 'Preserved for migration. The Work page gallery now controls order.',
-      deprecated: {reason: 'Drag projects into order from Work page → Project gallery.'},
+      deprecated: {reason: 'Drag Work placements into order from Work page → Work gallery.'},
       validation: (Rule) => [
         Rule.integer(),
         Rule.custom((value, context) =>
@@ -431,6 +491,7 @@ export const project = defineType({
     defineField({name: 'seo', title: 'SEO overrides', type: 'seoFields', group: 'seo'}),
   ],
   initialValue: {
+    template: 'video',
     visible: false,
     editorialStatus: 'draft',
     needsReview: true,
@@ -446,7 +507,7 @@ export const project = defineType({
     doNotPublishWithoutExplicitApproval: false,
     rightsApprovalStatus: 'pending',
   },
-  validation: (Rule) => Rule.custom(projectPublicationError),
+  validation: (Rule) => Rule.custom(workPublicationError),
   orderings: [
     {title: 'Title', name: 'titleAsc', by: [{field: 'title', direction: 'asc'}]},
     {title: 'Year, newest', name: 'yearDesc', by: [{field: 'year', direction: 'desc'}]},
@@ -461,7 +522,7 @@ export const project = defineType({
       year: 'year',
     },
     prepare: ({title, media, blocked, status, types, year}) => ({
-      title: title || 'Untitled project',
+      title: title || 'Untitled work',
       subtitle: [
         status === 'approved' ? 'Approved' : status === 'ready' ? 'Ready to publish' : status === 'review' ? 'Needs review' : 'Working draft',
         Array.isArray(types) ? types.join(' / ') : undefined,

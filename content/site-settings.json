@@ -2,6 +2,11 @@
   "_id": "siteSettings",
   "_type": "siteSettings",
   "siteName": "New Work Agency",
+  "navigation": [
+    {"_key": "work", "label": "Work", "destination": "work", "visible": true},
+    {"_key": "about", "label": "About", "destination": "reel", "visible": true},
+    {"_key": "contact", "label": "Contact", "destination": "contact", "visible": true}
+  ],
   "wordmark": {
     "format": "file",
     "file": "assets/web-ready/brand/new-black.svg",
@@ -63,6 +68,24 @@
     "desktopSource": null,
     "mobileSource": null,
     "caption": ""
+  },
+  "reelPage": {
+    "enabled": true,
+    "introEyebrow": "Lorem ipsum dolor",
+    "introHeadline": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+    "introCue": "Consectetur adipiscing",
+    "fallbackEyebrow": "Lorem ipsum dolor",
+    "fallbackHeadline": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+    "fallbackDescription": "Consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+    "closingEyebrow": "Lorem ipsum dolor",
+    "closingHeadline": "What should we make next?",
+    "ctaLabel": "Lorem ipsum",
+    "ctaDestination": "contact",
+    "seo": {
+      "metaTitle": "About — New Work Agency",
+      "metaDescription": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+      "noIndex": true
+    }
   },
   "notesEnabled": false,
   "analyticsEnabled": false,

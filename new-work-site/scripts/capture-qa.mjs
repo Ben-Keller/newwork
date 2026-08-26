@@ -36,18 +36,6 @@ const capture = async (page, name) => {
   captured.push(name);
 };
 
-const captureAnchored = async (page, selector, name) => {
-  const target = page.locator(selector);
-  await target.waitFor({ state: 'attached' });
-  await target.evaluate((element) => {
-    const top = globalThis.window.scrollY + element.getBoundingClientRect().top;
-    const headerOffset = Math.min(120, globalThis.window.innerHeight * .12);
-    globalThis.window.scrollTo(0, Math.max(0, top - headerOffset));
-  });
-  await settlePage(page, 450);
-  await capture(page, name);
-};
-
 const createSettledContext = async (browser, viewport, options = {}) => {
   const context = await browser.newContext({ viewport, ...options });
   await context.addInitScript(() => {
@@ -111,18 +99,6 @@ try {
     await desktopPage.goto(`${baseUrl}${route.path}`, { waitUntil: 'load' });
     await settlePage(desktopPage);
     await capture(desktopPage, route.name);
-    if (route.path === '/about') {
-      await captureAnchored(
-        desktopPage,
-        '[data-about-person="oliver"]',
-        'about-oliver-desktop-1440x1000',
-      );
-      await captureAnchored(
-        desktopPage,
-        '[data-about-person="michael"]',
-        'about-michael-desktop-1440x1000',
-      );
-    }
   }
   await desktopContext.close();
 
@@ -150,18 +126,6 @@ try {
       await page.goto(`${baseUrl}${route.path}`, { waitUntil: 'load' });
       await settlePage(page);
       await capture(page, route.name);
-      if (route.path === '/about') {
-        await captureAnchored(
-          page,
-          '[data-about-person="oliver"]',
-          `about-oliver-mobile-${suffix}`,
-        );
-        await captureAnchored(
-          page,
-          '[data-about-person="michael"]',
-          `about-michael-mobile-${suffix}`,
-        );
-      }
     }
     await context.close();
   }

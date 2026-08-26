@@ -13,7 +13,7 @@ type BadgeDocument = {
 
 export const workflowBadge: DocumentBadgeComponent = ({draft, published}) => {
   const document = (draft || published) as BadgeDocument | null
-  if (document?._type !== 'project') return null
+  if (document?._type !== 'work') return null
   if (document.doNotPublishWithoutExplicitApproval === true) {
     return {label: 'Approval blocked', title: 'Explicit publication approval is still required', color: 'danger', icon: WarningOutlineIcon}
   }
@@ -31,7 +31,7 @@ export const workflowBadge: DocumentBadgeComponent = ({draft, published}) => {
 
 export const rightsBadge: DocumentBadgeComponent = ({draft, published}) => {
   const document = (draft || published) as BadgeDocument | null
-  if (!document || !['project', 'mediaItem'].includes(document._type || '')) return null
+  if (!document || !['work', 'mediaItem'].includes(document._type || '')) return null
   if (document.rightsApprovalStatus === 'approved') {
     return {label: 'Rights approved', color: 'success', icon: CheckmarkCircleIcon}
   }

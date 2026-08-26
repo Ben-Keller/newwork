@@ -1,10 +1,6 @@
 ---
-import ProjectOverlay from '../../components/project/ProjectOverlay.astro';
-import ProjectTemplateRouter from '../../components/project/ProjectTemplateRouter.astro';
-import BaseLayout from '../../layouts/BaseLayout.astro';
-import { adjacentProjects, getSiteContent } from '../../lib/content';
-import { resolveProjectPresentation } from '../../lib/project-layout';
-import { PROJECT_HERO_IMAGE_SIZES } from '../../lib/responsive-images';
+import WorkDetailPage from '../../components/WorkDetailPage.astro';
+import { getSiteContent } from '../../lib/content';
 import type { ProjectView, SiteContent } from '../../lib/types';
 
 export async function getStaticPaths() {
@@ -14,49 +10,5 @@ export async function getStaticPaths() {
 
 interface Props { project: ProjectView; content: SiteContent }
 const { project, content } = Astro.props;
-const { previous, next } = adjacentProjects(content.projects, project.slug);
-const presentation = resolveProjectPresentation(project);
-const description = project.seo?.metaDescription || project.shortDescription;
-const schema = content.mode === 'production'
-  ? {
-      '@type': 'CreativeWork',
-      name: project.title,
-      url: Astro.url.href,
-      image: project.cover.poster.src,
-      description,
-      dateCreated: project.year ? String(project.year) : undefined,
-      producer: project.client ? {'@type': 'Organization', name: project.client} : undefined,
-      contributor: project.contributors.map((contributor) => ({
-        '@type': 'Person',
-        name: contributor.name,
-        jobTitle: contributor.role,
-      })),
-    }
-  : undefined;
 ---
-<BaseLayout
-  content={content}
-  title={project.title}
-  description={description}
-  seo={project.seo}
-  kind="project"
-  structuredData={schema}
-  pageClass="project-page"
-  pageTheme={presentation.projectTheme}
-  pageAccent={presentation.accentColor}
-  preloadImage={project.cover.poster}
-  preloadImageSizes={PROJECT_HERO_IMAGE_SIZES}
->
-  <ProjectOverlay
-    projectSlug={project.slug}
-    projectTitle={project.title}
-    projects={content.projects}
-  >
-    <ProjectTemplateRouter
-      project={project}
-      mode={content.mode}
-      previous={previous}
-      next={next}
-    />
-  </ProjectOverlay>
-</BaseLayout>
+<WorkDetailPage work={project} content={content} />

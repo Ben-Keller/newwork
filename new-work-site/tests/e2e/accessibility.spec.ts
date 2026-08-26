@@ -13,6 +13,10 @@ test.beforeEach(async ({page}) => {
 
 for (const route of ['/', '/about', '/contact', '/work/mercury-an-unexpected-life']) {
   test(`has no serious automated accessibility violations: ${route}`, async ({page}) => {
+    // Scan About's complete non-WebGL presentation. The enhanced canvas is
+    // decorative, while this is the semantic surface exposed to visitors who
+    // request reduced motion and to no-script clients.
+    if (route === '/about') await page.emulateMedia({reducedMotion: 'reduce'});
     await page.goto(route);
     await page.locator('[data-site-header]').waitFor();
     // Axe should evaluate the authored resting state, not a fractional opacity

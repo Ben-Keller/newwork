@@ -4,7 +4,7 @@ import {EnvelopeIcon} from '@sanity/icons/Envelope'
 import {HomeIcon} from '@sanity/icons/Home'
 import {ImagesIcon} from '@sanity/icons/Images'
 import {ProjectsIcon} from '@sanity/icons/Projects'
-import {UsersIcon} from '@sanity/icons/Users'
+import {PlayIcon} from '@sanity/icons/Play'
 import type {ComponentType} from 'react'
 import type {StructureBuilder, StructureResolver} from 'sanity/structure'
 import {ClientDashboard} from './components/ClientDashboard'
@@ -32,67 +32,68 @@ export const structure: StructureResolver = (S) =>
         .child(S.component(ClientDashboard).id('client-dashboard').title('Start here')),
       S.divider(),
       singleton(S, 'workPage', 'Work page', HomeIcon),
+      singleton(S, 'reelPage', 'About page', PlayIcon),
       S.listItem()
-        .id('projects')
-        .title('Projects')
+        .id('work')
+        .title('Work')
         .icon(ProjectsIcon)
         .child(
           S.list()
-            .title('Projects')
+            .title('Work')
             .items([
               S.listItem()
-                .id('projects-all')
-                .title('All projects')
+                .id('work-all')
+                .title('All work')
                 .child(
                   S.documentList()
-                    .id('projects-all-list')
-                    .title('All projects')
-                    .schemaType('project')
-                    .filter('_type == "project"')
+                    .id('work-all-list')
+                    .title('All work')
+                    .schemaType('work')
+                    .filter('_type == "work"')
                     .defaultOrdering([{field: 'title', direction: 'asc'}]),
                 ),
               S.listItem()
-                .id('projects-drafts')
+                .id('work-drafts')
                 .title('Working drafts')
                 .child(
                   S.documentList()
-                    .id('projects-drafts-list')
+                    .id('work-drafts-list')
                     .title('Working drafts')
-                    .schemaType('project')
-                    .filter('_type == "project" && editorialStatus == "draft"')
+                    .schemaType('work')
+                    .filter('_type == "work" && editorialStatus == "draft"')
                     .defaultOrdering([{field: '_updatedAt', direction: 'desc'}]),
                 ),
               S.listItem()
-                .id('projects-ready')
+                .id('work-ready')
                 .title('Ready to publish')
                 .child(
                   S.documentList()
-                    .id('projects-ready-list')
+                    .id('work-ready-list')
                     .title('Ready to publish')
-                    .schemaType('project')
-                    .filter('_type == "project" && editorialStatus == "ready"')
+                    .schemaType('work')
+                    .filter('_type == "work" && editorialStatus == "ready"')
                     .defaultOrdering([{field: 'title', direction: 'asc'}]),
                 ),
               S.listItem()
-                .id('projects-needs-attention')
+                .id('work-needs-attention')
                 .title('Needs client review')
                 .child(
                   S.documentList()
-                    .id('projects-needs-attention-list')
+                    .id('work-needs-attention-list')
                     .title('Needs client review')
-                    .schemaType('project')
-                    .filter('_type == "project" && (editorialStatus == "review" || doNotPublishWithoutExplicitApproval == true || rightsApprovalStatus != "approved")')
+                    .schemaType('work')
+                    .filter('_type == "work" && (editorialStatus == "review" || doNotPublishWithoutExplicitApproval == true || rightsApprovalStatus != "approved")')
                     .defaultOrdering([{field: 'title', direction: 'asc'}]),
                 ),
               S.listItem()
-                .id('projects-live')
+                .id('work-live')
                 .title('Approved for website')
                 .child(
                   S.documentList()
-                    .id('projects-live-list')
+                    .id('work-live-list')
                     .title('Approved for website')
-                    .schemaType('project')
-                    .filter('_type == "project" && editorialStatus == "approved"')
+                    .schemaType('work')
+                    .filter('_type == "work" && editorialStatus == "approved"')
                     .defaultOrdering([{field: 'title', direction: 'asc'}]),
                 ),
             ]),
@@ -129,7 +130,6 @@ export const structure: StructureResolver = (S) =>
             ]),
         ),
       S.divider(),
-      singleton(S, 'aboutPage', 'About page', UsersIcon),
       singleton(S, 'contactPage', 'Contact page', EnvelopeIcon),
       singleton(S, 'footerSettings', 'Footer', CogIcon),
       singleton(S, 'siteSettings', 'Brand & navigation', CogIcon),

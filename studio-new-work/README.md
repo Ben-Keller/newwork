@@ -18,16 +18,33 @@ Regenerate the shared schema and query types after changing a schema or GROQ que
 npm run typegen
 ```
 
-Validate and build the standalone Studio before deploying it:
+Validate and build the standalone Studio before a manual deployment:
 
 ```sh
 npm run build
-npm run schema:deploy
 npm run deploy
+```
+
+Pushes to GitHub `main` deploy the schema and hosted Studio automatically through the root `deploy-studio.yml` workflow. Its `deploy:ci` command is unattended, deploys the pre-built Studio, and fails when the schema upload fails.
+
+The local Studio reads the shared production dataset directly; content is not pulled into or merged with Git. Create a gitignored recovery snapshot and validate the current dataset with:
+
+```sh
+npm run content:snapshot
+npm run content:validate
 ```
 
 The deployed editorial app is available at `https://new-work.sanity.studio/`. The website remains a separate Astro deployment; publishing content triggers a website rebuild only after the hosting webhook is configured.
 
-The normal client workflow is documented in `CLIENT_GUIDE.md`. One-time data maintenance scripts live under `scripts/` and are intentionally not part of the Studio navigation.
+The normal client workflow is documented in `CLIENT_GUIDE.md`. Repository deployment and local synchronization are documented in `../DEPLOYMENT.md`. One-time data maintenance scripts live under `scripts/` and are intentionally not part of the Studio navigation.
+
+After deploying the unified `work` schema, preview and then apply the non-destructive Project-to-Work conversion with:
+
+```sh
+npm run migrate:work-type
+npm run migrate:work-type -- --apply
+```
+
+The migration creates Work copies and rewrites the known Work-page and asset-library references. It deliberately retains legacy Project documents as a rollback copy until the migrated site has been verified.
 
 The Studio stays in this sibling folder. It is not embedded in the Astro app.

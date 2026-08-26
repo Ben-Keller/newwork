@@ -348,4 +348,15 @@ const experienceStyle = `--logo-mask:url("${maskUrl}")`;
       mask-image: none;
     }
   }
+
+  @media (min-width: 768px) and (min-aspect-ratio: 15 / 8) {
+    .logo-mask-experience {
+      padding-block: 0;
+    }
+
+    .logo-mask-stage__solid,
+    .logo-mask-stage__single {
+      transform: scaleY(.94);
+    }
+  }
 </style>

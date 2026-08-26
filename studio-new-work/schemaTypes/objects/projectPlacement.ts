@@ -1,22 +1,42 @@
 import {ProjectsIcon} from '@sanity/icons/Projects'
 import {defineField, defineType} from 'sanity'
 
-export const projectPlacement = defineType({
-  name: 'projectPlacement',
-  title: 'Gallery project',
+export const workPlacement = defineType({
+  name: 'workPlacement',
+  title: 'Work-page placement',
   type: 'object',
   icon: ProjectsIcon,
   fields: [
     defineField({
-      name: 'project',
-      title: 'Project',
+      name: 'work',
+      title: 'Work',
       type: 'reference',
-      to: [{type: 'project'}],
+      to: [{type: 'work'}],
       options: {
         disableNew: true,
         filter: 'editorialStatus in ["ready", "approved"]',
       },
       validation: (Rule) => Rule.required(),
+    }),
+    defineField({
+      name: 'doorwayPhoto',
+      title: 'Photo doorway',
+      type: 'reference',
+      to: [{type: 'mediaItem'}],
+      description: 'Optional. For Photo work, choose which image appears here and becomes the page hero when clicked.',
+      options: {disableNew: true, filter: 'kind == "image"'},
+      validation: (Rule) => Rule.custom(async (value, context) => {
+        if (!value || typeof value !== 'object' || !('_ref' in value)) return true
+        const parent = context.parent as {work?: {_ref?: string}} | undefined
+        const workId = parent?.work?._ref
+        const photoId = (value as {_ref?: string})._ref
+        if (!workId || !photoId) return true
+        const included = await context.getClient({apiVersion: '2025-02-19'}).fetch<boolean>(
+          `count(*[_id == $workId && $photoId in photos[]._ref]) > 0`,
+          {workId, photoId},
+        )
+        return included ? true : 'Choose a photo that belongs to this Work\'s Photoshoot images.'
+      }),
     }),
     defineField({
       name: 'cardSize',
@@ -54,17 +74,19 @@ export const projectPlacement = defineType({
   ],
   preview: {
     select: {
-      title: 'project.title',
-      media: 'project.cover.poster',
+      title: 'work.title',
+      media: 'doorwayPhoto.image',
+      fallbackMedia: 'work.cover.poster',
+      photo: 'doorwayPhoto.title',
       size: 'cardSize',
       treatment: 'treatment',
     },
-    prepare: ({title, media, size, treatment}) => ({
-      title: title || 'Choose a project',
-      subtitle: [size || 'standard', treatment !== 'standard' ? treatment : undefined]
+    prepare: ({title, media, fallbackMedia, photo, size, treatment}) => ({
+      title: title || 'Choose a Work item',
+      subtitle: [photo, size || 'standard', treatment !== 'standard' ? treatment : undefined]
         .filter(Boolean)
         .join(' · '),
-      media,
+      media: media || fallbackMedia,
     }),
   },
 })

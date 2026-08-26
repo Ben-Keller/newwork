@@ -107,7 +107,7 @@ assets/web-ready/images/example.webp
 → /media/images/example.webp
 ```
 
-Michael's expanded review library follows the same convention. The 24 untouched portfolio renditions live under `../assets/source/michael/portfolio-expansion/`; normalized WebP review copies live under `../assets/web-ready/images/michael/portfolio-expansion/` and `public/media/images/michael/portfolio-expansion/`. The manifest records the original portfolio URL, dimensions, derivation, checksum, and publication blockers for each source/derivative pair. Prototype mode interleaves these images as unnamed Michael portfolio tiles for visual curation; they link only to Michael's About profile, make no project or credit claims, and are excluded entirely from production until their identity, rights, accessibility treatment, and approved masters are confirmed.
+Michael's expanded review library follows the same convention. The 24 untouched portfolio renditions live under `../assets/source/michael/portfolio-expansion/`; normalized WebP review copies live under `../assets/web-ready/images/michael/portfolio-expansion/` and `public/media/images/michael/portfolio-expansion/`. The manifest records the original portfolio URL, dimensions, derivation, checksum, and publication blockers for each source/derivative pair. Prototype mode interleaves these images as unnamed Michael portfolio tiles for visual curation. They make no project or credit claims and are excluded entirely from production until their identity, rights, accessibility treatment, and approved masters are confirmed.
 
 Keep fixture source IDs, block `_key` values, provenance, and every safety flag stable. The importer stores a fixture source ID as hidden `legacyId` metadata and lets Sanity assign the public document `_id`. In particular, never discard or auto-clear:
 
@@ -122,7 +122,7 @@ Keep fixture source IDs, block `_key` values, provenance, and every safety flag 
 
 Every fixture project also carries two deterministic `textNote` blocks as prototype layout copy. They intentionally use raw `body` strings so the seed importer can convert them to Portable Text, and both `needsReview` and `prototypeOnly` must remain `true` until an editor replaces and approves the copy in Sanity.
 
-The two `aboutPeople` fixture entries are ordered Michael, then Oliver; About and the footer People directory both consume that single order. Both profiles retain unmistakable Lorem Ipsum role/biography copy and derive five supporting visuals from owner-matched projects. Every profile remains review-gated. Keep canonical `../content/site-settings.json` identical to the app-local mirror. The seed importer prefers the canonical file; the prototype runtime reads the app-local file.
+Legacy `aboutPeople` fixture entries remain review-gated migration data only; the public About experience and footer no longer render those profiles. Keep canonical `../content/site-settings.json` identical to the app-local mirror. The seed importer prefers the canonical file; the prototype runtime reads the app-local file.
 
 Changing `visible` in a fixture does not authorize publication. Local fixtures are for internal composition and behavior review only.
 
@@ -191,10 +191,11 @@ npm run dev
 Sanity's development server defaults to port 3333. The client-facing editorial desk contains:
 
 - **Start here** for shortcuts, review counts, and the publishing checklist.
-- **Work page** for opening copy, the drag-to-order project gallery, the optional Reel, and page SEO.
+- **Work page** for opening copy, the drag-to-order project gallery, the optional homepage reel preview, and page SEO.
+- **About page** for the motion-led experience's opening copy, accessible fallback, closing action, visibility, and page SEO.
 - **Projects** for project pages grouped by editorial state.
 - **Asset library** for reusable media, descriptions, credits, rights, and related projects.
-- **About page**, **Contact page**, **Footer**, and **Brand & navigation** for their dedicated website areas.
+- **Contact page**, **Footer**, and **Brand & navigation** for their dedicated website areas.
 
 System metadata, imported provenance, legacy fields, Notes, comments, releases, scheduled drafts, tasks, and singleton delete/duplicate actions are hidden from the routine client workflow. Analytics is deployment-controlled and is not an editable Studio field.
 
@@ -202,9 +203,7 @@ Project presentation is editable independently from its ordered content blocks. 
 
 On project pages, the same cover used by the home gallery appears once in the opening hero: copy remains first in the document, desktop places the cover on the right, and mobile stacks it immediately after the copy. The ordered content blocks render below without repeating a cover-equivalent legacy block. Provisional fixtures include gated Lorem Ipsum copy; the non-production renderer supplies neutral geometric media studies where project-specific secondary media is absent. Replace both kinds of scaffolding with approved content before publication.
 
-The portfolio is presented as an open-ended, non-ranked selection. Project detail pages intentionally omit position labels, collection totals, and index-style reading progress; About portfolio media likewise omits item numbers, totals, and category labels. Previous/next controls remain browsing paths only and do not communicate a fixed sequence.
-
-On the About page, each profile’s supporting media forms one fixed-footprint, five-region rectangular mosaic, with a different orthogonal partition for Michael and Oliver. The curated selections alternate motion, portrait, product, bright, and dark frames rather than merely taking the first five projects. Narrow white gutters separate every tile. Fine-pointer hover and keyboard focus scale the emphasized image subtly inside its unchanged rectangle; no gallery uses angled, polygonal, or notched cropping. Reduced-motion and no-JavaScript modes retain the complete static composition. Titles and clients appear only as direct hover/focus captions, without a category label, item number, people/work total, or completeness claim, and the imagery is never presented as portraiture. About and Contact open directly with their eyebrow/title and contain no `Information` or page-fraction bar. Public GROQ and the typed adapter both remove provisional profiles individually, and the derived production media set contains only projects that passed the normal publication and asset-safety gates.
+The portfolio is presented as an open-ended, non-ranked selection. Project detail pages intentionally omit position labels, collection totals, and index-style reading progress. Previous/next controls remain browsing paths only and do not communicate a fixed sequence.
 
 ### 4. Approve a project deliberately
 
@@ -219,78 +218,15 @@ Before publishing a production record:
 
 The production adapter applies its safety filter again at build time. A Studio publish action alone is not enough to make an unsafe record public.
 
-Reel and Notes are independent. Reel renders only when enabled with an approved poster and desktop source. Notes routes and navigation render only when Notes is enabled and at least one eligible item exists; otherwise `/notes` is absent.
+The motion-led About page and the optional homepage video preview are independent. `/about` and its navigation item appear only when the About experience is enabled (the local prototype fixture keeps it available for review); the former `/reel` URL redirects permanently to `/about`. The homepage preview still requires its own enable flag plus an approved poster and desktop source. Notes routes and navigation render only when Notes is enabled and at least one eligible item exists; otherwise `/notes` is absent.
 
-## GitHub Pages staging (repository URL)
+## Automated deployment and content updates
 
-The checked-in `.github/workflows/deploy-pages.yml` publishes the prototype to GitHub Pages without a custom domain. Its address is:
+The root GitHub Actions workflows deploy the standalone Studio/schema and the production Astro site independently. Site builds always query published Sanity content; publishing relevant Sanity documents triggers a site-only rebuild through a protected GitHub workflow-dispatch webhook.
 
-```text
-https://<github-account>.github.io/<repository>/
-```
+Sanity remains the sole source of editorial content, while GitHub `main` remains the sole source of application and Studio code. CMS exports are never committed or merged with fixtures.
 
-The workflow derives both the account and repository name automatically. It builds with `PUBLIC_BASE_PATH=/<repository>`, so navigation, media, favicons, route transitions, canonical URLs, and direct project links work below the repository path while local development continues to use `/`.
-
-One repository setting is required after the code is pushed:
-
-1. Open **Settings → Pages** in the GitHub repository.
-2. Under **Build and deployment**, choose **GitHub Actions** as the source.
-3. Push `main` or run **Deploy to GitHub Pages** from the Actions tab.
-4. Open the URL reported by the workflow's `deploy` job and test the home, About, Contact, and a direct `/work/<slug>` URL.
-
-Do not add a `CNAME` file or configure **Custom domain** for this staging target. The workflow intentionally publishes `PUBLIC_CONTENT_MODE=prototype`: the site can be opened by anyone who has the URL, but every page remains `noindex, nofollow`, `robots.txt` disallows crawling, the sitemap is omitted, and production-only CMS eligibility gates remain unchanged. GitHub Pages does not provide access control; use a private preview host if the review itself must be private.
-
-GitHub's official references are [Using custom workflows with GitHub Pages](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages) and Astro's [GitHub Pages deployment guide](https://docs.astro.build/en/guides/deploy/github/).
-
-## Cloudflare Pages
-
-This repository produces static HTML. In Cloudflare's **Workers & Pages** dashboard, create a Pages project connected to the owner-controlled Git repository and use:
-
-| Setting | Value |
-|---|---|
-| Root directory | `new-work-site` when this directory is inside a larger repository; otherwise leave blank |
-| Build command | `pnpm build` |
-| Build output directory | `dist` |
-| Production branch | The repository's protected release branch, commonly `main` |
-| Node version | Set `NODE_VERSION=22.22.1` or another supported Node 22 release |
-
-Cloudflare documents the current [Pages build settings](https://developers.cloudflare.com/pages/configuration/build-configuration/) and [build-image version controls](https://developers.cloudflare.com/pages/configuration/build-image/). Keep the Node override explicit so a platform default change cannot silently alter the build.
-
-Set production variables in **Settings → Environment variables** using the production values from the content-mode section. At minimum:
-
-```dotenv
-NODE_VERSION=22.22.1
-PUBLIC_CONTENT_MODE=production
-PUBLIC_SANITY_PROJECT_ID=7un4plyu
-PUBLIC_SANITY_DATASET=production
-PUBLIC_SITE_URL=https://www.example.com
-```
-
-Add `PUBLIC_CONTACT_EMAIL` only when confirmed. Do not add `SANITY_WRITE_TOKEN` or `SANITY_PREVIEW_TOKEN` to the public website build. The production content queries use Sanity's published perspective without a read token; configure the dataset accordingly or introduce a server-only build credential through a reviewed change.
-
-The version-controlled `public/_headers` and `public/_redirects` files are copied into `dist`. After deployment, verify the CSP, referrer policy, content-type protection, permissions policy, immutable asset caching, HTML revalidation, canonical URLs, robots response, and redirects against the deployed origin.
-
-No deployment or account creation is performed by this repository.
-
-`wrangler.toml` records the `dist` Pages output for repeatable local/CLI configuration. It contains no account ID, token, route, or custom domain. The protected-branch workflow in `.github/workflows/ci.yml` runs strict types/lint/coverage, output scanning, all Playwright engines, Axe checks, and Lighthouse budgets; configure branch protection to require those checks. Lighthouse keeps Performance 90, Accessibility 95, Best Practices 90, LCP 2.5 seconds, CLS, and TBT as hard gates. SEO 90 remains a visible warning target in the local prototype because product safety requires `noindex`; run the same audit against the approved production-content deployment before launch.
-
-### Sanity publish → Cloudflare deploy hook
-
-Static content changes require a new build. Configure the hook without committing its secret URL:
-
-1. In Cloudflare, open **Workers & Pages → the Pages project → Settings → Builds**.
-2. Add a deploy hook named `sanity-published`, targeting the production branch.
-3. Copy the generated URL and treat it like a credential; anyone holding it can trigger builds.
-4. In `sanity.io/manage`, open the project API settings and create a document webhook for the production dataset.
-5. Use the Cloudflare deploy-hook URL, enable create/update/delete, leave draft/version events disabled, and filter to:
-
-   ```groq
-   _type in ["siteSettings", "workPage", "aboutPage", "contactPage", "footerSettings", "project", "mediaItem", "note"]
-   ```
-
-6. Publish a harmless reviewed change, confirm a single Pages deployment starts, and inspect its build log and deployed content.
-
-Cloudflare's [deploy-hook guide](https://developers.cloudflare.com/pages/configuration/deploy-hooks/) and Sanity's [GROQ webhook guide](https://www.sanity.io/docs/content-lake/webhooks) describe the current dashboard locations and event behavior. Delete and recreate the Cloudflare hook immediately if its URL is exposed.
+See [`../DEPLOYMENT.md`](../DEPLOYMENT.md) for the complete token setup, webhook values, local content workflow, no-merge Git rules, snapshot command, migration sequence, testing, and rollback procedure.
 
 ## Replace prototype assets
 

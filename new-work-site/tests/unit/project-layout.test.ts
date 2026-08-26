@@ -8,10 +8,11 @@ import {
 import type { ProjectView } from '../../src/lib/types';
 
 describe('project presentation routing', () => {
-  it('respects an explicit experimental selection and a safe accent color', () => {
+  it('routes featured Work through the longer campaign presentation and keeps safe art direction', () => {
     const fixture = getFixtureProjects()[0]!;
     const project = {
       ...fixture,
+      template: 'featured',
       layoutVariant: 'experimental',
       projectTheme: 'accent',
       accentColor: '#A1B2C3',
@@ -21,7 +22,7 @@ describe('project presentation routing', () => {
     } satisfies ProjectView;
 
     expect(resolveProjectPresentation(project)).toEqual({
-      layoutVariant: 'experimental',
+      layoutVariant: 'campaign',
       projectTheme: 'accent',
       accentColor: '#A1B2C3',
       titleTreatment: 'split',

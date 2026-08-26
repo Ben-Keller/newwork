@@ -1,7 +1,7 @@
 ---
 import PreviewVideo from './PreviewVideo.astro';
 import ResponsiveImage from './ResponsiveImage.astro';
-import type { ProjectView } from '../lib/types';
+import type { WorkGalleryEntryView } from '../lib/types';
 import {
   COLUMN_SCROLL_RESPONSES,
   COMPACT_COLUMN_SCROLL_RESPONSES,
@@ -10,7 +10,7 @@ import { withBase } from '../lib/base-path';
 import { buildGalleryImageSizes } from '../lib/responsive-images';
 
 interface Props {
-  project: ProjectView;
+  entry: WorkGalleryEntryView;
   index: number;
   desktopColumn?: number;
   tabletColumn?: number;
@@ -20,7 +20,7 @@ interface Props {
 }
 
 const {
-  project,
+  entry,
   index,
   desktopColumn,
   tabletColumn,
@@ -28,23 +28,24 @@ const {
   tabletColumnStart = false,
   editable = false,
 } = Astro.props;
+const project = entry.work;
 // The first tile in every responsive lane is immediately visible during the
 // opening zoom. Load those posters eagerly, while reserving high fetch priority
 // for the single LCP candidate.
 const eager = index === 0 || desktopColumnStart || tabletColumnStart;
-const homeCardSize = project.homeCardSize || 'standard';
-const homeTreatment = project.homeTreatment || 'standard';
+const homeCardSize = entry.cardSize || project.homeCardSize || 'standard';
+const homeTreatment = entry.treatment || project.homeTreatment || 'standard';
 const requestedOffset = Number.isFinite(project.homeOffset) ? project.homeOffset : 0;
 // Keep editorial staggering visible without letting repeated card offsets open
 // oversized holes inside an otherwise packed column.
 const safeOffset = Math.max(0, Math.min(12, requestedOffset || 0));
-const transitionName = `project-${project.slug}-media`;
+const transitionName = `project-${entry.id}-media`;
 const columnResponse = desktopColumn ? COLUMN_SCROLL_RESPONSES[desktopColumn - 1] : undefined;
 const tabletColumnResponse = tabletColumn
   ? COMPACT_COLUMN_SCROLL_RESPONSES[tabletColumn - 1]
   : undefined;
 const usesWideCard = project.cover.cardRatio === 'wideFeature' && index >= 8;
-const galleryImageSizes = buildGalleryImageSizes(project.cover.poster, {
+const galleryImageSizes = buildGalleryImageSizes(entry.image, {
   cardAspect: usesWideCard ? 3 / 2 : 4 / 5,
   mobileSource: project.cover.mobilePoster,
 });
@@ -58,7 +59,7 @@ const galleryImageSizes = buildGalleryImageSizes(project.cover.poster, {
   ]}
   id={`project-${project.slug}`}
   data-project-card
-  data-gallery-item-id={project.slug}
+  data-gallery-item-id={entry.id}
   data-home-size={homeCardSize}
   data-home-treatment={homeTreatment}
   data-desktop-column={desktopColumn}
@@ -73,22 +74,23 @@ const galleryImageSizes = buildGalleryImageSizes(project.cover.poster, {
   style={`--home-offset:${safeOffset}px`}
 >
   <a
-    href={withBase(`/work/${project.slug}`)}
+    href={withBase(entry.href)}
     data-project-link
-    data-project-slug={project.slug}
+    data-project-slug={entry.id}
+    data-gallery-photo-link={entry.photo ? true : undefined}
   >
     <span class="sr-only">{project.title}</span>
     <div class="project-card__media" transition:name={transitionName}>
       <div class="project-card__media-inner" data-card-media>
         <ResponsiveImage
-          image={project.cover.poster}
-          mobileImage={project.cover.mobilePoster}
+          image={entry.image}
+          mobileImage={entry.photo ? undefined : project.cover.mobilePoster}
           sizes={galleryImageSizes}
           eager={eager}
           priority={index === 0}
           galleryPreload
         />
-        {project.cover.previewVideo ? (
+        {!entry.photo && project.cover.previewVideo ? (
           <PreviewVideo
             source={project.cover.previewVideo}
             poster={project.cover.previewPosterOverride?.src || project.cover.poster.src}

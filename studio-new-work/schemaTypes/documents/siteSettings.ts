@@ -63,7 +63,7 @@ export const siteSettings = defineType({
     siteName: 'New Work Agency',
     navigation: [
       {_type: 'navigationItem', _key: 'work', label: 'Work', destination: 'work', visible: true},
-      {_type: 'navigationItem', _key: 'about', label: 'About', destination: 'about', visible: true},
+      {_type: 'navigationItem', _key: 'about', label: 'About', destination: 'reel', visible: true},
       {_type: 'navigationItem', _key: 'contact', label: 'Contact', destination: 'contact', visible: true},
     ],
     defaultSeo: {noIndex: false},

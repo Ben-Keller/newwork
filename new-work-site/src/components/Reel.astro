@@ -17,7 +17,7 @@ const mobileMime = inferVideoMimeType(reel.mobileSource || reel.desktopSource);
 
 {ready ? (
   <section class="reel" aria-labelledby="reel-heading">
-    <div class="section-kicker"><h2 id="reel-heading">Reel</h2></div>
+    <div class="section-kicker"><h2 id="reel-heading">About</h2></div>
     <div class="reel__frame" data-reel-shell data-media-frame style={`aspect-ratio:${reel.aspectRatio || '16 / 9'}`}>
       <ResponsiveImage image={reel.poster!} sizes="100vw" />
       <video
@@ -39,7 +39,7 @@ const mobileMime = inferVideoMimeType(reel.mobileSource || reel.desktopSource);
         />
       </video>
       <VideoControls targetId={id} />
-      <ErrorMedia message="Reel unavailable" />
+      <ErrorMedia message="About video unavailable" />
     </div>
     {reel.caption ? <p class="reel__caption">{reel.caption}</p> : null}
     {reel.credits ? <p class="reel__credits">{reel.credits}</p> : null}

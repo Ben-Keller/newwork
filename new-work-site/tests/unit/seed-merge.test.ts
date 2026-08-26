@@ -242,8 +242,9 @@ describe('seed document identity', () => {
       slug: {_type: 'slug', current: 'arc'},
     })).toEqual([
       'legacy:project:project.michael.arc',
+      'legacy:project.michael.arc',
       'id:project.michael.arc',
-      'slug:project:arc',
+      'slug:portfolio:arc',
     ])
   })
 

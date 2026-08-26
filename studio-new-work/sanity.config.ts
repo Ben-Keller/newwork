@@ -8,7 +8,7 @@ import {presentationResolve} from './presentation'
 import {structure} from './structure'
 import {SANITY_DATASET, SANITY_PROJECT_ID} from './sanity.constants'
 
-const SINGLETONS = ['siteSettings', 'workPage', 'aboutPage', 'contactPage', 'footerSettings']
+const SINGLETONS = ['siteSettings', 'workPage', 'reelPage', 'aboutPage', 'contactPage', 'footerSettings']
 const CLIENT_HIDDEN_TYPES = ['note']
 const CONFIGURED_PREVIEW_ORIGIN = process.env.SANITY_STUDIO_PREVIEW_ORIGIN
 const PREVIEW_ORIGIN = CONFIGURED_PREVIEW_ORIGIN || (process.env.NODE_ENV === 'development' ? 'http://localhost:4321' : undefined)
@@ -42,36 +42,36 @@ export default defineConfig({
     types: schemaTypes,
     templates: (previous) => [
       {
-        id: 'project-film',
-        title: 'Film project',
-        schemaType: 'project',
+        id: 'work-video',
+        title: 'Video work',
+        schemaType: 'work',
         value: {
           types: ['Film'],
-          layoutVariant: 'cinematic',
+          template: 'video',
           editorialStatus: 'draft',
           rightsApprovalStatus: 'pending',
           needsReview: false,
         },
       },
       {
-        id: 'project-photography',
-        title: 'Photography project',
-        schemaType: 'project',
+        id: 'work-photo',
+        title: 'Photo work',
+        schemaType: 'work',
         value: {
           types: ['Photography'],
-          layoutVariant: 'photoEssay',
+          template: 'photo',
           editorialStatus: 'draft',
           rightsApprovalStatus: 'pending',
           needsReview: false,
         },
       },
       {
-        id: 'project-campaign',
-        title: 'Campaign project',
-        schemaType: 'project',
+        id: 'work-featured',
+        title: 'Featured work',
+        schemaType: 'work',
         value: {
           types: ['Campaign'],
-          layoutVariant: 'campaign',
+          template: 'featured',
           editorialStatus: 'draft',
           rightsApprovalStatus: 'pending',
           needsReview: false,
@@ -109,7 +109,7 @@ export default defineConfig({
       },
       ...previous.filter(
         (template) =>
-          !['project', 'mediaItem'].includes(template.schemaType) &&
+          !['work', 'mediaItem'].includes(template.schemaType) &&
           !SINGLETONS.includes(template.schemaType) &&
           !CLIENT_HIDDEN_TYPES.includes(template.schemaType),
       ),
@@ -131,7 +131,7 @@ export default defineConfig({
         ? previous.filter((action) => !['delete', 'duplicate'].includes(action.action ?? ''))
         : previous,
     badges: (previous, context) => {
-      if (context.schemaType === 'project') return [workflowBadge, rightsBadge, ...previous]
+      if (context.schemaType === 'work') return [workflowBadge, rightsBadge, ...previous]
       if (context.schemaType === 'mediaItem') return [rightsBadge, ...previous]
       return previous
     },

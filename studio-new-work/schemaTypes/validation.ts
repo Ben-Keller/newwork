@@ -109,7 +109,7 @@ export function collectBlockingSafetyFlags(
   return issues
 }
 
-export function projectPublicationError(value: unknown): true | string {
+export function workPublicationError(value: unknown): true | string {
   if (!isRecord(value)) return true
   const approvedForWebsite = value.editorialStatus === 'approved' ||
     (value.editorialStatus === undefined && value.visible === true)
@@ -118,6 +118,8 @@ export function projectPublicationError(value: unknown): true | string {
   const problems: string[] = []
   const cover = isRecord(value.cover) ? value.cover : undefined
   const blocks = Array.isArray(value.contentBlocks) ? value.contentBlocks : []
+  const photos = Array.isArray(value.photos) ? value.photos : []
+  const isPhotoWork = value.template === 'photo'
 
   if (value.rightsApprovalStatus !== 'approved') {
     problems.push('record approved portfolio rights')
@@ -134,11 +136,18 @@ export function projectPublicationError(value: unknown): true | string {
     problems.push(`clear publication safety flags: ${safetyFlags.join(', ')}`)
   }
 
-  if (!cover || !hasAssetReference(cover.poster)) {
+  if (isPhotoWork && !hasDocumentReference(value.defaultPhoto)) {
+    problems.push('choose a default featured photo')
+  }
+  if (isPhotoWork && photos.length < 2) {
+    problems.push('add at least two photos from the photoshoot')
+  }
+  if (!isPhotoWork && (!cover || !hasAssetReference(cover.poster))) {
     problems.push('add a Sanity cover poster')
   }
 
   if (
+    !isPhotoWork &&
     cover &&
     !isNonEmptyString(cover.alt) &&
     cover.decorative !== true
@@ -146,7 +155,7 @@ export function projectPublicationError(value: unknown): true | string {
     problems.push('add cover alt text or deliberately mark the poster decorative')
   }
 
-  if (!blocks.some((block) => isRecord(block) && PUBLIC_MEDIA_BLOCK_TYPES.has(String(block._type)))) {
+  if (!isPhotoWork && !blocks.some((block) => isRecord(block) && PUBLIC_MEDIA_BLOCK_TYPES.has(String(block._type)))) {
     problems.push('add at least one public media block')
   }
 
@@ -220,8 +229,11 @@ export function projectPublicationError(value: unknown): true | string {
 
   return problems.length === 0
     ? true
-    : `This project cannot be public yet: ${problems.join('; ')}.`
+    : `This Work cannot be public yet: ${problems.join('; ')}.`
 }
+
+/** @deprecated Use workPublicationError. Kept only for migration scripts importing the old name. */
+export const projectPublicationError = workPublicationError
 
 export function notePublicationError(value: unknown): true | string {
   if (!isRecord(value) || value.visible !== true) return true

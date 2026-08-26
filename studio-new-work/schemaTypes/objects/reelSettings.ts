@@ -10,11 +10,11 @@ import {
 
 export const reelSettings = defineType({
   name: 'reelSettings',
-  title: 'Reel',
+  title: 'Homepage reel preview',
   type: 'object',
   icon: PlayIcon,
   fields: [
-    defineField({name: 'enabled', title: 'Show reel on the Work page', type: 'boolean', initialValue: false}),
+    defineField({name: 'enabled', title: 'Show the reel preview on the Work page', type: 'boolean', initialValue: false}),
     defineField({name: 'poster', title: 'Poster', type: 'editorialImage'}),
     defineField({
       name: 'desktopSource',

@@ -3,15 +3,19 @@ import {defineArrayMember, defineField, defineType} from 'sanity'
 import {collectBlockingSafetyFlags, isRecord, wordCount} from '../validation'
 import {hiddenAllFieldsGroup} from '../clientGroups'
 
-function uniqueGalleryProjects(value: unknown): true | string {
+function uniqueWorkDoorways(value: unknown): true | string {
   if (!Array.isArray(value)) return true
-  const projectIds = value.flatMap((placement) => {
-    if (!isRecord(placement) || !isRecord(placement.project)) return []
-    return typeof placement.project._ref === 'string' ? [placement.project._ref] : []
+  const doorwayIds = value.flatMap((placement) => {
+    if (!isRecord(placement) || !isRecord(placement.work)) return []
+    const workId = typeof placement.work._ref === 'string' ? placement.work._ref : undefined
+    const photoId = isRecord(placement.doorwayPhoto) && typeof placement.doorwayPhoto._ref === 'string'
+      ? placement.doorwayPhoto._ref
+      : 'default'
+    return workId ? [`${workId}:${photoId}`] : []
   })
-  return new Set(projectIds).size === projectIds.length
+  return new Set(doorwayIds).size === doorwayIds.length
     ? true
-    : 'Each project can appear only once in the Work gallery.'
+    : 'The same Work/photo doorway can appear only once.'
 }
 
 export const workPage = defineType({
@@ -21,8 +25,8 @@ export const workPage = defineType({
   icon: HomeIcon,
   groups: [
     {name: 'copy', title: 'Page copy', default: true},
-    {name: 'gallery', title: 'Project gallery'},
-    {name: 'modules', title: 'Reel'},
+    {name: 'gallery', title: 'Work gallery'},
+    {name: 'modules', title: 'Homepage reel preview'},
     {name: 'seo', title: 'Search & sharing'},
     hiddenAllFieldsGroup,
   ],
@@ -54,16 +58,16 @@ export const workPage = defineType({
     }),
     defineField({
       name: 'gallery',
-      title: 'Project gallery',
+      title: 'Work gallery',
       type: 'array',
       group: 'gallery',
-      description: 'Drag projects into the desired order. Open a row to choose its card size or treatment.',
-      of: [defineArrayMember({type: 'projectPlacement'})],
-      validation: (Rule) => Rule.required().min(1).custom(uniqueGalleryProjects),
+      description: 'Drag Work placements into order. A Photo Work can appear more than once by choosing a different doorway photo.',
+      of: [defineArrayMember({type: 'workPlacement'})],
+      validation: (Rule) => Rule.required().min(1).custom(uniqueWorkDoorways),
     }),
     defineField({
       name: 'reel',
-      title: 'Reel',
+      title: 'Homepage reel preview',
       type: 'reelSettings',
       group: 'modules',
       initialValue: {enabled: false, startMuted: true, aspectRatio: '16:9'},
@@ -95,6 +99,6 @@ export const workPage = defineType({
       : true
   }),
   preview: {
-    prepare: () => ({title: 'Work page', subtitle: 'Opening copy, project order and reel'}),
+    prepare: () => ({title: 'Work page', subtitle: 'Opening copy, Work order and reel'}),
   },
 })

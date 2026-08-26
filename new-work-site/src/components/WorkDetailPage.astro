@@ -1,0 +1,66 @@
+---
+import ProjectOverlay from './project/ProjectOverlay.astro';
+import ProjectTemplateRouter from './project/ProjectTemplateRouter.astro';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { adjacentProjects, workGalleryEntryId } from '../lib/content';
+import { resolveProjectPresentation, selectWorkPhoto } from '../lib/project-layout';
+import { PROJECT_HERO_IMAGE_SIZES } from '../lib/responsive-images';
+import type { ProjectView, SiteContent } from '../lib/types';
+
+interface Props {
+  work: ProjectView;
+  content: SiteContent;
+  selectedPhotoId?: string;
+}
+
+const { work, content, selectedPhotoId } = Astro.props;
+const project = selectWorkPhoto(work, selectedPhotoId);
+const { previous, next } = adjacentProjects(content.projects, work.slug);
+const presentation = resolveProjectPresentation(project);
+const description = project.seo?.metaDescription || project.shortDescription;
+const routeTransitionId = workGalleryEntryId(work, selectedPhotoId);
+const schema = content.mode === 'production'
+  ? {
+      '@type': 'CreativeWork',
+      name: project.title,
+      url: Astro.url.href,
+      image: project.cover.poster.src,
+      description,
+      dateCreated: project.year ? String(project.year) : undefined,
+      producer: project.client ? {'@type': 'Organization', name: project.client} : undefined,
+      contributor: project.contributors.map((contributor) => ({
+        '@type': 'Person',
+        name: contributor.name,
+        jobTitle: contributor.role,
+      })),
+    }
+  : undefined;
+---
+
+<BaseLayout
+  content={content}
+  title={project.title}
+  description={description}
+  seo={project.seo}
+  kind="project"
+  structuredData={schema}
+  pageClass="project-page"
+  pageTheme={presentation.projectTheme}
+  pageAccent={presentation.accentColor}
+  preloadImage={project.cover.poster}
+  preloadImageSizes={PROJECT_HERO_IMAGE_SIZES}
+>
+  <ProjectOverlay
+    projectSlug={routeTransitionId}
+    projectTitle={project.title}
+    projects={content.projects}
+  >
+    <ProjectTemplateRouter
+      project={project}
+      mode={content.mode}
+      routeTransitionId={routeTransitionId}
+      previous={previous}
+      next={next}
+    />
+  </ProjectOverlay>
+</BaseLayout>

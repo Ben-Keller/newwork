@@ -1,0 +1,297 @@
+---
+import { reducedMotionFeaturedStills } from '../lib/reel/reel-assets';
+
+interface Props {
+  assetBase: string;
+  ctaHref: string;
+}
+
+const { assetBase, ctaHref } = Astro.props;
+const normalizedAssetBase = assetBase.endsWith('/') ? assetBase : `${assetBase}/`;
+const assetUrl = (path: string) => `${normalizedAssetBase}${path.replace(/^\/+/, '')}`;
+
+const stages = [
+  {
+    id: 'rushes',
+    marker: '01 — Lorem',
+    start: 0,
+    end: 0.17,
+    eyebrow: 'Lorem ipsum dolor',
+    title: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
+    note: 'Consectetur adipiscing',
+  },
+  {
+    id: 'winding',
+    marker: '02 — Ipsum',
+    start: 0.14,
+    end: 0.38,
+    eyebrow: 'Lorem ipsum dolor',
+    title: 'Consectetur adipiscing elit.',
+    note: 'Sed do eiusmod tempor',
+  },
+  {
+    id: 'orbit',
+    marker: '03 — Dolor',
+    start: 0.38,
+    end: 0.61,
+    eyebrow: 'Lorem ipsum dolor',
+    title: 'Sed do eiusmod tempor incididunt.',
+    note: 'Ut labore et dolore',
+  },
+  {
+    id: 'index',
+    marker: '04 — Amet',
+    start: 0.59,
+    end: 0.79,
+    eyebrow: 'Lorem ipsum dolor',
+    title: 'Ut enim ad minim veniam.',
+    note: 'Quis nostrud exercitation',
+  },
+  {
+    id: 'chapters',
+    marker: '05 — Elit',
+    start: 0.77,
+    end: 0.91,
+    eyebrow: 'Lorem ipsum dolor',
+    title: 'Duis aute irure dolor.',
+    note: 'Reprehenderit in voluptate',
+  },
+  {
+    id: 'aperture',
+    marker: '06 — Tempor',
+    start: 0.86,
+    end: 0.981,
+    eyebrow: 'Lorem ipsum dolor',
+    title: 'Excepteur sint occaecat cupidatat.',
+    note: 'Sunt in culpa qui officia',
+  },
+] as const;
+---
+
+<section
+  class="reel-experience"
+  data-reel-experience
+  data-asset-base={normalizedAssetBase}
+  data-mode="loading"
+  aria-busy="true"
+>
+  <a class="reel-skip-link" href="#reel-archive" aria-label="Skip the motion experience">Lorem ipsum</a>
+
+  <div class="reel-motion-stage">
+    <div class="reel-canvas-mount" data-reel-canvas></div>
+    <div class="reel-paper-wash" aria-hidden="true"></div>
+    <div class="reel-grain" aria-hidden="true"></div>
+
+    <div class="reel-scene-chrome" aria-hidden="true">
+      <span data-reel-marker>01 — Lorem</span>
+    </div>
+
+    <div class="reel-progress-track" aria-hidden="true"><span></span></div>
+
+    <div class="reel-stage-copy-stack">
+      {stages.map((stage) => (
+        <article
+          class:list={['reel-stage-copy', `reel-stage-copy--${stage.id}`]}
+          data-reel-stage-copy
+          data-start={stage.start}
+          data-end={stage.end}
+          data-initial={stage.id === 'rushes' ? 'true' : undefined}
+          data-exit-duration={stage.id === 'aperture' ? '0.017' : undefined}
+        >
+          <p>{stage.eyebrow}</p>
+          <h1>{stage.title}</h1>
+          <small>{stage.note}</small>
+        </article>
+      ))}
+
+      <article
+        class="reel-stage-copy reel-stage-copy--final"
+        data-reel-stage-copy
+        data-final
+        data-enter-duration="0.017"
+        data-start="0.964"
+        data-end="1.1"
+      >
+        <p>Lorem ipsum dolor</p>
+        <h1>What should we make next?</h1>
+        <a href={ctaHref} tabindex="-1" aria-label="Start a project">
+          Lorem ipsum <span aria-hidden="true">↗</span>
+        </a>
+      </article>
+    </div>
+
+    <div class="reel-loading-card" role="status">
+      <span>Lorem ipsum</span>
+      <i></i>
+    </div>
+  </div>
+
+  <section id="reel-archive" class="reel-static-fallback">
+    <div class="reel-fallback-intro">
+      <p>Lorem ipsum dolor</p>
+      <h1>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</h1>
+      <span>Consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</span>
+    </div>
+    <div class="reel-fallback-grid">
+      {reducedMotionFeaturedStills.map((asset, index) => (
+        <figure class:list={['reel-fallback-card', `reel-card-${index + 1}`]}>
+          <div class="reel-fallback-image">
+            <img src={assetUrl(asset.poster)} alt={asset.alt} loading="lazy" />
+          </div>
+          <figcaption>
+            <span>Lorem ipsum</span>
+            <small>Dolor sit amet</small>
+          </figcaption>
+        </figure>
+      ))}
+    </div>
+    <div class="reel-fallback-cta">
+      <p>Lorem ipsum dolor</p>
+      <h2>What should we make next?</h2>
+      <a href={ctaHref} aria-label="Start a project">Lorem ipsum <span aria-hidden="true">↗</span></a>
+    </div>
+  </section>
+
+  <noscript>
+    <style is:global>
+      .reel-experience[data-mode='loading'] { height: auto; overflow: visible; }
+      .reel-experience[data-mode='loading'] .reel-motion-stage { display: none; }
+      .reel-experience[data-mode='loading'] .reel-static-fallback { display: block; }
+    </style>
+    <p class="reel-noscript-note">Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
+  </noscript>
+</section>
+
+<script>
+  type ReelController = { destroy: () => void };
+
+  declare global {
+    interface Window {
+      __newWorkReelCleanup?: () => void;
+      __newWorkReelLifecycleInstalled?: boolean;
+    }
+  }
+
+  const quintic = (edge0: number, edge1: number, value: number): number => {
+    const t = Math.min(1, Math.max(0, (value - edge0) / (edge1 - edge0)));
+    return t * t * t * (t * (t * 6 - 15) + 10);
+  };
+
+  const supportsWebGL2 = (): boolean => {
+    try {
+      const probe = document.createElement('canvas');
+      const context = probe.getContext('webgl2', {powerPreference: 'high-performance'});
+      if (!context) return false;
+      context.getExtension('WEBGL_lose_context')?.loseContext();
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const initializeReelExperience = (): void => {
+    window.__newWorkReelCleanup?.();
+    const root = document.querySelector<HTMLElement>('[data-reel-experience]');
+    const mount = root?.querySelector<HTMLElement>('[data-reel-canvas]');
+    if (!root || !mount) return;
+
+    let cancelled = false;
+    let controller: ReelController | undefined;
+    root.dataset.mode = 'loading';
+    root.setAttribute('aria-busy', 'true');
+
+    const settleFallback = (): void => {
+      if (cancelled) return;
+      controller?.destroy();
+      controller = undefined;
+      root.dataset.mode = 'fallback';
+      root.setAttribute('aria-busy', 'false');
+    };
+
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || !supportsWebGL2()) {
+      settleFallback();
+      window.__newWorkReelCleanup = () => {
+        cancelled = true;
+      };
+      return;
+    }
+
+    const stageElements = Array.from(
+      root.querySelectorAll<HTMLElement>('[data-reel-stage-copy]'),
+    );
+    const marker = root.querySelector<HTMLElement>('[data-reel-marker]');
+    const markerRanges = [
+      [0, '01 — Lorem'],
+      [0.14, '02 — Ipsum'],
+      [0.38, '03 — Dolor'],
+      [0.59, '04 — Amet'],
+      [0.77, '05 — Elit'],
+      [0.86, '06 — Tempor'],
+      [0.972, '07 — Ipsum'],
+    ] as const;
+
+    const updateInterface = (progress: number): void => {
+      root.style.setProperty('--reel-progress', progress.toFixed(5));
+      stageElements.forEach((element) => {
+        const start = Number(element.dataset.start ?? 0);
+        const end = Number(element.dataset.end ?? 1);
+        const enterDuration = Number(element.dataset.enterDuration ?? 0.025);
+        const exitDuration = Number(element.dataset.exitDuration ?? 0.025);
+        const enter = element.hasAttribute('data-initial')
+          ? 1
+          : quintic(start, Math.min(end, start + enterDuration), progress);
+        const exit = element.hasAttribute('data-final')
+          ? 1
+          : 1 - quintic(Math.max(start, end - exitDuration), end, progress);
+        const opacity = enter * exit;
+        const travel = (1 - enter) * 28 - (1 - exit) * 22;
+        const interactive = opacity > 0.72;
+        element.style.opacity = opacity.toFixed(4);
+        element.style.transform = `translate3d(0, ${travel.toFixed(2)}px, 0)`;
+        element.style.pointerEvents = interactive ? 'auto' : 'none';
+        element.inert = !interactive;
+        element.querySelectorAll<HTMLAnchorElement>('a').forEach((anchor) => {
+          anchor.tabIndex = interactive ? 0 : -1;
+        });
+      });
+      let currentMarker: string = markerRanges[0][1];
+      markerRanges.forEach(([start, label]) => {
+        if (progress >= start) currentMarker = label;
+      });
+      if (marker) marker.textContent = currentMarker;
+    };
+
+    void import('../lib/reel/engine')
+      .then((module) => module.createExperience({
+        mount,
+        scrollRoot: root,
+        assetBase: root.dataset.assetBase || '/',
+        onReady: () => {
+          if (cancelled) return;
+          root.dataset.mode = 'enhanced';
+          root.setAttribute('aria-busy', 'false');
+        },
+        onFailure: settleFallback,
+        onProgress: updateInterface,
+      }))
+      .then((createdController) => {
+        if (cancelled) createdController.destroy();
+        else controller = createdController;
+      })
+      .catch(settleFallback);
+
+    window.__newWorkReelCleanup = () => {
+      cancelled = true;
+      controller?.destroy();
+      controller = undefined;
+      root.style.removeProperty('--reel-progress');
+    };
+  };
+
+  if (!window.__newWorkReelLifecycleInstalled) {
+    window.__newWorkReelLifecycleInstalled = true;
+    document.addEventListener('astro:page-load', initializeReelExperience);
+    document.addEventListener('astro:before-swap', () => window.__newWorkReelCleanup?.());
+  }
+  initializeReelExperience();
+</script>

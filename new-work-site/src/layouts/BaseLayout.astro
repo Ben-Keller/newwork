@@ -58,30 +58,43 @@ const compactMarkAsset = settings.compactMark ?? wordmarkAsset;
 const brandTone = pageTheme === 'dark' ? 'light' : 'dark';
 const showNotes = settings.notesEnabled && notes.length > 0;
 const destinationHref = {
-  work: withBase('/'),
+  work: withBase('/#work-gallery'),
+  reel: withBase('/about'),
   about: withBase('/about'),
   notes: withBase('/notes'),
   contact: withBase('/contact'),
 };
-const navigationItems = settings.navigation
-  .filter((item) => item.visible && (item.destination !== 'notes' || showNotes))
+const reelAvailable = settings.reelPage.enabled || mode === 'prototype';
+const configuredNavigation = reelAvailable
+  && !settings.navigation.some((item) => item.destination === 'reel')
+  ? settings.navigation.flatMap((item) => item.destination === 'work'
+    ? [item, {label: 'About', destination: 'reel' as const, visible: true}]
+    : [item])
+  : settings.navigation;
+const navigationItems = configuredNavigation
+  .filter((item) => item.visible
+    && (item.destination !== 'notes' || showNotes)
+    && item.destination !== 'about'
+    && (item.destination !== 'reel' || reelAvailable))
   .map((item) => ({
     href: destinationHref[item.destination],
-    label: item.label,
+    label: item.destination === 'reel' ? 'About' : item.label,
     match: 'section' as const,
   }));
 const galleryOrderToolsEnabled = false;
 const routePath = withoutBase(Astro.url.pathname).replace(/\/+$/u, '') || '/';
 const showFooterContact = routePath !== '/contact';
-const footerPeople = settings.aboutPeople.map((person) => ({
-  href: withBase(`/about#about-person-${person.projectOwner}`),
-  label: person.name,
-}));
-const footerExploreLinks = settings.footer.exploreLinks.flatMap((link) => {
+const footerExploreCandidates = settings.footer.exploreLinks.flatMap((link) => {
   if (link.destination === 'notes' && !showNotes) return [];
+  if ((link.destination === 'reel' || link.destination === 'about') && !reelAvailable) return [];
   const href = link.destination === 'external' ? link.url : destinationHref[link.destination];
-  return href ? [{href, label: link.label}] : [];
+  const label = link.destination === 'reel' || link.destination === 'about'
+    ? 'About'
+    : link.label;
+  return href ? [{href, label}] : [];
 });
+const footerExploreLinks = footerExploreCandidates.filter((link, index, links) =>
+  links.findIndex((candidate) => candidate.href === link.href) === index);
 const routeTransition = fade({ duration: 160 });
 const safePageAccent = pageAccent && /^#[\da-f]{6}$/iu.test(pageAccent) ? pageAccent : undefined;
 const pageStyle = safePageAccent ? `--project-page-accent:${safePageAccent}` : undefined;
@@ -192,7 +205,6 @@ const avifHref = (image: ImageView) => image.src.replace(/\.webp$/iu, '.avif');
         contactEmail={settings.contactEmail}
         contactLabel={settings.footer.contactLabel}
         links={settings.socialLinks}
-        people={footerPeople}
         strapline={settings.footer.strapline}
         exploreLinks={footerExploreLinks}
         peopleHeading={settings.footer.peopleHeading}

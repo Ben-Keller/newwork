@@ -1,36 +1,27 @@
 ---
 import ProjectCard from './ProjectCard.astro';
-import GalleryImageCard from './GalleryImageCard.astro';
 import { excludedWorkGalleryItemIds } from '../content/local/gallery-curation';
-import { michaelDevelopmentGallery, type DevelopmentGalleryImage } from '../content/local/michael-gallery';
-import type { ContentMode, ProjectView } from '../lib/types';
+import type { ContentMode, WorkGalleryEntryView } from '../lib/types';
 
 interface Props {
-  projects: ProjectView[];
+  entries: WorkGalleryEntryView[];
   mode?: ContentMode;
 }
 
-const { projects, mode = 'prototype' } = Astro.props;
+const { entries, mode = 'prototype' } = Astro.props;
 // Temporary editorial tooling remains implemented, but is not rendered in the
 // review UI. Switch this flag back on when another curation pass is needed.
 const galleryEditingEnabled = false;
-type GalleryEntry =
-  | { kind: 'project'; project: ProjectView }
-  | { kind: 'image'; item: DevelopmentGalleryImage };
-const galleryEntries: GalleryEntry[] = [];
-const developmentImages = mode === 'production' ? [] : michaelDevelopmentGallery;
-for (let index = 0; index < Math.max(projects.length, developmentImages.length); index += 1) {
-  const project = projects[index];
-  const item = developmentImages[index];
-  if (project && (mode === 'production' || !excludedWorkGalleryItemIds.has(project.slug))) {
-    galleryEntries.push({ kind: 'project', project });
-  }
-  if (item && !excludedWorkGalleryItemIds.has(item.id)) {
-    galleryEntries.push({ kind: 'image', item });
-  }
-}
-const isWideFeature = (entry: GalleryEntry, index: number) =>
-  entry.kind === 'project' && entry.project.cover.cardRatio === 'wideFeature' && index >= 8;
+const galleryEntries = entries.filter((entry) => (
+  mode === 'production'
+  || (
+    !excludedWorkGalleryItemIds.has(entry.id)
+    && !excludedWorkGalleryItemIds.has(entry.photo?.id || '')
+    && !excludedWorkGalleryItemIds.has(entry.work.slug)
+  )
+));
+const isWideFeature = (entry: WorkGalleryEntryView, index: number) =>
+  entry.work.cover.cardRatio === 'wideFeature' && index >= 8;
 const assignColumns = (columnCount: number) => {
   let nextColumn = 0;
   return galleryEntries.map((entry, index) => {
@@ -39,11 +30,7 @@ const assignColumns = (columnCount: number) => {
       return undefined;
     }
 
-    const requestedColumn = entry.kind === 'project'
-      ? entry.project.homeColumn
-      : columnCount === 4
-        ? entry.item.desktopColumn
-        : entry.item.tabletColumn;
+    const requestedColumn = entry.work.homeColumn;
     const preferred = requestedColumn
       ? ((requestedColumn - 1) % columnCount) + 1
       : undefined;
@@ -54,10 +41,7 @@ const assignColumns = (columnCount: number) => {
 };
 // A fixed visual column is applied after the placement cursor is calculated,
 // so moving one editorial tile does not reshuffle every card that follows it.
-const desktopColumns = assignColumns(4).map((column, index) => {
-  const entry = galleryEntries[index];
-  return entry?.kind === 'image' ? entry.item.fixedDesktopColumn ?? column : column;
-});
+const desktopColumns = assignColumns(4);
 const tabletColumns = assignColumns(2);
 const desktopColumnStarts = desktopColumns.map((column, index) =>
   column !== undefined && desktopColumns.indexOf(column) === index);
@@ -69,22 +53,12 @@ const tabletColumnStarts = tabletColumns.map((column, index) =>
   <h1 id="work-heading" class="sr-only">Selected work</h1>
   <div class="project-grid-stage" data-gallery-entrance data-gallery-entrance-state="pending">
     <div class="project-grid" data-project-grid data-gallery-plane>
-      {galleryEntries.map((entry, index) => entry.kind === 'project' ? (
+      {galleryEntries.map((entry, index) => (
           <ProjectCard
-            project={entry.project}
+            entry={entry}
             index={index}
             desktopColumn={desktopColumns[index]}
             tabletColumn={tabletColumns[index]}
-            desktopColumnStart={desktopColumnStarts[index]}
-            tabletColumnStart={tabletColumnStarts[index]}
-            editable={galleryEditingEnabled && mode !== 'production'}
-          />
-        ) : (
-          <GalleryImageCard
-            item={entry.item}
-            index={index}
-            desktopColumn={desktopColumns[index] ?? index % 4 + 1}
-            tabletColumn={tabletColumns[index] ?? index % 2 + 1}
             desktopColumnStart={desktopColumnStarts[index]}
             tabletColumnStart={tabletColumnStarts[index]}
             editable={galleryEditingEnabled && mode !== 'production'}
@@ -103,8 +77,14 @@ const tabletColumnStarts = tabletColumns.map((column, index) =>
     restoreRouteVideo,
   } from '../lib/motion/route-video-continuity';
   import {
+    animatePersistedRouteMedia,
+    captureRouteMediaHandoff,
+    disableRouteMediaSnapshots,
     persistMatchingVideo,
     persistResponsiveImage,
+    restoreRouteMediaSnapshots,
+    routeVideoIsVisiblyPlaying,
+    skipRouteSnapshotTransition,
     supportsRouteMediaPersistence,
   } from '../lib/motion/route-media-persistence';
 
@@ -234,6 +214,11 @@ const tabletColumnStarts = tabletColumns.map((column, index) =>
     const slug = link.dataset.projectSlug
       || link.closest<HTMLElement>('[data-project-card]')?.dataset.galleryItemId;
     if (!slug) return;
+    const handoff = captureRouteMediaHandoff(
+      video,
+      link.querySelector<HTMLElement>('.project-card__media') || video,
+    );
+    if (supportsRouteMediaPersistence() && handoff) disableRouteMediaSnapshots(document);
 
     // Keep the live preview running until the old page is actually replaced.
     // The project hero uses this same local loop, so its clock can continue
@@ -245,12 +230,21 @@ const tabletColumnStarts = tabletColumns.map((column, index) =>
       const target = event.newDocument.querySelector<HTMLVideoElement>(
         '[data-project-hero-media][data-first-media="true"] video[data-short-loop]',
       );
-      if (target) persisted = persistMatchingVideo(video, target, slug);
+      if (target) persisted = persistMatchingVideo(video, target, slug, event);
+      if (persisted) {
+        disableRouteMediaSnapshots(event.newDocument);
+        skipRouteSnapshotTransition(event);
+      }
     }, { once: true });
     document.addEventListener('astro:after-swap', () => {
       if (persisted && video.isConnected) {
         cancelRouteVideo(video, slug);
         video.dataset.routeVideoRestored = 'true';
+        animatePersistedRouteMedia(video, handoff, slug, 1);
+        const resumePlayback = video.dataset.routeMediaWasPlaying === 'true';
+        video.removeAttribute('data-route-media-was-playing');
+        if (resumePlayback && video.paused) void video.play().catch(() => undefined);
+        restoreRouteMediaSnapshots();
         return;
       }
       const target = document.querySelector<HTMLVideoElement>(
@@ -258,6 +252,9 @@ const tabletColumnStarts = tabletColumns.map((column, index) =>
       );
       if (target) void restoreRouteVideo(target, slug);
     }, { once: true });
+    window.setTimeout(() => {
+      if (document.querySelector('[data-project-grid]')) restoreRouteMediaSnapshots();
+    }, 2_000);
   };
 
   const preparePersistedStillPhoto = (link: HTMLAnchorElement): boolean => {
@@ -265,19 +262,33 @@ const tabletColumnStarts = tabletColumns.map((column, index) =>
     const source = link.querySelector<HTMLElement>('.project-card__media');
     const slug = link.dataset.projectSlug
       || link.closest<HTMLElement>('[data-project-card]')?.dataset.galleryItemId;
-    if (!source || !slug || !source.querySelector('.responsive-image')) return false;
+    const sourceImage = source?.querySelector<HTMLElement>('.responsive-image');
+    if (!source || !sourceImage || !slug) return false;
+    const handoff = captureRouteMediaHandoff(sourceImage, source);
+    if (!handoff) return false;
+    disableRouteMediaSnapshots(document);
+    let persisted: HTMLElement | undefined;
 
     document.addEventListener('astro:before-swap', (event) => {
       const target = event.newDocument.querySelector<HTMLElement>(
-        '[data-project-hero-media][data-first-media="true"], [data-gallery-photo-primary]',
+        '[data-project-hero-media][data-first-media="true"]',
       );
       if (!target) return;
-      const persisted = persistResponsiveImage(source, target, slug);
+      persisted = persistResponsiveImage(source, target, slug, event);
       if (persisted) {
         source.dataset.routeTransitionSource = 'still-persisted';
         target.dataset.routeTransitionTarget = 'still-persisted';
+        disableRouteMediaSnapshots(event.newDocument);
+        skipRouteSnapshotTransition(event);
       }
     }, { once: true });
+    document.addEventListener('astro:after-swap', () => {
+      if (persisted) animatePersistedRouteMedia(persisted, handoff, slug);
+      restoreRouteMediaSnapshots();
+    }, { once: true });
+    window.setTimeout(() => {
+      if (document.querySelector('[data-project-grid]')) restoreRouteMediaSnapshots();
+    }, 2_000);
     return true;
   };
 
@@ -375,7 +386,7 @@ const tabletColumnStarts = tabletColumns.map((column, index) =>
       }
       document.documentElement.style.removeProperty('view-transition-name');
       document.querySelectorAll<HTMLElement>(
-        '[data-project-grid] .project-card__media, [data-project-hero-media], [data-gallery-photo-primary]',
+        '[data-project-grid] .project-card__media, [data-project-hero-media]',
       ).forEach((candidate) => {
         candidate.style.removeProperty('view-transition-name');
         candidate.style.removeProperty('visibility');
@@ -387,8 +398,9 @@ const tabletColumnStarts = tabletColumns.map((column, index) =>
       if (!newDocument) return;
       newDocument.documentElement.style.viewTransitionName = 'none';
       newDocument.querySelectorAll<HTMLElement>(
-        '[data-project-hero-media], [data-gallery-photo-primary]',
+        '[data-project-hero-media]',
       ).forEach((candidate) => { candidate.style.viewTransitionName = 'none'; });
+      skipRouteSnapshotTransition(event);
 
       const placeholder = newDocument.createElement('div');
       placeholder.setAttribute('data-astro-transition-persist', stillPhotoHandoffPersistKey);
@@ -406,7 +418,7 @@ const tabletColumnStarts = tabletColumns.map((column, index) =>
       });
 
       const target = document.querySelector<HTMLElement>(
-        '[data-project-hero-media][data-first-media="true"], [data-gallery-photo-primary]',
+        '[data-project-hero-media][data-first-media="true"]',
       );
       if (!target) {
         cleanup();
@@ -780,10 +792,12 @@ const tabletColumnStarts = tabletColumns.map((column, index) =>
 
         event.preventDefault();
         link.dataset.navigationPending = 'true';
-        preserveSelectedPreview(link);
-        const isStillTransition = !link.querySelector('[data-preview-video]');
-        const usesPersistedStill = isStillTransition && supportsRouteMediaPersistence();
-        if (!isStillTransition || usesPersistedStill) prepareGalleryRouteTransition(link);
+        const previewVideo = link.querySelector<HTMLVideoElement>('[data-preview-video]');
+        const hasLivePreview = routeVideoIsVisiblyPlaying(previewVideo);
+        if (hasLivePreview) preserveSelectedPreview(link);
+        const isStillTransition = !hasLivePreview;
+        const usesPersistedMedia = supportsRouteMediaPersistence();
+        if (!usesPersistedMedia) prepareGalleryRouteTransition(link);
 
         const slug = link.dataset.projectSlug
           || link.closest<HTMLElement>('[data-project-card]')?.dataset.galleryItemId;
@@ -801,10 +815,15 @@ const tabletColumnStarts = tabletColumns.map((column, index) =>
           }));
         }
 
-        await waitForDetailPoster(link);
-        if (isStillTransition) {
-          if (usesPersistedStill) preparePersistedStillPhoto(link);
-          else prepareStillPhotoHandoff(link);
+        if (usesPersistedMedia) {
+          // The selected responsive image is already decoded and is the node we
+          // transport. Warm the larger candidate concurrently instead of
+          // holding the click for a network round trip before motion can begin.
+          if (isStillTransition) preparePersistedStillPhoto(link);
+          void loadDetailPoster(link, 'high');
+        } else {
+          await waitForDetailPoster(link);
+          if (isStillTransition) prepareStillPhotoHandoff(link);
         }
         try {
           await navigate(link.href);

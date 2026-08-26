@@ -282,7 +282,7 @@
     color: #101010;
   }
   .video-controls button { padding: .6rem .8rem; }
-  .video-controls [data-video-play] {
+  .video-controls :is([data-video-play], [data-video-mute], [data-video-fullscreen]) {
     display: grid;
     width: 44px;
     padding: 0;
@@ -296,7 +296,9 @@
   }
   .media-control-icon svg { display: block; width: 100%; height: 100%; }
   [data-video-action="play"] .media-control-icon--pause,
-  [data-video-action="pause"] .media-control-icon--play { display: none; }
+  [data-video-action="pause"] .media-control-icon--play,
+  [data-video-muted="true"] .media-control-icon--volume-on,
+  [data-video-muted="false"] .media-control-icon--volume-off { display: none; }
   .reel__caption { margin-top: .65rem; font-size: var(--text-sm); }
 
   .notes-strip { padding-bottom: clamp(5rem, 10vw, 10rem); }

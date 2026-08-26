@@ -2,6 +2,22 @@ import { expect, test } from '@playwright/test';
 
 test.use({ javaScriptEnabled: false });
 
+test('the About experience remains complete and navigable without JavaScript', async ({page}) => {
+  const response = await page.goto('/about');
+  expect(response?.status()).toBe(200);
+
+  const reel = page.locator('[data-reel-experience]');
+  await expect(reel.locator('.reel-motion-stage')).toBeHidden();
+  await expect(reel.locator('.reel-static-fallback')).toBeVisible();
+  await expect(reel.locator('.reel-fallback-card')).toHaveCount(6);
+  await expect(page.getByRole('heading', {
+    level: 1,
+    name: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
+  }))
+    .toBeVisible();
+  await expect(page.getByRole('link', {name: 'Start a project'}).last()).toHaveAttribute('href', '/contact');
+});
+
 test('the work index and film fallback remain useful without JavaScript', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1_000 });
   const homeResponse = await page.goto('/');
@@ -78,82 +94,4 @@ test('the work index and film fallback remain useful without JavaScript', async 
   await expect(page.locator('[data-project-overlay-return]')).toHaveAttribute('href', /\/$/u);
   await expect(page.locator('[data-project-overlay-fallback] img')).not.toHaveCount(0);
   await expect(page.locator('.lazy-embed iframe')).toHaveCount(0);
-});
-
-test('the About profiles remain complete, readable, and ordered without JavaScript', async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 1_000 });
-  const response = await page.goto('/about');
-  expect(response?.status()).toBe(200);
-
-  const about = page.locator('[data-about-page]');
-  const people = about.locator('[data-about-people]');
-  const profiles = people.locator('[data-about-person]');
-  await expect(about).toBeVisible();
-  await expect(page.getByRole('heading', { level: 1, name: 'About', exact: true })).toBeVisible();
-  await expect(people.getByRole('heading', { level: 2, name: 'The Creatives', exact: true })).toBeVisible();
-  await expect(profiles).toHaveCount(2);
-  await expect(profiles.nth(0)).toHaveAttribute('data-about-person', 'michael');
-  await expect(profiles.nth(1)).toHaveAttribute('data-about-person', 'oliver');
-  await expect(profiles.nth(0).getByRole('heading', { level: 3, name: 'Michael', exact: true })).toBeVisible();
-  await expect(profiles.nth(1).getByRole('heading', { level: 3, name: 'Oliver', exact: true })).toBeVisible();
-  await expect(about.locator('[data-about-capabilities]')).toBeVisible();
-
-  for (const profile of await profiles.all()) {
-    const copy = profile.locator('[data-about-person-copy]');
-    const media = profile.locator('[data-about-person-media]');
-    const links = media.locator('[data-about-work-item]');
-    const expectedItems = 5;
-    await expect(copy).toBeVisible();
-    await expect(copy.locator('p')).not.toHaveCount(0);
-    await expect(media).toBeVisible();
-    await expect(links).toHaveCount(expectedItems);
-
-    for (const link of await links.all()) {
-      await link.scrollIntoViewIfNeeded();
-      await expect(link).toBeVisible();
-      await expect(link).toHaveAccessibleName(/\S/u);
-      expect((await link.innerText()).trim()).not.toBe('');
-      const image = link.locator('img');
-      await expect(image).toHaveCount(1);
-      await expect(image).toHaveAttribute('alt', '');
-      await expect.poll(() => image.evaluate((element) => (element as HTMLImageElement).naturalWidth))
-        .toBeGreaterThan(0);
-    }
-  }
-
-  const staticVisibility = await about.evaluate((element) => ({
-    hidden: [...element.querySelectorAll<HTMLElement>('[data-motion-reveal], [data-motion-split]')].filter((item) => {
-      const styles = getComputedStyle(item);
-      return styles.opacity === '0' || styles.visibility === 'hidden' || styles.display === 'none';
-    }).length,
-    overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
-  }));
-  expect(staticVisibility).toEqual({ hidden: 0, overflow: 0 });
-
-  await page.setViewportSize({ width: 320, height: 700 });
-  await page.locator('[data-about-person="oliver"]').scrollIntoViewIfNeeded();
-  const mobileLayout = await profiles.evaluateAll((items) => ({
-    overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
-    profiles: items.map((profile) => {
-      const copy = profile.querySelector<HTMLElement>('[data-about-person-copy]')?.getBoundingClientRect();
-      const media = profile.querySelector<HTMLElement>('[data-about-person-media]')?.getBoundingClientRect();
-      return {
-        copy: copy ? { left: copy.left, right: copy.right, bottom: copy.bottom, width: copy.width } : null,
-        media: media ? { top: media.top, left: media.left, right: media.right, width: media.width } : null,
-      };
-    }),
-  }));
-  expect(mobileLayout.overflow).toBeLessThanOrEqual(0);
-  for (const profile of mobileLayout.profiles) {
-    expect(profile.copy).not.toBeNull();
-    expect(profile.media).not.toBeNull();
-    if (!profile.copy || !profile.media) continue;
-    expect(profile.copy.width).toBeGreaterThan(0);
-    expect(profile.media.width).toBeGreaterThan(0);
-    expect(profile.copy.left).toBeGreaterThanOrEqual(-1);
-    expect(profile.copy.right).toBeLessThanOrEqual(321);
-    expect(profile.media.left).toBeGreaterThanOrEqual(-1);
-    expect(profile.media.right).toBeLessThanOrEqual(321);
-    expect(profile.copy.bottom).toBeLessThanOrEqual(profile.media.top + 1);
-  }
 });

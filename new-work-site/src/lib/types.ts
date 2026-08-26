@@ -9,8 +9,9 @@ export type ProjectTheme = 'light' | 'warm' | 'dark' | 'accent';
 export type TitleTreatment = 'standard' | 'stacked' | 'oversized' | 'split';
 export type HeroTreatment = 'contained' | 'fullViewport' | 'split' | 'masked';
 export type ProjectLayoutVariant = 'cinematic' | 'photoEssay' | 'campaign' | 'experimental';
+export type WorkTemplate = 'photo' | 'video' | 'featured';
 export type MotionIntensity = 'low' | 'medium' | 'high';
-export type NavigationDestination = 'work' | 'about' | 'notes' | 'contact';
+export type NavigationDestination = 'work' | 'reel' | 'about' | 'notes' | 'contact';
 
 export interface FocalPoint {
   x: number;
@@ -195,6 +196,9 @@ export interface ProjectView {
   role?: string;
   contributors: Contributor[];
   shortDescription?: string;
+  template: WorkTemplate;
+  photos: WorkPhotoView[];
+  defaultPhotoId?: string;
   cover: CoverView;
   contentBlocks: ContentBlockView[];
   credits: Credit[];
@@ -219,9 +223,26 @@ export interface ProjectView {
   seo?: SeoFields;
 }
 
+export interface WorkPhotoView {
+  id: string;
+  title?: string;
+  image: ImageView;
+}
+
 export interface WorkGalleryPlacementView {
   _key: string;
-  projectId: string;
+  workId: string;
+  photoId?: string;
+  cardSize: HomeCardSize;
+  treatment: HomeTreatment;
+}
+
+export interface WorkGalleryEntryView {
+  id: string;
+  work: ProjectView;
+  photo?: WorkPhotoView;
+  image: ImageView;
+  href: string;
   cardSize: HomeCardSize;
   treatment: HomeTreatment;
 }
@@ -258,6 +279,21 @@ export interface ReelView {
   ctaLabel?: string;
   ctaUrl?: string;
   aspectRatio?: string;
+}
+
+export interface ReelPageView {
+  enabled: boolean;
+  introEyebrow: string;
+  introHeadline: string;
+  introCue: string;
+  fallbackEyebrow: string;
+  fallbackHeadline: string;
+  fallbackDescription: string;
+  closingEyebrow: string;
+  closingHeadline: string;
+  ctaLabel: string;
+  ctaDestination: 'work' | 'contact';
+  seo?: SeoFields;
 }
 
 export interface AboutWorkView {
@@ -312,6 +348,7 @@ export interface SiteSettingsView {
   location?: string;
   socialLinks: Array<{ _key?: string; label: string; url: string }>;
   reel: ReelView;
+  reelPage: ReelPageView;
   notesEnabled: boolean;
   defaultSeo: SeoFields;
   footer: FooterSettingsView;
@@ -332,6 +369,7 @@ export interface SiteContent {
   mode: ContentMode;
   settings: SiteSettingsView;
   projects: ProjectView[];
+  galleryEntries: WorkGalleryEntryView[];
   notes: NoteView[];
 }
 

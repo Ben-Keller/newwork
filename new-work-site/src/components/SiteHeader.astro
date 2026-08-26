@@ -42,7 +42,7 @@ const {
 } = Astro.props;
 
 const defaultItems: NavItem[] = [
-  { href: withBase('/'), label: 'Work', match: 'section' },
+  { href: withBase('/#work-gallery'), label: 'Work', match: 'section' },
   { href: withBase('/about'), label: 'About', match: 'section' },
   ...(showNotes ? [{ href: withBase('/notes'), label: 'Notes', match: 'section' as const }] : []),
   { href: withBase('/contact'), label: 'Contact', match: 'section' },

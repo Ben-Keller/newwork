@@ -15,8 +15,8 @@ export const PUBLIC_PROJECT_FILTER = `
   (defined(editorialStatus) || needsReview != true) &&
   doNotPublishWithoutExplicitApproval != true &&
   (!defined(publishAt) || publishAt <= now()) &&
-  defined(cover.poster.asset) &&
-  (length(coalesce(cover.alt, "")) > 0 || cover.decorative == true) &&
+  ((template == "photo" && defined(defaultPhoto->image.asset)) || (template != "photo" && defined(cover.poster.asset))) &&
+  (template == "photo" || length(coalesce(cover.alt, "")) > 0 || cover.decorative == true) &&
   cover.needsReview != true &&
   cover.previewIsPlaceholder != true &&
   cover.prototypeOnly != true &&
@@ -56,7 +56,7 @@ export const PUBLIC_PROJECT_FILTER = `
   seo.shareImage.needsApprovedMaster != true &&
   seo.shareImage.previewIsPlaceholder != true &&
   seo.shareImage.doNotPublishWithoutExplicitApproval != true &&
-  count(contentBlocks[_type in ["heroImage", "heroVideo", "fullBleedImage", "containedImage", "imagePair", "imageGrid", "video", "shortLoop"]]) > 0 &&
+  ((template == "photo" && count(photos) >= 2) || count(contentBlocks[_type in ["heroImage", "heroVideo", "fullBleedImage", "containedImage", "imagePair", "imageGrid", "video", "shortLoop"]]) > 0) &&
   count(contentBlocks[
     needsReview == true ||
     prototypeOnly == true ||
@@ -258,13 +258,28 @@ const PUBLIC_BLOCK_PROJECTION = `{
   _type == "caption" => {text, credit, association}
 }`
 
+const WORK_PHOTO_PROJECTION = `{
+  _id,
+  title,
+  image${IMAGE_PROJECTION},
+  alt,
+  decorative,
+  caption,
+  credit,
+  ${INTERNAL_SAFETY_PROJECTION}
+}`
+
 const PROJECT_CARD_PROJECTION = `{
   _id,
+  _type,
   title,
   "slug": slug.current,
   owner,
   client,
   types,
+  "template": coalesce(template, select(layoutVariant == "photoEssay" => "photo", layoutVariant in ["campaign", "experimental"] => "featured", "video")),
+  "photos": photos[]->${WORK_PHOTO_PROJECTION},
+  "defaultPhoto": defaultPhoto->${WORK_PHOTO_PROJECTION},
   cover${COVER_PROJECTION},
   homeOrder,
   homeCardSize,
@@ -297,9 +312,24 @@ const REEL_PROJECTION = `{
 const WORK_PAGE_PROJECTION = `{
   introName,
   manifesto,
-  gallery[]{_key, "projectId": project->_id, cardSize, treatment},
+  gallery[]{_key, "workId": coalesce(work->_id, project->_id), "photoId": doorwayPhoto->_id, cardSize, treatment},
   reel${REEL_PROJECTION},
   notesEnabled,
+  seo${SEO_PROJECTION}
+}`
+
+const REEL_PAGE_PROJECTION = `{
+  enabled,
+  introEyebrow,
+  introHeadline,
+  introCue,
+  fallbackEyebrow,
+  fallbackHeadline,
+  fallbackDescription,
+  closingEyebrow,
+  closingHeadline,
+  ctaLabel,
+  ctaDestination,
   seo${SEO_PROJECTION}
 }`
 
@@ -356,6 +386,7 @@ const SITE_SETTINGS_PROJECTION = `{
   compactMark{format, image${IMAGE_PROJECTION}, file${FILE_PROJECTION}},
   defaultSeo${SEO_PROJECTION},
   "workPage": *[_id == "workPage"][0]${WORK_PAGE_PROJECTION},
+  "reelPage": *[_id == "reelPage"][0]${REEL_PAGE_PROJECTION},
   "aboutPage": *[_id == "aboutPage"][0]${PUBLIC_ABOUT_PAGE_PROJECTION},
   "contactPage": *[_id == "contactPage"][0]${CONTACT_PAGE_PROJECTION},
   "footer": *[_id == "footerSettings"][0]${FOOTER_PROJECTION}
@@ -368,6 +399,7 @@ const PREVIEW_SITE_SETTINGS_PROJECTION = `{
   compactMark{format, image${IMAGE_PROJECTION}, file${FILE_PROJECTION}},
   defaultSeo${SEO_PROJECTION},
   "workPage": *[_id == "workPage"][0]${WORK_PAGE_PROJECTION},
+  "reelPage": *[_id == "reelPage"][0]${REEL_PAGE_PROJECTION},
   "aboutPage": *[_id == "aboutPage"][0]${PREVIEW_ABOUT_PAGE_PROJECTION},
   "contactPage": *[_id == "contactPage"][0]${CONTACT_PAGE_PROJECTION},
   "footer": *[_id == "footerSettings"][0]${FOOTER_PROJECTION}
@@ -387,23 +419,27 @@ export const SITE_SETTINGS_QUERY = defineQuery(/* groq */ `*[_id == "siteSetting
 
 export const PREVIEW_SITE_SETTINGS_QUERY = defineQuery(/* groq */ `*[_id == "siteSettings"][0]${PREVIEW_SITE_SETTINGS_PROJECTION}`)
 
-export const HOME_PROJECTS_QUERY = defineQuery(/* groq */ `*[_type == "project" && featuredOnHome == true && ${PUBLIC_PROJECT_FILTER}]
+export const HOME_PROJECTS_QUERY = defineQuery(/* groq */ `*[_type in ["work", "project"] && featuredOnHome == true && ${PUBLIC_PROJECT_FILTER}]
   | order(homeOrder asc) ${PROJECT_CARD_PROJECTION}`)
 
-export const ALL_PUBLIC_PROJECTS_QUERY = defineQuery(/* groq */ `*[_type == "project" && ${PUBLIC_PROJECT_FILTER}]
+export const ALL_PUBLIC_PROJECTS_QUERY = defineQuery(/* groq */ `*[_type in ["work", "project"] && ${PUBLIC_PROJECT_FILTER}]
   | order(homeOrder asc) ${PROJECT_CARD_PROJECTION}`)
 
-export const PUBLIC_PROJECT_SLUGS_QUERY = defineQuery(/* groq */ `*[_type == "project" && ${PUBLIC_PROJECT_FILTER}]
+export const PUBLIC_PROJECT_SLUGS_QUERY = defineQuery(/* groq */ `*[_type in ["work", "project"] && ${PUBLIC_PROJECT_FILTER}]
   | order(homeOrder asc)[]{"slug": slug.current}`)
 
 const PROJECT_DETAIL_FIELDS = `
   _id,
+  _type,
   title,
   "slug": slug.current,
   owner,
   client,
   year,
   types,
+  "template": coalesce(template, select(layoutVariant == "photoEssay" => "photo", layoutVariant in ["campaign", "experimental"] => "featured", "video")),
+  "photos": photos[]->${WORK_PHOTO_PROJECTION},
+  "defaultPhoto": defaultPhoto->${WORK_PHOTO_PROJECTION},
   role,
   contributors[]{_key, name, role},
   shortDescription,
@@ -437,7 +473,7 @@ const PROJECT_DETAIL_PROJECTION = `{
   "doNotPublishWithoutExplicitApproval": false
 }`
 
-export const ALL_PUBLIC_PROJECT_DETAILS_QUERY = defineQuery(/* groq */ `*[_type == "project" && ${PUBLIC_PROJECT_FILTER}]
+export const ALL_PUBLIC_PROJECT_DETAILS_QUERY = defineQuery(/* groq */ `*[_type in ["work", "project"] && ${PUBLIC_PROJECT_FILTER}]
   | order(homeOrder asc) ${PROJECT_DETAIL_PROJECTION}`)
 
 const PREVIEW_PROJECT_PROJECTION = `{
@@ -451,16 +487,16 @@ const PREVIEW_PROJECT_PROJECTION = `{
   doNotPublishWithoutExplicitApproval
 }`
 
-export const PREVIEW_PROJECT_DETAILS_QUERY = defineQuery(/* groq */ `*[_type == "project"]
+export const PREVIEW_PROJECT_DETAILS_QUERY = defineQuery(/* groq */ `*[_type in ["work", "project"]]
   | order(homeOrder asc) ${PREVIEW_PROJECT_PROJECTION}`)
 
-export const PROJECT_BY_SLUG_QUERY = defineQuery(/* groq */ `*[_type == "project" && slug.current == $slug && ${PUBLIC_PROJECT_FILTER}][0]
+export const PROJECT_BY_SLUG_QUERY = defineQuery(/* groq */ `*[_type in ["work", "project"] && slug.current == $slug && ${PUBLIC_PROJECT_FILTER}][0]
   ${PROJECT_DETAIL_PROJECTION}`)
 
 export const PROJECT_NEIGHBORS_QUERY = defineQuery(/* groq */ `{
-  "previous": *[_type == "project" && ${PUBLIC_PROJECT_FILTER} && homeOrder < $homeOrder]
+  "previous": *[_type in ["work", "project"] && ${PUBLIC_PROJECT_FILTER} && homeOrder < $homeOrder]
     | order(homeOrder desc)[0] ${PROJECT_CARD_PROJECTION},
-  "next": *[_type == "project" && ${PUBLIC_PROJECT_FILTER} && homeOrder > $homeOrder]
+  "next": *[_type in ["work", "project"] && ${PUBLIC_PROJECT_FILTER} && homeOrder > $homeOrder]
     | order(homeOrder asc)[0] ${PROJECT_CARD_PROJECTION}
 }`)
 
@@ -520,7 +556,7 @@ export const NOTE_BY_SLUG_QUERY = defineQuery(/* groq */ `*[_type == "note" && s
 }`)
 
 export const SITEMAP_QUERY = defineQuery(/* groq */ `{
-  "projects": *[_type == "project" && ${PUBLIC_PROJECT_FILTER}][]{"slug": slug.current},
+  "projects": *[_type in ["work", "project"] && ${PUBLIC_PROJECT_FILTER}][]{"slug": slug.current},
   "notes": *[_type == "note" && ${PUBLIC_NOTE_FILTER} &&
     *[_id == "workPage"][0].notesEnabled == true][]{"slug": slug.current}
 }`)

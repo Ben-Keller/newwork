@@ -661,7 +661,7 @@ function createMapper(
       navigation: keyedObjects(
         value.navigation ?? [
           {label: 'Work', destination: 'work', visible: true},
-          {label: 'About', destination: 'about', visible: true},
+          {label: 'About', destination: 'reel', visible: true},
           {label: 'Contact', destination: 'contact', visible: true},
         ],
         'navigationItem',
@@ -689,7 +689,14 @@ function createMapper(
 
     return withoutUndefined({
       ...fixtureFields,
-      _type: 'project',
+      _type: 'work',
+      template: value.template ?? (
+        value.layoutVariant === 'photoEssay'
+          ? 'photo'
+          : value.layoutVariant === 'campaign' || value.layoutVariant === 'experimental'
+            ? 'featured'
+            : 'video'
+      ),
       legacyId,
       slug,
       contributors: keyedObjects(value.contributors, 'contributor', projectSourceKey),
@@ -752,10 +759,11 @@ export function seedDocumentLookupKeys(document: JsonRecord): string[] {
   const keys: string[] = []
   if (typeof document._id === 'string' && document._id) keys.push(`id:${document._id}`)
   if (typeof document.legacyId === 'string' && document.legacyId) {
-    keys.push(`legacy:${type}:${document.legacyId}`, `id:${document.legacyId}`)
+    keys.push(`legacy:${type}:${document.legacyId}`, `legacy:${document.legacyId}`, `id:${document.legacyId}`)
   }
   const slug = slugFromDocument(document)
-  if (slug && ['project', 'note'].includes(type)) keys.push(`slug:${type}:${slug}`)
+  if (slug && ['work', 'project'].includes(type)) keys.push(`slug:portfolio:${slug}`)
+  if (slug && type === 'note') keys.push(`slug:note:${slug}`)
   return [...new Set(keys)]
 }
 
@@ -1113,7 +1121,7 @@ export async function runSanitySeed(): Promise<void> {
     `*[
       _id in $explicitIds ||
       legacyId in $legacyIds ||
-      (_type in ["project", "note"] && slug.current in $slugs)
+      (_type in ["work", "project", "note"] && slug.current in $slugs)
     ]`,
     {explicitIds, legacyIds, slugs},
   )
@@ -1164,7 +1172,7 @@ export async function runSanitySeed(): Promise<void> {
   await transaction.commit({autoGenerateArrayKeys: false})
 
   console.log(
-    `Seed complete: 1 site settings document, ${projectFixtures.length} projects, ${noteFixtures.length} notes, ${referencedPaths.length} deduplicated assets.`,
+    `Seed complete: 1 site settings document, ${projectFixtures.length} Work items, ${noteFixtures.length} notes, ${referencedPaths.length} deduplicated assets.`,
   )
   console.log(
     updateMode === 'force'

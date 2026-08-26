@@ -13,7 +13,8 @@ import {aboutPage} from './documents/aboutPage'
 import {contactPage} from './documents/contactPage'
 import {footerSettings} from './documents/footerSettings'
 import {mediaItem} from './documents/mediaItem'
-import {project} from './documents/project'
+import {work} from './documents/project'
+import {reelPage} from './documents/reelPage'
 import {siteSettings} from './documents/siteSettings'
 import {workPage} from './documents/workPage'
 import {brandAsset} from './objects/brandAsset'
@@ -34,15 +35,16 @@ import {socialLink} from './objects/socialLink'
 import {footerLine} from './objects/footerLine'
 import {footerLink} from './objects/footerLink'
 import {navigationItem} from './objects/navigationItem'
-import {projectPlacement} from './objects/projectPlacement'
+import {workPlacement} from './objects/projectPlacement'
 
 export const schemaTypes = [
   siteSettings,
   workPage,
+  reelPage,
   aboutPage,
   contactPage,
   footerSettings,
-  project,
+  work,
   mediaItem,
   note,
   portableText,
@@ -56,7 +58,7 @@ export const schemaTypes = [
   navigationItem,
   footerLine,
   footerLink,
-  projectPlacement,
+  workPlacement,
   contributor,
   credit,
   seoFields,

@@ -1,56 +1,5 @@
-import type { ImageView } from '../../lib/types';
+import type { ImageView, ProjectView, WorkPhotoView } from '../../lib/types';
 import { withBase } from '../../lib/base-path';
-
-export interface DevelopmentGalleryImage {
-  id: string;
-  label: string;
-  image: ImageView;
-  desktopColumn?: 1 | 2 | 3 | 4;
-  fixedDesktopColumn?: 1 | 2 | 3 | 4;
-  tabletColumn?: 1 | 2;
-}
-
-export interface DevelopmentGalleryPlaceholder {
-  title: string;
-  description: string;
-  opening: string;
-  closing: string;
-}
-
-const placeholderTitles = [
-  'Lorem ipsum',
-  'Dolor sit amet',
-  'Consectetur adipiscing',
-  'Adipiscing elit',
-  'Sed do eiusmod',
-  'Tempor incididunt',
-  'Labore et dolore',
-  'Magna aliqua',
-  'Ut enim ad minim',
-  'Veniam quis nostrud',
-  'Exercitation ullamco',
-  'Laboris nisi',
-  'Aliquip ex ea',
-  'Commodo consequat',
-  'Duis aute irure',
-  'Dolor in reprehenderit',
-  'Voluptate velit',
-  'Esse cillum',
-  'Fugiat nulla',
-  'Pariatur excepteur',
-  'Sint occaecat',
-  'Cupidatat non proident',
-  'Sunt in culpa',
-  'Qui officia',
-  'Deserunt mollit',
-] as const;
-
-export const developmentGalleryPlaceholder = (index: number): DevelopmentGalleryPlaceholder => ({
-  title: placeholderTitles[index] ?? 'Lorem ipsum',
-  description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.',
-  opening: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer posuere erat a ante venenatis dapibus posuere velit aliquet. Donec ullamcorper nulla non metus auctor fringilla.',
-  closing: 'Curabitur blandit tempus porttitor. Maecenas faucibus mollis interdum. Vestibulum id ligula porta felis euismod semper.',
-});
 
 const image = (filename: string, width: number, height: number, objectPosition = '50% 50%'): ImageView => ({
   src: withBase(`/media/images/michael/portfolio-expansion/${filename}.webp`),
@@ -72,14 +21,9 @@ const selectedImage = (filename: string, width: number, height: number, objectPo
 
 // Prototype-only portfolio edit. These files are already provenance-tracked in
 // the asset manifest but intentionally remain unnamed until editorial review.
-export const michaelDevelopmentGallery: readonly DevelopmentGalleryImage[] = [
+export const michaelWorkPhotos = [
   { id: 'michael-poolside-product', label: 'Michael — selected work', image: image('michael-poolside-product', 1440, 1800) },
-  {
-    id: 'michael-wow-rainbow-pavement',
-    label: 'Michael — selected work',
-    image: image('michael-wow-rainbow-pavement', 2200, 1466),
-    fixedDesktopColumn: 3,
-  },
+  { id: 'michael-wow-rainbow-pavement', label: 'Michael — selected work', image: image('michael-wow-rainbow-pavement', 2200, 1466) },
   { id: 'michael-food-test-sandwich', label: 'Michael — selected work', image: image('michael-food-test-sandwich', 1760, 2200) },
   { id: 'michael-aw50273-dark-portrait', label: 'Michael — selected work', image: image('michael-aw50273-dark-portrait', 1929, 1543) },
   { id: 'michael-ad-interior', label: 'Michael — selected work', image: image('michael-ad-interior', 1603, 1069) },
@@ -98,20 +42,54 @@ export const michaelDevelopmentGallery: readonly DevelopmentGalleryImage[] = [
   { id: 'michael-img8738-wedding-bw', label: 'Michael — selected work', image: image('michael-img8738-wedding-bw', 2200, 1821) },
   { id: 'michael-sports-product-graphic', label: 'Michael — selected work', image: image('michael-sports-product-graphic', 1226, 1533) },
   { id: 'michael-aw51026-court-portrait', label: 'Michael — selected work', image: image('michael-aw51026-court-portrait', 1633, 1633) },
-  {
-    id: 'michael-rob-summerlin-curlers',
-    label: 'Michael — selected work',
-    image: image('michael-rob-summerlin-curlers', 1665, 1665),
-    fixedDesktopColumn: 4,
-  },
+  { id: 'michael-rob-summerlin-curlers', label: 'Michael — selected work', image: image('michael-rob-summerlin-curlers', 1665, 1665) },
   { id: 'michael-aw59536-group', label: 'Michael — selected work', image: image('michael-aw59536-group', 2200, 2200) },
   { id: 'michael-img7198-portrait', label: 'Michael — selected work', image: image('michael-img7198-portrait', 1295, 1295) },
   { id: 'michael-aw59665-double-exposure', label: 'Michael — selected work', image: image('michael-aw59665-double-exposure', 2200, 2200) },
-  {
-    id: 'michael-native-stop-motion-still',
-    label: 'Michael — selected work',
-    image: selectedImage('michael_native_stop_motion-poster', 1166, 1166),
-    desktopColumn: 4,
-    tabletColumn: 2,
-  },
+  { id: 'michael-native-stop-motion-still', label: 'Michael — selected work', image: selectedImage('michael_native_stop_motion-poster', 1166, 1166) },
 ] as const;
+
+/**
+ * Prototype photography now follows the same Work contract as every other
+ * portfolio item. Individual images are doorways into this one photo Work;
+ * they are not standalone gallery records or standalone pages.
+ */
+export const michaelPhotoWork: ProjectView = {
+  id: 'work.michael-selected-photography',
+  title: 'Michael — Selected Photography',
+  slug: 'michael-selected-photography',
+  owner: 'michael',
+  types: ['Photography'],
+  template: 'photo',
+  photos: michaelWorkPhotos.map((item): WorkPhotoView => ({
+    id: item.id,
+    title: item.label,
+    image: item.image,
+  })),
+  defaultPhotoId: michaelWorkPhotos[0]?.id,
+  cover: {
+    poster: michaelWorkPhotos[0]!.image,
+    mediaType: 'still',
+    cardRatio: 'portrait',
+  },
+  contributors: [],
+  shortDescription: 'A selection of photography by Michael.',
+  contentBlocks: [],
+  credits: [],
+  whatWeDid: ['Photography'],
+  featuredOnHome: true,
+  homeOrder: 2,
+  homeCardSize: 'standard',
+  homeOffset: 0,
+  homeTreatment: 'standard',
+  projectTheme: 'warm',
+  titleTreatment: 'stacked',
+  heroTreatment: 'contained',
+  layoutVariant: 'photoEssay',
+  motionIntensity: 'medium',
+  editorialStatus: 'review',
+  visible: false,
+  needsReview: true,
+  doNotPublishWithoutExplicitApproval: false,
+  seo: {noIndex: true},
+};

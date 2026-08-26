@@ -12,7 +12,7 @@ import { getSiteContent } from '../lib/content';
 import { buildGalleryImageSizes } from '../lib/responsive-images';
 
 const content = await getSiteContent();
-const { settings, projects, notes, mode } = content;
+const { settings, projects, galleryEntries, notes, mode } = content;
 const homeProjects = mode === 'production' ? projects.filter((project) => project.featuredOnHome) : projects;
 const placeholderReelProject = projects.find((project) => project.slug === 'mercury-an-unexpected-life')
   ?? projects.find((project) => Boolean(project.cover.previewVideo));
@@ -25,11 +25,11 @@ const workReel = settings.reel.enabled
       mobileSource: placeholderReelProject?.cover.previewVideo,
       aspectRatio: '16 / 9',
     };
-const preloadProject = homeProjects[0];
-const preloadImageSizes = preloadProject
-  ? buildGalleryImageSizes(preloadProject.cover.poster, {
-      cardAspect: preloadProject.cover.cardRatio === 'wideFeature' ? 3 / 2 : 4 / 5,
-      mobileSource: preloadProject.cover.mobilePoster,
+const preloadEntry = galleryEntries[0];
+const preloadImageSizes = preloadEntry
+  ? buildGalleryImageSizes(preloadEntry.image, {
+      cardAspect: preloadEntry.work.cover.cardRatio === 'wideFeature' ? 3 / 2 : 4 / 5,
+      mobileSource: preloadEntry.photo ? undefined : preloadEntry.work.cover.mobilePoster,
     })
   : undefined;
 ---
@@ -47,8 +47,8 @@ const preloadImageSizes = preloadProject
     sameAs: settings.socialLinks.map((link) => link.url),
   }}
   pageClass="home-page"
-  preloadImage={preloadProject?.cover.poster}
-  preloadMobileImage={preloadProject?.cover.mobilePoster}
+  preloadImage={preloadEntry?.image}
+  preloadMobileImage={preloadEntry?.photo ? undefined : preloadEntry?.work.cover.mobilePoster}
   preloadImageSizes={preloadImageSizes}
 >
   <div class="logo-work-page" data-logo-work-page data-handoff="false" data-logo-page-ready="false">
@@ -60,7 +60,8 @@ const preloadImageSizes = preloadProject
       <div class="logo-work-page__title" data-logo-work-title>
         <LogoIntro siteName={settings.workIntroName} projects={homeProjects} />
       </div>
-      <ProjectGrid projects={homeProjects} mode={mode} />
+      <div id="work-gallery" class="logo-work-page__gallery-anchor" aria-hidden="true"></div>
+      <ProjectGrid entries={galleryEntries} mode={mode} />
       <GalleryBackdropCapture />
       <Manifesto text={settings.manifesto} />
       <NotesStrip notes={notes} mode={mode} />
@@ -101,6 +102,11 @@ const preloadImageSizes = preloadProject
   .logo-work-page__title {
     position: relative;
     z-index: 5;
+  }
+
+  .logo-work-page__gallery-anchor {
+    position: relative;
+    scroll-margin-block-start: clamp(4.75rem, 6.2vw, 6.5rem);
   }
 
   .logo-work-page__content {
@@ -174,6 +180,7 @@ const preloadImageSizes = preloadProject
     let touchStartY = 0;
     let touchLocked = false;
     let backgroundFrame = 0;
+    let galleryScrollFrame = 0;
     const backgroundCycleDuration = 60_000;
     const backgroundCycleStartedAt = performance.now();
     const backgroundStartingPhase = Math.random();
@@ -185,7 +192,9 @@ const preloadImageSizes = preloadProject
     const wheelMinimumHold = 520;
     const wheelMaximumHold = 900;
     const lockedKeys = new Set<string>();
+    const openAtGallery = window.location.hash === '#work-gallery';
     const restoreWorkOnLoad = (() => {
+      if (openAtGallery) return true;
       if (document.querySelector('[data-work-gallery][data-gallery-restore="true"]')) return true;
       try {
         return window.sessionStorage.getItem('new-work-restore-requested') === 'true';
@@ -209,6 +218,27 @@ const preloadImageSizes = preloadProject
       footer?.toggleAttribute('inert', !active);
       footer?.setAttribute('aria-hidden', String(!active));
       if (wasActive && !active) window.dispatchEvent(new Event('new-work:logo-reveal'));
+    };
+
+    const scrollToGallery = () => {
+      galleryScrollFrame = 0;
+      const anchor = document.querySelector<HTMLElement>('#work-gallery');
+      if (!anchor) return;
+      const headerHeight = header.getBoundingClientRect().height;
+      const top = window.scrollY + anchor.getBoundingClientRect().top - headerHeight;
+      window.scrollTo({ top: Math.max(0, top), left: 0, behavior: 'auto' });
+    };
+
+    const requestGalleryScroll = () => {
+      if (galleryScrollFrame) window.cancelAnimationFrame(galleryScrollFrame);
+      galleryScrollFrame = window.requestAnimationFrame(() => {
+        galleryScrollFrame = window.requestAnimationFrame(scrollToGallery);
+      });
+    };
+
+    const revealGallery = () => {
+      setHandoff(true);
+      requestGalleryScroll();
     };
 
     const automaticColor = (hue: number) => {
@@ -382,14 +412,21 @@ const preloadImageSizes = preloadProject
     window.addEventListener('keyup', handleKeyUp, { signal: controller.signal });
     window.addEventListener('click', handlePageClick, { signal: controller.signal });
     window.addEventListener('scroll', handleScrollFallback, { passive: true, signal: controller.signal });
+    window.addEventListener('hashchange', () => {
+      if (window.location.hash === '#work-gallery') revealGallery();
+    }, { signal: controller.signal });
+    header.querySelectorAll<HTMLAnchorElement>('a[href$="#work-gallery"]')
+      .forEach((link) => link.addEventListener('click', revealGallery, { signal: controller.signal }));
     page.dataset.logoPageReady = 'true';
     startAutomaticBackground();
     setHandoff(restoreWorkOnLoad);
+    if (openAtGallery) requestGalleryScroll();
 
     window.__newWorkLogoPageCleanup = () => {
       controller.abort();
       if (wheelReleaseTimer) window.clearTimeout(wheelReleaseTimer);
       if (backgroundFrame) window.cancelAnimationFrame(backgroundFrame);
+      if (galleryScrollFrame) window.cancelAnimationFrame(galleryScrollFrame);
       delete page.dataset.handoff;
       delete page.dataset.logoPageReady;
       delete document.body.dataset.logoHeaderVisible;

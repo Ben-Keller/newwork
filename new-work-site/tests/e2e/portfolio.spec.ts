@@ -43,6 +43,73 @@ test('the landing loads directly into the stacked typographic title while its en
   await expect(intro.locator('[data-type-title]')).toBeVisible();
 });
 
+test('opening gallery from the Work tab skips the title while keeping it directly above', async ({ page }) => {
+  await page.setViewportSize({ width: 1_440, height: 900 });
+  await page.goto('/about');
+  const desktopWorkLink = page.locator('[data-desktop-nav]').getByRole('link', { name: 'Work' });
+  await expect(desktopWorkLink).toHaveAttribute('href', '/#work-gallery');
+  await expect(page.locator('[data-mobile-menu-root] [data-menu-link]', { hasText: 'Work' }))
+    .toHaveAttribute('href', '/#work-gallery');
+
+  await desktopWorkLink.click({ noWaitAfter: true });
+  await page.waitForURL('**/#work-gallery');
+  await expect(page.locator('[data-logo-work-page]')).toHaveAttribute('data-handoff', 'true');
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(100);
+  await expect.poll(() => page.evaluate(() => {
+    const anchor = document.querySelector<HTMLElement>('#work-gallery')?.getBoundingClientRect();
+    const header = document.querySelector<HTMLElement>('[data-site-header]')?.getBoundingClientRect();
+    return Math.abs((anchor?.top ?? -1) - (header?.bottom ?? -1));
+  })).toBeLessThan(2);
+
+  const galleryLanding = await page.evaluate(() => {
+    const anchor = document.querySelector<HTMLElement>('#work-gallery')?.getBoundingClientRect();
+    const header = document.querySelector<HTMLElement>('[data-site-header]')?.getBoundingClientRect();
+    const intro = document.querySelector<HTMLElement>('[data-logo-intro]')?.getBoundingClientRect();
+    const visibleCards = [...document.querySelectorAll<HTMLElement>('[data-project-card]')]
+      .filter((card) => {
+        const box = card.getBoundingClientRect();
+        return box.bottom > 0 && box.top < window.innerHeight;
+      }).length;
+    return {
+      anchorTop: anchor?.top ?? -1,
+      headerBottom: header?.bottom ?? -1,
+      introBottom: intro?.bottom ?? -1,
+      visibleCards,
+    };
+  });
+  expect(Math.abs(galleryLanding.anchorTop - galleryLanding.headerBottom)).toBeLessThan(2);
+  expect(Math.abs(galleryLanding.introBottom - galleryLanding.headerBottom)).toBeLessThan(2);
+  expect(galleryLanding.visibleCards).toBeGreaterThan(0);
+
+  await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'auto' }));
+  await expect(page.locator('[data-logo-intro]')).toBeVisible();
+  const titleTop = await page.locator('[data-logo-intro]').evaluate((intro) => (
+    intro.getBoundingClientRect().top
+  ));
+  const headerBottom = await page.locator('[data-site-header]').evaluate((header) => (
+    header.getBoundingClientRect().bottom
+  ));
+  expect(Math.abs(titleTop - headerBottom)).toBeLessThan(2);
+
+  await desktopWorkLink.click();
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(100);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/about');
+  await page.locator('[data-mobile-menu-root]').getByRole('button', { name: 'Menu' }).click();
+  const mobileWorkLink = page.locator('[data-mobile-menu-root] [data-menu-link]', { hasText: 'Work' });
+  await expect(mobileWorkLink).toBeVisible();
+  await mobileWorkLink.click({ noWaitAfter: true });
+  await page.waitForURL('**/#work-gallery');
+  await expect(page.locator('[data-logo-work-page]')).toHaveAttribute('data-handoff', 'true');
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(100);
+  await expect.poll(() => page.evaluate(() => {
+    const anchor = document.querySelector<HTMLElement>('#work-gallery')?.getBoundingClientRect();
+    const header = document.querySelector<HTMLElement>('[data-site-header]')?.getBoundingClientRect();
+    return Math.abs((anchor?.top ?? -1) - (header?.bottom ?? -1));
+  })).toBeLessThan(2);
+});
+
 test('refreshing a scrolled route returns it to the top', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('[data-project-grid]')).toBeVisible();
@@ -130,14 +197,10 @@ test('the footer closes every route with a studio statement, directory, and over
   await page.goto('/');
   const footer = page.locator('[data-site-footer]');
   await expect(footer.locator('.site-footer__strapline p')).toHaveCount(4);
-  await expect(footer.getByRole('heading', { level: 2, name: 'People' })).toBeVisible();
+  await expect(footer.getByRole('heading', { level: 2, name: 'People' })).toHaveCount(0);
   await expect(footer.getByRole('heading', { level: 2, name: 'Explore' })).toBeVisible();
   await expect(footer.getByRole('heading', { level: 2, name: 'Connect' })).toBeVisible();
-  await expect(footer.locator('.site-footer__group--people a')).toHaveCount(2);
-  await expect(footer.locator('.site-footer__group--people a')).toHaveText([
-    'Michael',
-    'Oliver',
-  ]);
+  await expect(footer.locator('.site-footer__group--people')).toHaveCount(0);
   await expect(footer.getByRole('link', { name: 'hello@lorem.ipsum' })).toHaveCount(1);
   await expect(footer.locator('.site-footer__legal')).toContainText('New Work Agency');
 
@@ -149,13 +212,13 @@ test('the footer closes every route with a studio statement, directory, and over
     };
     const box = rect(element);
     const strapline = rect(element.querySelector('.site-footer__strapline'));
-    const people = rect(element.querySelector('.site-footer__group--people'));
+    const explore = rect(element.querySelector('.site-footer__group--explore'));
     const brand = rect(element.querySelector('.site-footer__brand'));
     const legal = rect(element.querySelector('.site-footer__legal'));
-    return { box, strapline, people, brand, legal, overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth };
+    return { box, strapline, explore, brand, legal, overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth };
   });
   expect(desktop.box.height).toBeGreaterThanOrEqual(900);
-  expect(desktop.strapline.right).toBeLessThanOrEqual(desktop.people.left + 1);
+  expect(desktop.strapline.right).toBeLessThanOrEqual(desktop.explore.left + 1);
   expect(desktop.brand.width).toBeGreaterThan(500);
   expect(Math.abs(desktop.brand.bottom - desktop.legal.bottom)).toBeLessThanOrEqual(4);
   expect(desktop.overflow).toBeLessThanOrEqual(1);
@@ -168,14 +231,12 @@ test('the footer closes every route with a studio statement, directory, and over
       return { top: box.top, right: box.right, bottom: box.bottom, left: box.left, width: box.width, height: box.height };
     };
     const box = rect(element);
-    const people = rect(element.querySelector('.site-footer__group--people'));
     const explore = rect(element.querySelector('.site-footer__group--explore'));
     const connect = rect(element.querySelector('.site-footer__group--connect'));
     const brand = rect(element.querySelector('.site-footer__brand'));
-    return { box, people, explore, connect, brand, overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth };
+    return { box, explore, connect, brand, overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth };
   });
   expect(mobile.box.height).toBeGreaterThanOrEqual(844);
-  expect(mobile.people.left).toBeLessThan(mobile.explore.left);
   expect(Math.abs(mobile.explore.left - mobile.connect.left)).toBeLessThanOrEqual(1);
   expect(mobile.brand.width).toBeGreaterThan(150);
   expect(mobile.overflow).toBeLessThanOrEqual(1);
@@ -506,193 +567,6 @@ async function expectGridColumns(page: Page, width: number, expectedColumns: num
   }
 }
 
-async function expectAboutLayout(page: Page, width: number, height: number) {
-  await page.setViewportSize({ width, height });
-  await page.goto('/about');
-
-  const about = page.locator('[data-about-page]');
-  const people = about.locator('[data-about-people]');
-  const profiles = people.locator('[data-about-person]');
-  const capabilities = about.locator('[data-about-capabilities]');
-
-  await expect(about).toBeVisible();
-  await expect(page.getByRole('heading', { level: 1, name: 'About', exact: true })).toHaveCount(1);
-  await expect(people.getByRole('heading', { level: 2, name: 'The Creatives', exact: true })).toHaveCount(1);
-  await expect(profiles).toHaveCount(2);
-  await expect(profiles.nth(0)).toHaveAttribute('data-about-person', 'michael');
-  await expect(profiles.nth(1)).toHaveAttribute('data-about-person', 'oliver');
-  await expect(profiles.nth(0).getByRole('heading', { level: 3, name: 'Michael', exact: true })).toHaveCount(1);
-  await expect(profiles.nth(1).getByRole('heading', { level: 3, name: 'Oliver', exact: true })).toHaveCount(1);
-  await expect(capabilities.getByRole('heading', { level: 2, name: 'Expertise', exact: true }))
-    .toHaveCount(1);
-  await expect(capabilities.locator('li')).toHaveCount(4);
-  await expect(about.locator(
-    '.about-intro__index, .about-person__number, .about-person__work-label, .about-work__index, .about-work__kicker',
-  )).toHaveCount(0);
-  await expect(about).not.toContainText(/selected work/iu);
-  await expect(capabilities.locator('li > span')).toHaveCount(0);
-
-  const headingOrder = await about.locator('h1, h2, h3').evaluateAll((headings) => headings.map((heading) => ({
-    level: heading.tagName,
-    text: heading.textContent?.trim() || '',
-  })));
-  const aboutIndex = headingOrder.findIndex(({ level, text }) => level === 'H1' && text === 'About');
-  const peopleIndex = headingOrder.findIndex(({ level, text }) => level === 'H2' && text === 'The Creatives');
-  const oliverIndex = headingOrder.findIndex(({ level, text }) => level === 'H3' && text === 'Oliver');
-  const michaelIndex = headingOrder.findIndex(({ level, text }) => level === 'H3' && text === 'Michael');
-  const capabilitiesIndex = headingOrder.findIndex(({ level, text }) => level === 'H2' && text === 'Expertise');
-  expect([aboutIndex, peopleIndex, michaelIndex, oliverIndex, capabilitiesIndex])
-    .toEqual([...([aboutIndex, peopleIndex, michaelIndex, oliverIndex, capabilitiesIndex])]
-      .sort((left, right) => left - right));
-  expect(aboutIndex).toBeGreaterThanOrEqual(0);
-
-  for (const profile of await profiles.all()) {
-    const copy = profile.locator('[data-about-person-copy]');
-    const media = profile.locator('[data-about-person-media]');
-    const links = media.locator('[data-about-work-item]');
-    const images = links.locator('img');
-    const owner = await profile.getAttribute('data-about-person');
-    const expectedItems = 5;
-
-    await expect(copy).toHaveCount(1);
-    expect((await copy.innerText()).trim().length).toBeGreaterThan(80);
-    await expect(copy.locator('p')).not.toHaveCount(0);
-    await expect(media).toHaveCount(1);
-    await expect(links).toHaveCount(expectedItems);
-    await expect(images).toHaveCount(expectedItems);
-    const workKeys = await links.evaluateAll((items) => items.map((item) => (
-      item as HTMLElement
-    ).dataset.aboutWorkKey));
-    if (owner === 'oliver') {
-      expect(workKeys).toEqual([
-        'tour-de-france-x-toyota',
-        'humu-make-work-better-holly',
-        'mercury-an-unexpected-life',
-        'mercury-one-of-the-greats',
-        'olympics-toyota-in-due-time',
-      ]);
-    } else if (owner === 'michael') {
-      expect(workKeys).toEqual([
-        'native-cucumber-mint-stop-motion',
-        'arc',
-        'cradlewise',
-        'specialized-globe',
-        'brava',
-      ]);
-    }
-    expect(await links.evaluateAll((items) => items.every((item) =>
-      getComputedStyle(item).clipPath === 'none'))).toBe(true);
-
-    for (const link of await links.all()) {
-      await expect(link).toHaveAccessibleName(/\S/u);
-      const visibleLines = (await link.innerText()).split(/\n+/u).map((line) => line.trim()).filter(Boolean);
-      expect(visibleLines.length).toBeGreaterThanOrEqual(2);
-      expect(visibleLines.join(' ')).not.toMatch(/draft|placeholder|needs? review/iu);
-      await expect(link.locator('img')).toHaveCount(1);
-      await expect(link.locator('img')).toHaveAttribute('alt', '');
-    }
-  }
-
-  await expect(page.locator('html')).toHaveAttribute('data-motion-runtime', 'static');
-  const staticMotion = await about.evaluate((element) => ({
-    hiddenReveals: [...element.querySelectorAll<HTMLElement>('[data-motion-reveal]')].filter((item) => {
-      const styles = getComputedStyle(item);
-      return item.dataset.motionReady !== 'static' || styles.opacity === '0' || styles.visibility === 'hidden';
-    }).length,
-    movingParallax: [...element.querySelectorAll<HTMLElement>('[data-motion-parallax]')].filter((item) =>
-      getComputedStyle(item).transform !== 'none').length,
-  }));
-  expect(staticMotion).toEqual({ hiddenReveals: 0, movingParallax: 0 });
-
-  const layout = await about.evaluate((element) => {
-    const toBox = (item: Element | null) => {
-      const box = item?.getBoundingClientRect();
-      return box
-        ? { top: box.top, right: box.right, bottom: box.bottom, left: box.left, width: box.width, height: box.height }
-        : null;
-    };
-    const profileElements = [...element.querySelectorAll<HTMLElement>('[data-about-person]')];
-    const peopleHeading = element.querySelector('[data-about-people] h2');
-    const capabilitiesHeading = element.querySelector('[data-about-capabilities] h2');
-
-    return {
-      viewportWidth: document.documentElement.clientWidth,
-      overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
-      peopleHeading: toBox(peopleHeading),
-      capabilitiesHeading: toBox(capabilitiesHeading),
-      profiles: profileElements.map((profile) => ({
-        owner: profile.dataset.aboutPerson,
-        profile: toBox(profile),
-        copy: toBox(profile.querySelector('[data-about-person-copy]')),
-        media: toBox(profile.querySelector('[data-about-person-media]')),
-        links: [...profile.querySelectorAll('[data-about-person-media] [data-about-work-item]')].map(toBox),
-        clips: [...profile.querySelectorAll<HTMLElement>('[data-about-person-media] [data-about-work-item]')]
-          .map((item) => getComputedStyle(item).clipPath),
-      })),
-    };
-  });
-
-  expect(layout.overflow).toBeLessThanOrEqual(1);
-  expect(layout.profiles).toHaveLength(2);
-  expect(layout.peopleHeading).not.toBeNull();
-  expect(layout.capabilitiesHeading).not.toBeNull();
-
-  for (const profile of layout.profiles) {
-    expect(profile.profile).not.toBeNull();
-    expect(profile.copy).not.toBeNull();
-    expect(profile.media).not.toBeNull();
-    if (!profile.profile || !profile.copy || !profile.media) continue;
-
-    for (const box of [profile.profile, profile.copy, profile.media, ...profile.links]) {
-      expect(box).not.toBeNull();
-      if (!box) continue;
-      expect(box.width).toBeGreaterThan(0);
-      expect(box.height).toBeGreaterThan(0);
-      expect(box.left).toBeGreaterThanOrEqual(-1);
-      expect(box.right).toBeLessThanOrEqual(layout.viewportWidth + 1);
-    }
-    expect(profile.clips.every((clip) => clip === 'none')).toBe(true);
-
-    if (width >= 768) {
-      const copyBeforeMedia = profile.copy.right <= profile.media.left + 1;
-      const mediaBeforeCopy = profile.media.right <= profile.copy.left + 1;
-      expect(copyBeforeMedia || mediaBeforeCopy).toBe(true);
-      const horizontalGap = copyBeforeMedia
-        ? profile.media.left - profile.copy.right
-        : profile.copy.left - profile.media.right;
-      expect(horizontalGap).toBeGreaterThanOrEqual(width >= 1200 ? 32 : 24);
-      expect(profile.copy.width).toBeGreaterThanOrEqual(width >= 1200 ? 340 : 280);
-      expect(profile.media.width).toBeGreaterThanOrEqual(width >= 1200 ? 500 : 400);
-      if (profile.owner === 'oliver') expect(profile.copy.left).toBeLessThan(profile.media.left);
-      if (profile.owner === 'michael') expect(profile.media.left).toBeLessThan(profile.copy.left);
-    } else {
-      expect(profile.copy.bottom).toBeLessThanOrEqual(profile.media.top + 1);
-      const internalGap = profile.media.top - profile.copy.bottom;
-      expect(internalGap).toBeGreaterThanOrEqual(20);
-      expect(internalGap).toBeLessThanOrEqual(64);
-    }
-  }
-
-  const firstProfile = layout.profiles[0]?.profile;
-  const secondProfile = layout.profiles[1]?.profile;
-  if (layout.peopleHeading && firstProfile) {
-    const peopleGap = firstProfile.top - layout.peopleHeading.bottom;
-    expect(peopleGap).toBeGreaterThanOrEqual(width >= 768 ? 32 : 24);
-    expect(peopleGap).toBeLessThanOrEqual(width >= 1200 ? 160 : width >= 768 ? 144 : 112);
-  }
-  if (firstProfile && secondProfile) {
-    const profileGap = secondProfile.top - firstProfile.bottom;
-    const minimumProfileGap = width >= 1200 ? 64 : width >= 768 ? 56 : 48;
-    expect(profileGap).toBeGreaterThanOrEqual(minimumProfileGap - 1);
-    expect(profileGap).toBeLessThanOrEqual(width >= 1200 ? 192 : width >= 768 ? 160 : 112);
-  }
-  if (secondProfile && layout.capabilitiesHeading) {
-    const capabilitiesGap = layout.capabilitiesHeading.top - secondProfile.bottom;
-    expect(capabilitiesGap).toBeGreaterThanOrEqual(width >= 768 ? 48 : 40);
-    expect(capabilitiesGap).toBeLessThanOrEqual(width >= 1200 ? 192 : width >= 768 ? 160 : 112);
-  }
-}
-
 test('the work index has exactly 4, 2, and 2 complete columns', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('[data-project-card]')).toHaveCount(28);
@@ -714,32 +588,29 @@ test('the work index has exactly 4, 2, and 2 complete columns', async ({ page })
   await expectGridColumns(page, 375, 2);
 });
 
-test('every standalone gallery photograph opens an image page and never routes through About', async ({ page }) => {
+test('every photo doorway opens its shared Work page and never routes through About', async ({ page }) => {
   await page.goto('/');
   const photoLinks = page.locator('[data-gallery-photo-link]');
   await expect(photoLinks).toHaveCount(14);
 
   const destinations = await photoLinks.evaluateAll((links) => links.map((link) =>
     (link as HTMLAnchorElement).getAttribute('href') || ''));
-  expect(destinations.every((href) => /^\/gallery\/[a-z\d-]+$/u.test(href))).toBe(true);
+  expect(destinations.every((href) => /^\/work\/michael-selected-photography\/[a-z\d-]+$/u.test(href))).toBe(true);
   expect(destinations.some((href) => href.includes('/about'))).toBe(false);
 
   const destination = destinations[0]!;
   await page.goto(destination);
   await expect(page.locator('[data-gallery-photo-page]')).toBeVisible();
-  await expect(page.locator('[data-gallery-photo-primary] img')).toBeVisible();
+  await expect(page.locator('[data-project-hero-media] img')).toBeVisible();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(/\S/u);
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex, nofollow');
 
-  await page.goto('/about');
-  await expect(page.locator('[data-about-page] img[src*="/portfolio-expansion/"]')).toHaveCount(0);
-  await expect(page.locator('[data-about-work-item][href^="/gallery/"]')).toHaveCount(0);
 });
 
-test('standalone gallery hero frames end exactly with their photographs', async ({ page }) => {
-  await page.goto('/gallery/michael-wow-rainbow-pavement');
+test('photo Work hero frames end exactly with their photographs', async ({ page }) => {
+  await page.goto('/work/michael-selected-photography/michael-wow-rainbow-pavement');
 
-  const geometry = await page.locator('[data-gallery-photo-primary]').evaluate((figure) => {
+  const geometry = await page.locator('[data-project-hero-media]').evaluate((figure) => {
     const image = figure.querySelector('img');
     if (!image) throw new Error('The gallery hero photograph is missing.');
     const figureRect = figure.getBoundingClientRect();
@@ -789,7 +660,7 @@ test('cover-cropped gallery photographs request enough raster pixels for their v
   await page.goto('/');
 
   const image = page.locator(
-    'a[href="/gallery/michael-wow-rainbow-pavement"] img[data-gallery-image]',
+    'a[href="/work/michael-selected-photography/michael-wow-rainbow-pavement"] img[data-gallery-image]',
   );
   await expect(image).toHaveAttribute('data-gallery-image-ready', 'true');
   const quality = await image.evaluate((element) => {
@@ -1346,12 +1217,14 @@ test('the manifesto reveals letters in direct proportion to reversible page scro
   await expect(statement).toHaveCSS('opacity', '1');
 });
 
-test('prototype filler copy completes the editorial review surfaces with its placeholder Reel', async ({ page }) => {
+test('prototype filler copy completes the editorial review surfaces', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/about');
-  await expect(page.locator('.about-intro__lead')).toContainText('Lorem ipsum dolor sit amet');
-  await expect(page.locator('.capabilities li')).toHaveCount(4);
-  await expect(page.locator('.about-intro__meta')).toHaveCount(0);
-  await expect(page.locator('main')).not.toContainText('Information');
+  await expect(page.locator('[data-reel-experience]')).toHaveAttribute('data-mode', 'fallback');
+  await expect(page.getByRole('heading', { level: 1, name: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.' }))
+    .toBeVisible();
+  await expect(page.getByRole('heading', { level: 2, name: 'What should we make next?' }))
+    .toBeVisible();
 
   await page.goto('/contact');
   await expect(page.getByRole('link', { name: 'hello@lorem.ipsum' })).toHaveCount(1);
@@ -1374,79 +1247,12 @@ test('prototype filler copy completes the editorial review surfaces with its pla
   await expect(page.locator('.notes-strip')).toHaveCount(0);
 });
 
-test('the About page presents Michael and Oliver as a responsive editorial sequence with reduced motion', async ({
-  page,
-}) => {
-  await page.emulateMedia({ reducedMotion: 'reduce' });
-  for (const viewport of [
-    { width: 1440, height: 1_000 },
-    { width: 1024, height: 768 },
-    { width: 390, height: 844 },
-    { width: 320, height: 700 },
-  ]) {
-    await expectAboutLayout(page, viewport.width, viewport.height);
-  }
-});
-
-test('About portfolio mosaics keep rectangular crops on hover and focus', async ({ page }) => {
-  test.setTimeout(45_000);
-  await page.emulateMedia({ reducedMotion: 'no-preference' });
-  await page.setViewportSize({ width: 1440, height: 1_000 });
-  await page.goto('/about');
-  test.skip(
-    !await page.evaluate(() => matchMedia('(hover: hover) and (pointer: fine)').matches),
-    'Tile emphasis is a fine-pointer enhancement.',
-  );
-
-  for (const owner of ['oliver', 'michael'] as const) {
-    const profile = page.locator(`[data-about-person="${owner}"]`);
-    const gallery = profile.locator('[data-about-mosaic]');
-    const items = gallery.locator('[data-about-work-item]');
-    const expectedItems = 5;
-    await expect(items).toHaveCount(expectedItems);
-    await gallery.scrollIntoViewIfNeeded();
-
-    const initial = await gallery.evaluate((element) => {
-      const box = element.getBoundingClientRect();
-      const items = [...element.querySelectorAll<HTMLElement>('[data-about-work-item]')];
-      return {
-        box: { width: box.width, height: box.height },
-        clips: items.map((item) => getComputedStyle(item).clipPath),
-        bounds: items.map((item) => {
-          const itemBox = item.getBoundingClientRect();
-          return { width: itemBox.width, height: itemBox.height };
-        }),
-      };
-    });
-    expect(initial.box.width).toBeGreaterThan(500);
-    expect(initial.box.height).toBeGreaterThan(400);
-    expect(initial.clips.every((clip) => clip === 'none')).toBe(true);
-    expect(initial.bounds.every((box) =>
-      box.width < initial.box.width && box.height <= initial.box.height)).toBe(true);
-
-    const pointerBox = await gallery.boundingBox();
-    if (!pointerBox) throw new Error(`${owner} mosaic is missing its rendered bounds.`);
-    await page.mouse.move(pointerBox.x + pointerBox.width * .12, pointerBox.y + pointerBox.height * .12);
-    await expect(items.first().locator('.about-work__caption')).toHaveCSS('opacity', '1');
-    expect(await items.evaluateAll((links) => links.every((link) =>
-      getComputedStyle(link).clipPath === 'none'))).toBe(true);
-    const hoveredVisual = await items.first().locator('.about-work__visual').evaluate((element) =>
-      new DOMMatrixReadOnly(getComputedStyle(element).transform).a);
-    expect(hoveredVisual).toBeGreaterThan(1.02);
-    const after = await gallery.boundingBox();
-    expect(after?.width).toBeCloseTo(initial.box.width, 0);
-    expect(after?.height).toBeCloseTo(initial.box.height, 0);
-
-    await items.last().focus();
-    await expect(items.last().locator('.about-work__caption')).toHaveCSS('opacity', '1');
-    await page.mouse.move(2, 2);
-  }
-});
-
 test('key routes render without editorial markers and remain noindex in prototype mode', async ({ page }) => {
+  test.setTimeout(60_000);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   const routes = [
     { path: '/', heading: 'Selected work', statuses: [200] },
-    { path: '/about', heading: 'About', statuses: [200] },
+    { path: '/about', heading: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.', statuses: [200] },
     { path: '/contact', heading: 'Contact', statuses: [200] },
     { path: '/work/arc', heading: 'Arc', statuses: [200] },
     { path: '/work/mercury-an-unexpected-life', heading: 'Mercury — An Unexpected Life', statuses: [200] },
@@ -1794,7 +1600,7 @@ test('route media keeps the original node continuous with a compatibility handof
   await page.setViewportSize({ width: 1_440, height: 1_000 });
 
   const supportsPersistentMedia = await page.goto('/').then(() => page.evaluate(() => (
-    typeof document.startViewTransition === 'function'
+    Boolean(document.querySelector('meta[name="astro-view-transitions-enabled"]'))
   )));
   if (supportsPersistentMedia) {
     for (const { selector, index } of [
@@ -1811,13 +1617,23 @@ test('route media keeps the original node continuous with a compatibility handof
       const probe = `still-${slug}-${Date.now()}`;
       await link.locator('.responsive-image').evaluate((element, value) => {
         element.setAttribute('data-continuity-probe', value);
+        (window as Window & { __routeStillNode?: Element }).__routeStillNode = element;
       }, probe);
 
       await link.evaluate((element) => (element as HTMLAnchorElement).click());
       await page.waitForURL((url) => url.pathname !== '/');
+      const outboundHandoff = page.locator(`[data-continuity-probe="${probe}"]`);
+      await expect(outboundHandoff).toHaveAttribute('data-continuity-probe', probe);
+      await expect(outboundHandoff).toHaveAttribute(
+        'data-route-media-handoff',
+        /^(?:animating|settled)$/u,
+      );
+      expect(await outboundHandoff.evaluate((element) => (
+        (window as Window & { __routeStillNode?: Element }).__routeStillNode === element
+      ))).toBe(true);
+      await expect(page.locator('[data-gallery-route-transition-style]')).toHaveCount(0);
       const heroImage = page.locator(
-        '[data-project-hero-media][data-first-media="true"] .responsive-image, '
-        + '[data-gallery-photo-primary] .responsive-image',
+        '[data-project-hero-media][data-first-media="true"] .responsive-image',
       );
       await expect(heroImage).toHaveAttribute('data-continuity-probe', probe);
       await expect(heroImage).toHaveAttribute('data-route-media-continuity', slug);
@@ -1829,6 +1645,15 @@ test('route media keeps the original node continuous with a compatibility handof
 
       await page.locator('[data-project-overlay-return]').click({ noWaitAfter: true });
       await page.waitForURL((url) => url.pathname === '/');
+      const returnHandoff = page.locator(`[data-continuity-probe="${probe}"]`);
+      await expect(returnHandoff).toHaveAttribute('data-continuity-probe', probe);
+      await expect(returnHandoff).toHaveAttribute(
+        'data-route-media-handoff',
+        /^(?:animating|settled)$/u,
+      );
+      expect(await returnHandoff.evaluate((element) => (
+        (window as Window & { __routeStillNode?: Element }).__routeStillNode === element
+      ))).toBe(true);
       const returnedImage = page.locator(
         `[data-gallery-item-id="${slug}"] .responsive-image`,
       );
@@ -1850,12 +1675,25 @@ test('route media keeps the original node continuous with a compatibility handof
     await motionPreview.evaluate(async (element) => {
       const video = element as HTMLVideoElement;
       video.dataset.continuityProbe = 'same-video-node';
+      video.dataset.playing = 'true';
+      (window as Window & { __routeVideoNode?: Element }).__routeVideoNode = video;
       video.currentTime = 1.25;
       await video.play();
     });
 
     await motionLink.click({ noWaitAfter: true });
     await page.waitForURL((url) => url.pathname !== '/');
+    const outboundVideoHandoff = page.locator('[data-continuity-probe="same-video-node"]');
+    await expect(outboundVideoHandoff).toBeAttached();
+    await expect(outboundVideoHandoff).toHaveAttribute(
+      'data-route-media-handoff',
+      /^(?:animating|settled)$/u,
+    );
+    expect(await outboundVideoHandoff.evaluate((video) => (
+      (window as Window & { __routeVideoNode?: Element }).__routeVideoNode === video
+    ))).toBe(true);
+    expect(await outboundVideoHandoff.evaluate((video) => (video as HTMLVideoElement).paused)).toBe(false);
+    await expect(page.locator('[data-gallery-route-transition-style]')).toHaveCount(0);
     const projectLoop = page.locator(
       '[data-project-hero-media][data-first-media="true"] video[data-short-loop]',
     );
@@ -1866,20 +1704,30 @@ test('route media keeps the original node continuous with a compatibility handof
     ))).toBeGreaterThan(1.25);
     await projectLoop.evaluate(async (element) => {
       const video = element as HTMLVideoElement;
-      video.currentTime = 2.5;
+      video.currentTime = .5;
       await video.play();
     });
 
     await page.locator('[data-project-overlay-return]').click({ noWaitAfter: true });
     await page.waitForURL((url) => url.pathname === '/');
+    const returnVideoHandoff = page.locator('[data-continuity-probe="same-video-node"]');
+    await expect(returnVideoHandoff).toBeAttached();
+    await expect(returnVideoHandoff).toHaveAttribute(
+      'data-route-media-handoff',
+      /^(?:animating|settled)$/u,
+    );
+    expect(await returnVideoHandoff.evaluate((video) => (
+      (window as Window & { __routeVideoNode?: Element }).__routeVideoNode === video
+    ))).toBe(true);
+    expect(await returnVideoHandoff.evaluate((video) => (video as HTMLVideoElement).paused)).toBe(false);
     const returnedPreview = page.locator(
       `[data-gallery-item-id="${motionSlug}"] [data-preview-video]`,
     );
     await expect(returnedPreview).toHaveAttribute('data-continuity-probe', 'same-video-node');
     await expect(returnedPreview).toHaveAttribute('data-route-video-persisted', 'true');
-    await expect.poll(() => returnedPreview.evaluate((video) => (
-      (video as HTMLVideoElement).currentTime
-    ))).toBeGreaterThan(2.5);
+  await expect.poll(() => returnedPreview.evaluate((video) => (
+    (video as HTMLVideoElement).currentTime
+  ))).toBeGreaterThan(.5);
     return;
   }
 
@@ -1949,7 +1797,7 @@ test('route media keeps the original node continuous with a compatibility handof
     await expect(handoff).toHaveAttribute('data-photo-route-handoff', 'animating');
     await expect(handoff).toHaveAttribute('data-photo-route-layout', 'ready');
     const projectTarget = page.locator(
-      '[data-project-hero-media][data-first-media="true"], [data-gallery-photo-primary]',
+      '[data-project-hero-media][data-first-media="true"]',
     );
     await expect(projectTarget).toBeAttached();
     const routeImages = handoff.locator('img');
@@ -1957,7 +1805,7 @@ test('route media keeps the original node continuous with a compatibility handof
     await expect(routeImages.first()).toHaveCSS('opacity', '1');
     const routeFraming = await routeImages.first().evaluate((element) => {
       const target = document.querySelector<HTMLElement>(
-        '[data-project-hero-media][data-first-media="true"], [data-gallery-photo-primary]',
+        '[data-project-hero-media][data-first-media="true"]',
       );
       const targetImage = target?.querySelector<HTMLImageElement>('img');
       const effect = element.getAnimations()[0]?.effect;
@@ -1982,7 +1830,7 @@ test('route media keeps the original node continuous with a compatibility handof
         const capture = () => {
           if (element.getAttribute('data-photo-route-handoff') !== 'settled') return;
           const target = document.querySelector<HTMLElement>(
-            '[data-project-hero-media][data-first-media="true"], [data-gallery-photo-primary]',
+            '[data-project-hero-media][data-first-media="true"]',
           );
           const targetImage = target?.querySelector<HTMLImageElement>('img');
           // Route handoffs align with the painted image. Photography figures
@@ -2177,11 +2025,188 @@ test('route media keeps the original node continuous with a compatibility handof
     .toHaveAttribute('data-gallery-entrance-state', 'settled');
 });
 
+test('landscape photo handoffs stay topmost and crop without distortion in both directions', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name.startsWith('mobile-'), 'The desktop landscape-to-portrait morph exercises the largest aspect-ratio change.');
+  await page.setViewportSize({ width: 1_440, height: 1_000 });
+  await page.goto('/');
+
+  type PortalCapture = {
+    frameRatio: number;
+    imageRatio: number;
+    objectFit: string;
+    position: string;
+    topmost: boolean;
+    viewTransitionName: string;
+    zIndex: number;
+  };
+  const beginNextPortalCapture = () => page.evaluate(() => {
+    const captureWindow = window as Window & {
+      __routePortalCapture?: Promise<PortalCapture | null>;
+    };
+    captureWindow.__routePortalCapture = new Promise<PortalCapture | null>((resolve) => {
+      let timeout = 0;
+      let interval = 0;
+      const inspect = (portal: HTMLElement) => {
+        const image = portal.querySelector('img');
+        if (!(image instanceof HTMLImageElement)) return false;
+        const frame = portal.getBoundingClientRect();
+        const centerX = frame.left + frame.width / 2;
+        const centerY = frame.top + frame.height / 2;
+        const previousPointerEvents = portal.style.pointerEvents;
+        // The production portal deliberately ignores input. Temporarily make
+        // it hit-testable so elementsFromPoint can verify its paint order.
+        portal.style.pointerEvents = 'auto';
+        const topElement = document.elementsFromPoint(centerX, centerY)[0];
+        portal.style.pointerEvents = previousPointerEvents;
+        const portalStyle = getComputedStyle(portal);
+        const imageStyle = getComputedStyle(image);
+        window.clearTimeout(timeout);
+        window.clearInterval(interval);
+        resolve({
+          frameRatio: frame.width / frame.height,
+          imageRatio: image.naturalWidth / image.naturalHeight,
+          objectFit: imageStyle.objectFit,
+          position: portalStyle.position,
+          topmost: topElement === portal || portal.contains(topElement),
+          viewTransitionName: portalStyle.viewTransitionName,
+          zIndex: Number(portalStyle.zIndex),
+        });
+        return true;
+      };
+      const scan = () => {
+        const portal = document.querySelector<HTMLElement>('[data-route-media-portal]');
+        if (portal) inspect(portal);
+      };
+      scan();
+      interval = window.setInterval(scan, 16);
+      timeout = window.setTimeout(() => {
+        window.clearInterval(interval);
+        resolve(null);
+      }, 3_000);
+    });
+  });
+  const readNextPortalCapture = () => page.evaluate(() => (
+    (window as Window & {
+      __routePortalCapture?: Promise<PortalCapture | null>;
+    }).__routePortalCapture ?? null
+  ));
+
+  const link = page.locator(
+    '[data-gallery-item-id="michael-selected-photography--michael-wow-rainbow-pavement"] a',
+  );
+  await link.scrollIntoViewIfNeeded();
+  await beginNextPortalCapture();
+  await link.click({ noWaitAfter: true });
+  await page.waitForURL('**/work/michael-selected-photography/michael-wow-rainbow-pavement');
+  const outboundPortal = await readNextPortalCapture();
+  expect(outboundPortal).not.toBeNull();
+  expect(outboundPortal?.position).toBe('fixed');
+  expect(outboundPortal?.viewTransitionName).toBe('none');
+  expect(outboundPortal?.zIndex).toBeGreaterThan(2_147_483_000);
+  expect(outboundPortal?.objectFit).toBe('cover');
+  expect(outboundPortal?.topmost).toBe(true);
+  expect(outboundPortal?.imageRatio).toBeGreaterThan(1.45);
+  expect(outboundPortal?.frameRatio).toBeGreaterThan(0);
+  await expect(page.locator('[data-gallery-photo-primary]')).toHaveCount(0);
+  await expect(page.locator('[data-route-media-portal]')).toHaveCount(0, { timeout: 2_000 });
+
+  await beginNextPortalCapture();
+  await page.locator('[data-project-overlay-return]').click({ noWaitAfter: true });
+  await page.waitForURL((url) => url.pathname === '/');
+  const returnPortal = await readNextPortalCapture();
+  expect(returnPortal).not.toBeNull();
+  expect(returnPortal?.position).toBe('fixed');
+  expect(returnPortal?.viewTransitionName).toBe('none');
+  expect(returnPortal?.zIndex).toBeGreaterThan(2_147_483_000);
+  expect(returnPortal?.objectFit).toBe('cover');
+  expect(returnPortal?.topmost).toBe(true);
+  expect(returnPortal?.imageRatio).toBeGreaterThan(1.45);
+  expect(returnPortal?.frameRatio).toBeGreaterThan(0);
+  await expect(page.locator('[data-route-media-portal]')).toHaveCount(0, { timeout: 2_000 });
+  await expect(page.locator(
+    '[data-gallery-item-id="michael-selected-photography--michael-wow-rainbow-pavement"] .project-card__media',
+  )).toBeVisible();
+});
+
+test('ClientRouter fallback preserves the exact media nodes without native snapshots', async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(Document.prototype, 'startViewTransition', {
+      configurable: true,
+      value: undefined,
+    });
+  });
+  await page.setViewportSize({ width: 1_440, height: 1_000 });
+  await page.goto('/');
+  expect(await page.evaluate(() => typeof document.startViewTransition)).toBe('undefined');
+
+  const stillLink = page.locator('[data-project-slug="arc"]');
+  await stillLink.scrollIntoViewIfNeeded();
+  await stillLink.locator('.responsive-image').evaluate((element) => {
+    element.dataset.continuityProbe = 'fallback-still-node';
+    (window as Window & { __fallbackStillNode?: Element }).__fallbackStillNode = element;
+  });
+  await stillLink.click({ noWaitAfter: true });
+  await page.waitForURL('**/work/arc');
+  const projectStill = page.locator('[data-continuity-probe="fallback-still-node"]');
+  await expect(projectStill).toHaveAttribute(
+    'data-route-media-handoff',
+    /^(?:animating|settled)$/u,
+  );
+  expect(await projectStill.evaluate((element) => (
+    (window as Window & { __fallbackStillNode?: Element }).__fallbackStillNode === element
+  ))).toBe(true);
+  await page.locator('[data-project-overlay-return]').click({ noWaitAfter: true });
+  await page.waitForURL((url) => url.pathname === '/');
+  const returnedStill = page.locator('[data-continuity-probe="fallback-still-node"]');
+  expect(await returnedStill.evaluate((element) => (
+    (window as Window & { __fallbackStillNode?: Element }).__fallbackStillNode === element
+  ))).toBe(true);
+
+  await page.goto('/');
+  const motionLink = page.locator('[data-project-link]:has([data-preview-video])').first();
+  await motionLink.scrollIntoViewIfNeeded();
+  const preview = motionLink.locator('[data-preview-video]');
+  await expect.poll(() => preview.evaluate((video) => (
+    (video as HTMLVideoElement).readyState
+  )), { timeout: 15_000 }).toBeGreaterThanOrEqual(1);
+  await preview.evaluate(async (element) => {
+    const video = element as HTMLVideoElement;
+    video.dataset.continuityProbe = 'fallback-video-node';
+    (window as Window & { __fallbackVideoNode?: Element }).__fallbackVideoNode = video;
+    video.currentTime = .25;
+    await video.play();
+  });
+  await motionLink.click({ noWaitAfter: true });
+  await page.waitForURL((url) => url.pathname !== '/');
+  const projectVideo = page.locator('[data-continuity-probe="fallback-video-node"]');
+  await expect(projectVideo).toHaveAttribute('data-route-video-persisted', 'true');
+  expect(await projectVideo.evaluate((video) => (
+    (window as Window & { __fallbackVideoNode?: Element }).__fallbackVideoNode === video
+  ))).toBe(true);
+  expect(await projectVideo.evaluate((video) => (video as HTMLVideoElement).paused)).toBe(false);
+
+  const projectLoop = page.locator(
+    '[data-project-hero-media][data-first-media="true"] video[data-short-loop]',
+  );
+  await expect(projectLoop).toBeAttached();
+  await page.locator('[data-project-overlay-return]').click({ noWaitAfter: true });
+  await page.waitForURL((url) => url.pathname === '/');
+  const returnedVideo = page.locator('[data-continuity-probe="fallback-video-node"]');
+  expect(await returnedVideo.evaluate((video) => (
+    (window as Window & { __fallbackVideoNode?: Element }).__fallbackVideoNode === video
+  ))).toBe(true);
+  await expect.poll(() => returnedVideo.evaluate((video) => (
+    (video as HTMLVideoElement).paused
+  ))).toBe(false);
+});
+
 test('mobile still-photo navigation keeps the persisted image visible through the route swap', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
 
-  if (await page.evaluate(() => typeof document.startViewTransition === 'function')) {
+  if (await page.evaluate(() => Boolean(
+    document.querySelector('meta[name="astro-view-transitions-enabled"]'),
+  ))) {
     const link = page.locator('[data-project-slug="arc"]');
     await link.scrollIntoViewIfNeeded();
     const originScroll = await page.evaluate(() => window.scrollY);
@@ -2230,7 +2255,8 @@ test('mobile still-photo navigation keeps the persisted image visible through th
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(originScroll);
 });
 
-test('ClientRouter navigation shares project media names and restores the originating work position', async ({ page }, testInfo) => {
+test('ClientRouter navigation persists project media and restores the originating work position', async ({ page }, testInfo) => {
+  test.setTimeout(90_000);
   test.skip(testInfo.project.name.startsWith('mobile-'), 'Desktop transition CSS is covered at a desktop viewport; mobile continuity has dedicated tests.');
   await page.setViewportSize({ width: 1440, height: 1_000 });
   await page.addInitScript(() => {
@@ -2258,16 +2284,17 @@ test('ClientRouter navigation shares project media names and restores the origin
   expect(cardTransitionName).toBe(`project-${projectSlug}-media`);
 
   await projectLink.click({ noWaitAfter: true });
-  const routeTransitionStyle = page.locator('[data-gallery-route-transition-style]');
-  await expect(routeTransitionStyle).toHaveAttribute(
-    'data-gallery-route-transition-style',
-    cardTransitionName,
-  );
-  const routeTransitionCss = await routeTransitionStyle.evaluate((style) => style.textContent || '');
-  expect(routeTransitionCss).toContain('animation-duration: 900ms');
-  expect(routeTransitionCss).toContain('animation-duration: 520ms');
+  await expect(page.locator('[data-gallery-route-transition-style]')).toHaveCount(0);
   await page.waitForURL(`**/work/${projectSlug}`);
   await expect(page.locator('[data-project-template]')).toBeVisible();
+  const persistedHeroImage = page.locator(
+    '[data-project-hero-media][data-first-media="true"] .responsive-image',
+  );
+  await expect(persistedHeroImage).toHaveAttribute('data-route-media-continuity', projectSlug);
+  await expect(persistedHeroImage).toHaveAttribute(
+    'data-route-media-handoff',
+    /^(?:animating|settled)$/u,
+  );
   const storedClickOrigin = await page.evaluate(() =>
     JSON.parse(sessionStorage.getItem('new-work-origin') || '{}') as { slug?: string; scrollY?: number });
   expect(storedClickOrigin.slug).toBe(projectSlug);
@@ -2286,7 +2313,9 @@ test('ClientRouter navigation shares project media names and restores the origin
     '[data-project-hero-media][data-first-media="true"]',
   ).evaluate((element) =>
     getComputedStyle(element).viewTransitionName);
-  expect(projectTransitionName).toBe(cardTransitionName);
+  expect(projectTransitionName).toBe(`project-${projectSlug}-media`);
+  await expect(page.locator('[data-project-hero-media][data-first-media="true"]'))
+    .not.toHaveAttribute('data-route-media-snapshot-disabled');
   const routeEvents = await page.evaluate(() =>
     (window as typeof window & { __qaRouteEvents?: string[] }).__qaRouteEvents ?? []);
   expect(routeEvents).toContain('astro:before-swap');
@@ -2461,7 +2490,7 @@ test('a failed first-party image leaves a titled fallback without collapsing the
   await expect(page.getByRole('heading', { level: 1, name: 'Arc' })).toBeVisible();
 });
 
-test('the placeholder Reel closes Work above the footer while disabled Notes stay absent', async ({ page }) => {
+test('the placeholder About film closes Work above the footer while disabled Notes stay absent', async ({ page }) => {
   await page.goto('/');
 
   const reel = page.locator('.reel');
@@ -2476,9 +2505,21 @@ test('the placeholder Reel closes Work above the footer while disabled Notes sta
       && (element.compareDocumentPosition(footer) & Node.DOCUMENT_POSITION_FOLLOWING));
   })).toBe(true);
   await expect(page.locator('[data-notes-strip]')).toHaveCount(0);
-  await expect(page.getByRole('heading', { name: 'Reel' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'About' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Notes' })).toHaveCount(0);
   await expect(page.locator('[data-site-header] a', { hasText: 'Notes' })).toHaveCount(0);
+
+  const muteButton = reel.locator('[data-video-mute]');
+  const fullscreenButton = reel.locator('[data-video-fullscreen]');
+  await expect(muteButton).toHaveAccessibleName('Unmute video');
+  await expect(fullscreenButton).toHaveAccessibleName('Enter full screen');
+  await expect(muteButton.locator('[data-media-control-icon="volume-off"]')).toBeVisible();
+  await expect(fullscreenButton.locator('[data-media-control-icon="fullscreen"]')).toBeVisible();
+  expect(await muteButton.evaluate((button) => button.textContent?.trim())).toBe('');
+  expect(await fullscreenButton.evaluate((button) => button.textContent?.trim())).toBe('');
+  await muteButton.click();
+  await expect(muteButton).toHaveAccessibleName('Mute video');
+  await expect(muteButton.locator('[data-media-control-icon="volume-on"]')).toBeVisible();
 
   const notesResponse = await page.request.get('/notes');
   expect(notesResponse.status()).toBe(404);

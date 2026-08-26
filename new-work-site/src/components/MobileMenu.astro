@@ -15,7 +15,7 @@ export interface Props {
 
 const {
   items = [
-    { href: withBase('/'), label: 'Work', match: 'section' },
+    { href: withBase('/#work-gallery'), label: 'Work', match: 'section' },
     { href: withBase('/about'), label: 'About', match: 'section' },
     { href: withBase('/contact'), label: 'Contact', match: 'section' },
   ],
@@ -31,8 +31,9 @@ const panelId = `${instanceId}-panel`;
 const titleId = `${instanceId}-title`;
 
 const normalizePath = (path: string): string => {
-  if (path === '/') return path;
-  return path.replace(/\/+$/, '');
+  const pathname = path.split(/[?#]/u, 1)[0] || '/';
+  if (pathname === '/') return pathname;
+  return pathname.replace(/\/+$/, '');
 };
 
 const activePath = normalizePath(withoutBase(currentPath));

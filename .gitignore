@@ -13,6 +13,10 @@
 /assets/
 /references/
 
+# Local Sites prototype retained as the source/reference for the integrated
+# Astro Reel. The commit-ready implementation lives in new-work-site/.
+/new-work-reel/
+
 # Private build briefs and binding source documents
 /BUILD_PROMPT.md
 /PRODUCT_SPEC.md
@@ -63,4 +67,3 @@
 .vscode/
 *.swp
 *.swo
-

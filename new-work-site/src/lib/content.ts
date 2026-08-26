@@ -2,6 +2,7 @@ import {sanityClient} from 'sanity:client';
 import fixtureProjects from '../content/local/projects.json';
 import fixtureSettings from '../content/local/site-settings.json';
 import attributionRecords from '../content/local/asset-attribution.json';
+import { michaelPhotoWork } from '../content/local/michael-gallery';
 import {
   notesQuery,
   previewNotesQuery,
@@ -50,6 +51,7 @@ import type {
   ProjectType,
   ProjectView,
   ReelView,
+  ReelPageView,
   RichTextBlockView,
   RichTextView,
   SeoFields,
@@ -57,6 +59,9 @@ import type {
   SiteSettingsView,
   VideoView,
   WorkGalleryPlacementView,
+  WorkGalleryEntryView,
+  WorkPhotoView,
+  WorkTemplate,
 } from './types';
 import { withBase } from './base-path';
 import {SANITY_API_VERSION} from './sanity-config';
@@ -106,6 +111,16 @@ function inferredLayoutVariant(types: ProjectType[]): ProjectLayoutVariant {
   if (types.includes('Film')) return 'cinematic';
   if (types.includes('Photography') && !types.includes('Animation')) return 'photoEssay';
   return types.includes('Animation') ? 'experimental' : 'cinematic';
+}
+
+function inferredWorkTemplate(types: ProjectType[], legacyLayout?: ProjectLayoutVariant): WorkTemplate {
+  if (legacyLayout === 'campaign' || legacyLayout === 'experimental' || types.includes('Campaign')) {
+    return 'featured';
+  }
+  if (legacyLayout === 'photoEssay' || (types.includes('Photography') && !types.includes('Film'))) {
+    return 'photo';
+  }
+  return 'video';
 }
 
 export function getContentMode(
@@ -215,24 +230,37 @@ export function isProductionEligible(project: UnknownRecord, now = new Date()): 
   if (typeof project.rightsExpiresAt === 'string' && new Date(project.rightsExpiresAt) <= now) return false;
   const slugRecord = recordOrEmpty(project.slug);
   const slug = typeof project.slug === 'string' ? project.slug : slugRecord.current;
+  const isPhotoWork = project.template === 'photo';
+  const photos = Array.isArray(project.photos) ? project.photos : [];
+  const defaultPhoto = recordOrEmpty(project.defaultPhoto);
   const cover = recordOrEmpty(project.cover);
   const coverPoster = recordOrEmpty(cover.poster);
-  if (!hasMeaningfulAlt(project.title) || !hasMeaningfulAlt(slug) || !isApprovedSanityAsset(cover.poster, 'image')) return false;
+  if (!hasMeaningfulAlt(project.title) || !hasMeaningfulAlt(slug)) return false;
+  if (isPhotoWork) {
+    if (photos.length < 2 || !isApprovedSanityAsset(defaultPhoto.image, 'image')) return false;
+    if (photos.some((photo) => {
+      const item = recordOrEmpty(photo);
+      return hasBlockedBlock(item)
+        || !isApprovedSanityAsset(item.image, 'image')
+        || (!item.decorative && !hasMeaningfulAlt(item.alt));
+    })) return false;
+  } else if (!isApprovedSanityAsset(cover.poster, 'image')) return false;
   if (!Array.isArray(project.types) || project.types.length === 0) return false;
   if (project.featuredOnHome && !Number.isFinite(Number(project.homeOrder))) return false;
-  if (hasBlockedBlock(cover)) return false;
-  if (!cover.decorative && !hasMeaningfulAlt(cover.alt || coverPoster.alt)) return false;
+  if (!isPhotoWork && hasBlockedBlock(cover)) return false;
+  if (!isPhotoWork && !cover.decorative && !hasMeaningfulAlt(cover.alt || coverPoster.alt)) return false;
   if (cover.previewIsPlaceholder) return false;
   if (cover.previewVideo && !safeHostedVideoUrl(sourceUrl(cover.previewVideo))) return false;
   if (cover.previewVideoUrl && !safeHostedVideoUrl(cover.previewVideoUrl)) return false;
   if (cover.previewPosterOverride && !isApprovedSanityAsset(cover.previewPosterOverride, 'image')) return false;
   if (cover.mobilePoster && !isApprovedSanityAsset(cover.mobilePoster, 'image')) return false;
   if (typeof project.publishAt === 'string' && new Date(project.publishAt) > now) return false;
-  if (!Array.isArray(project.contentBlocks) || project.contentBlocks.length === 0) return false;
-  if (!project.contentBlocks.some((block: UnknownRecord) =>
+  const contentBlocks = Array.isArray(project.contentBlocks) ? project.contentBlocks : [];
+  if (!isPhotoWork && contentBlocks.length === 0) return false;
+  if (!isPhotoWork && !contentBlocks.some((block: UnknownRecord) =>
     PUBLIC_MEDIA_BLOCK_TYPES.has(String(block._type)),
   )) return false;
-  return !project.contentBlocks.some((block: UnknownRecord) => hasBlockedBlock(block) || !blockHasAccessibleMedia(block));
+  return !contentBlocks.some((block: UnknownRecord) => hasBlockedBlock(block) || !blockHasAccessibleMedia(block));
 }
 
 function localPublicPath(source: string): string {
@@ -632,6 +660,26 @@ function normalizeCover(raw: UnknownRecord): CoverView {
   };
 }
 
+function normalizeWorkPhoto(value: unknown, index: number): WorkPhotoView | undefined {
+  const raw = optionalRecord(value);
+  if (!raw) return undefined;
+  const id = stringFrom(raw._id) || stringFrom(raw.id) || stringFrom(raw._key);
+  const source = raw.image || raw.poster;
+  if (!id || !source) return undefined;
+  const image = resolveImage(source, {
+    alt: raw.alt,
+    needsReview: Boolean(raw.needsReview || raw.altNeedsReview),
+    caption: raw.caption,
+    credit: raw.credit,
+  });
+  if (!image.src) return undefined;
+  return {
+    id: id.replace(/^drafts\./u, ''),
+    title: stringFrom(raw.title) || `Photo ${index + 1}`,
+    image,
+  };
+}
+
 function normalizeSeo(value: unknown): SeoFields | undefined {
   const raw = optionalRecord(value);
   if (!raw) return undefined;
@@ -682,6 +730,24 @@ export function normalizeProject(raw: UnknownRecord): ProjectView {
           : [];
       })
     : [];
+  const legacyLayout = enumValue(
+    raw.layoutVariant,
+    ['cinematic', 'photoEssay', 'campaign', 'experimental'] as const,
+  );
+  const template = enumValue(raw.template, ['photo', 'video', 'featured'] as const)
+    || inferredWorkTemplate(types, legacyLayout);
+  const photos = (Array.isArray(raw.photos) ? raw.photos : [])
+    .map(normalizeWorkPhoto)
+    .filter((photo): photo is WorkPhotoView => Boolean(photo));
+  const defaultPhotoRecord = optionalRecord(raw.defaultPhoto);
+  const defaultPhotoId = (stringFrom(defaultPhotoRecord?._id)
+    || stringFrom(defaultPhotoRecord?._ref)
+    || stringFrom(raw.defaultPhotoId))?.replace(/^drafts\./u, '');
+  const defaultPhoto = photos.find((photo) => photo.id === defaultPhotoId) || photos[0];
+  const normalizedCover = normalizeCover(recordOrEmpty(raw.cover));
+  const cover = template === 'photo' && defaultPhoto
+    ? {...normalizedCover, poster: defaultPhoto.image, mediaType: 'still' as const, previewVideo: undefined}
+    : normalizedCover;
   return {
     id: String(raw.id || raw._id),
     title: String(raw.title || 'Untitled project'),
@@ -696,7 +762,10 @@ export function normalizeProject(raw: UnknownRecord): ProjectView {
       typeof raw.shortDescription === 'string' && raw.shortDescription
         ? raw.shortDescription
         : undefined,
-    cover: normalizeCover(recordOrEmpty(raw.cover)),
+    template,
+    photos,
+    defaultPhotoId: defaultPhoto?.id,
+    cover,
     contentBlocks: (Array.isArray(raw.contentBlocks) ? raw.contentBlocks : [])
       .map((block: UnknownRecord) => normalizeBlock(block, String(raw.title)))
       .filter((block): block is ContentBlockView => Boolean(block)),
@@ -716,10 +785,7 @@ export function normalizeProject(raw: UnknownRecord): ProjectView {
     accentColor: presentationAccent(raw.accentColor),
     titleTreatment: enumValue(raw.titleTreatment, ['standard', 'stacked', 'oversized', 'split'] as const) || 'standard',
     heroTreatment: enumValue(raw.heroTreatment, ['contained', 'fullViewport', 'split', 'masked'] as const) || 'contained',
-    layoutVariant: enumValue(
-      raw.layoutVariant,
-      ['cinematic', 'photoEssay', 'campaign', 'experimental'] as const,
-    ) || inferredLayoutVariant(types),
+    layoutVariant: legacyLayout || inferredLayoutVariant(types),
     motionIntensity: enumValue(raw.motionIntensity, ['low', 'medium', 'high'] as const) || 'medium',
     editorialStatus: enumValue(raw.editorialStatus, ['draft', 'review', 'ready', 'approved'] as const)
       || (raw.visible ? 'approved' : raw.needsReview ? 'review' : 'draft'),
@@ -828,7 +894,7 @@ function normalizeAboutSelectedWork(value: unknown, mode: ContentMode): AboutWor
 
 const DEFAULT_NAVIGATION: SiteSettingsView['navigation'] = [
   {label: 'Work', destination: 'work', visible: true},
-  {label: 'About', destination: 'about', visible: true},
+  {label: 'About', destination: 'reel', visible: true},
   {label: 'Contact', destination: 'contact', visible: true},
 ];
 
@@ -839,7 +905,7 @@ function normalizeNavigation(value: unknown): SiteSettingsView['navigation'] {
     const label = stringFrom(item?.label);
     const destination = enumValue(
       item?.destination,
-      ['work', 'about', 'notes', 'contact'] as const,
+      ['work', 'reel', 'about', 'notes', 'contact'] as const,
     );
     if (!label || !destination) return [];
     return [{
@@ -852,15 +918,36 @@ function normalizeNavigation(value: unknown): SiteSettingsView['navigation'] {
   return navigation.length ? navigation : DEFAULT_NAVIGATION;
 }
 
+function normalizeReelPage(value: unknown): ReelPageView {
+  const page = recordOrEmpty(value);
+  return {
+    enabled: page.enabled === true,
+    introEyebrow: stringFrom(page.introEyebrow) || 'Lorem ipsum dolor',
+    introHeadline: stringFrom(page.introHeadline) || 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
+    introCue: stringFrom(page.introCue) || 'Consectetur adipiscing',
+    fallbackEyebrow: stringFrom(page.fallbackEyebrow) || 'Lorem ipsum dolor',
+    fallbackHeadline: stringFrom(page.fallbackHeadline)
+      || 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
+    fallbackDescription: stringFrom(page.fallbackDescription)
+      || 'Consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.',
+    closingEyebrow: stringFrom(page.closingEyebrow) || 'Lorem ipsum dolor',
+    closingHeadline: stringFrom(page.closingHeadline) || 'What should we make next?',
+    ctaLabel: stringFrom(page.ctaLabel) || 'Lorem ipsum',
+    ctaDestination: enumValue(page.ctaDestination, ['work', 'contact'] as const) || 'contact',
+    seo: normalizeSeo(page.seo) || {noIndex: true},
+  };
+}
+
 function normalizeWorkGallery(value: unknown): WorkGalleryPlacementView[] | undefined {
   if (!Array.isArray(value)) return undefined;
   return value.flatMap((candidate, index): WorkGalleryPlacementView[] => {
     const placement = optionalRecord(candidate);
-    const projectId = stringFrom(placement?.projectId);
-    if (!projectId) return [];
+    const workId = stringFrom(placement?.workId) || stringFrom(placement?.projectId);
+    if (!workId) return [];
     return [{
       _key: stringFrom(placement?._key) || `gallery-${index + 1}`,
-      projectId,
+      workId: workId.replace(/^drafts\./u, ''),
+      photoId: stringFrom(placement?.photoId)?.replace(/^drafts\./u, ''),
       cardSize: enumValue(placement?.cardSize, ['standard', 'tall', 'large', 'wide'] as const) || 'standard',
       treatment: enumValue(placement?.treatment, ['standard', 'masked', 'framed', 'poster'] as const) || 'standard',
     }];
@@ -886,7 +973,7 @@ function normalizeFooter(value: unknown): FooterSettingsView {
         const label = stringFrom(link?.label);
         const destination = enumValue(
           link?.destination,
-          ['work', 'about', 'notes', 'contact', 'external'] as const,
+          ['work', 'reel', 'about', 'notes', 'contact', 'external'] as const,
         );
         const url = destination === 'external' ? safeHttpsUrl(link?.url) : undefined;
         if (!label || !destination || (destination === 'external' && !url)) return [];
@@ -906,7 +993,7 @@ function normalizeFooter(value: unknown): FooterSettingsView {
     connectHeading: stringFrom(footer.connectHeading) || 'Connect',
     exploreLinks: exploreLinks.length ? exploreLinks : [
       {label: 'Work', destination: 'work'},
-      {label: 'About', destination: 'about'},
+      {label: 'About', destination: 'reel'},
       {label: 'Contact', destination: 'contact'},
     ],
     contactLabel: stringFrom(footer.contactLabel),
@@ -967,6 +1054,7 @@ export function normalizeSiteSettings(
         })
       : [],
     reel: normalizeReel(workPage?.reel || fixtureFallback.reel),
+    reelPage: normalizeReelPage(raw.reelPage || fixtureFallback.reelPage),
     notesEnabled: Boolean(workPage ? workPage.notesEnabled : fixtureFallback.notesEnabled),
     defaultSeo: normalizeSeo(raw.defaultSeo) || { noIndex: true },
     footer: normalizeFooter(raw.footer),
@@ -979,7 +1067,7 @@ function applyWorkGallery(
 ): ProjectView[] {
   if (!placements) return sortProjects(projects);
   const placementByProject = new Map(
-    placements.map((placement, index) => [placement.projectId, {placement, index}]),
+    placements.map((placement, index) => [placement.workId, {placement, index}]),
   );
   return sortProjects(projects.map((project) => {
     const curated = placementByProject.get(project.id.replace(/^drafts\./u, ''))
@@ -994,6 +1082,80 @@ function applyWorkGallery(
       homeOffset: curated ? 0 : project.homeOffset,
     };
   }));
+}
+
+function preferUnifiedWorkDocuments(records: UnknownRecord[]): UnknownRecord[] {
+  const bySlug = new Map<string, UnknownRecord>();
+  records.forEach((record) => {
+    const slug = stringFrom(record.slug) || stringFrom(recordOrEmpty(record.slug).current) || stringFrom(record._id);
+    if (!slug) return;
+    const existing = bySlug.get(slug);
+    if (!existing || (record._type === 'work' && existing._type !== 'work')) bySlug.set(slug, record);
+  });
+  return [...bySlug.values()];
+}
+
+export function workGalleryEntryId(work: ProjectView, photoId?: string): string {
+  return photoId ? `${work.slug}--${photoId}` : work.slug;
+}
+
+export function buildWorkGallery(
+  projects: ProjectView[],
+  placements?: WorkGalleryPlacementView[],
+): WorkGalleryEntryView[] {
+  const byId = new Map<string, ProjectView>();
+  projects.forEach((project) => {
+    byId.set(project.id, project);
+    byId.set(project.id.replace(/^drafts\./u, ''), project);
+  });
+
+  const buildEntry = (
+    work: ProjectView,
+    photoId?: string,
+    cardSize = work.homeCardSize,
+    treatment = work.homeTreatment,
+  ): WorkGalleryEntryView => {
+    const photo = photoId ? work.photos.find((candidate) => candidate.id === photoId) : undefined;
+    const selectedPhoto = photo || (work.template === 'photo'
+      ? work.photos.find((candidate) => candidate.id === work.defaultPhotoId) || work.photos[0]
+      : undefined);
+    const doorwayId = photo?.id;
+    return {
+      id: workGalleryEntryId(work, doorwayId),
+      work,
+      photo,
+      image: selectedPhoto?.image || work.cover.poster,
+      href: doorwayId ? `/work/${work.slug}/${doorwayId}` : `/work/${work.slug}`,
+      cardSize,
+      treatment,
+    };
+  };
+
+  if (placements?.length) {
+    return placements.flatMap((placement) => {
+      const work = byId.get(placement.workId);
+      return work ? [buildEntry(work, placement.photoId, placement.cardSize, placement.treatment)] : [];
+    });
+  }
+  return sortProjects(projects).map((work) => buildEntry(work));
+}
+
+function buildPrototypeWorkGallery(projects: ProjectView[]): WorkGalleryEntryView[] {
+  const photoWork = projects.find((project) => project.id === michaelPhotoWork.id);
+  const standardWorks = projects.filter((project) => project !== photoWork);
+  if (!photoWork) return buildWorkGallery(standardWorks);
+  const workEntries = buildWorkGallery(standardWorks);
+  const photoEntries = photoWork.photos.map((photo) => buildWorkGallery(
+    [photoWork],
+    [{_key: photo.id, workId: photoWork.id, photoId: photo.id, cardSize: 'standard', treatment: 'standard'}],
+  )[0]!).filter(Boolean);
+  const interleaved: WorkGalleryEntryView[] = [];
+  const length = Math.max(workEntries.length, photoEntries.length);
+  for (let index = 0; index < length; index += 1) {
+    if (workEntries[index]) interleaved.push(workEntries[index]!);
+    if (photoEntries[index]) interleaved.push(photoEntries[index]!);
+  }
+  return interleaved;
 }
 
 function normalizeNote(raw: UnknownRecord): NoteView {
@@ -1086,10 +1248,12 @@ export function getFixtureProjects(): ProjectView[] {
 }
 
 function prototypeContent(): SiteContent {
+  const projects = sortProjects([...getFixtureProjects(), michaelPhotoWork]);
   return {
     mode: 'prototype',
     settings: normalizeSiteSettings(fixtureSiteSettings, 'prototype'),
-    projects: getFixtureProjects(),
+    projects,
+    galleryEntries: buildPrototypeWorkGallery(projects),
     notes: [],
   };
 }
@@ -1129,6 +1293,9 @@ async function sanityContent(mode: 'preview' | 'production'): Promise<SiteConten
           defaultSeo: rawSettings.defaultSeo,
         },
         workSeo: workPage.seo,
+        reelPage: recordOrEmpty(rawSettings.reelPage).enabled === true
+          ? rawSettings.reelPage
+          : undefined,
         activeReel: reel.enabled === true ? reel : undefined,
         aboutPage: rawSettings.aboutPage,
         contactPage: rawSettings.contactPage,
@@ -1146,9 +1313,13 @@ async function sanityContent(mode: 'preview' | 'production'): Promise<SiteConten
     if (mode === 'production' && !hasEligibleEnabledReel(settings.reel)) {
       throw new Error('The enabled Reel is missing an approved poster or hosted source.');
     }
-    const projects = applyWorkGallery((mode === 'production'
+    const eligibleProjects = mode === 'production'
       ? parsed.projects.filter((project) => isProductionEligible(project))
-      : parsed.projects).map(normalizeProject), settings.workGallery);
+      : parsed.projects;
+    const projects = applyWorkGallery(
+      preferUnifiedWorkDocuments(eligibleProjects).map(normalizeProject),
+      settings.workGallery,
+    );
     if (mode === 'production' && (projects.length === 0 || !projects.some((project) => project.featuredOnHome))) {
       throw new Error('Production requires at least one approved project featured on the home page.');
     }
@@ -1156,7 +1327,11 @@ async function sanityContent(mode: 'preview' | 'production'): Promise<SiteConten
     const notes = settings.notesEnabled || mode === 'preview'
       ? (mode === 'production' ? parsed.notes.filter(isProductionEligibleNote) : parsed.notes).map(normalizeNote)
       : [];
-    return { mode, settings, projects, notes };
+    const galleryEntries = buildWorkGallery(
+      projects.filter((project) => mode !== 'production' || project.featuredOnHome),
+      settings.workGallery,
+    );
+    return { mode, settings, projects, galleryEntries, notes };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     throw new Error(`Sanity ${mode} content could not be loaded; fixture fallback is disabled. ${message}`);

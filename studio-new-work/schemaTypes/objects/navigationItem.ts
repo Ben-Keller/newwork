@@ -20,7 +20,7 @@ export const navigationItem = defineType({
       options: {
         list: [
           {title: 'Work', value: 'work'},
-          {title: 'About', value: 'about'},
+          {title: 'About', value: 'reel'},
           {title: 'Contact', value: 'contact'},
         ],
         layout: 'radio',

@@ -9,14 +9,14 @@ import ProjectTemplateHeader from './ProjectTemplateHeader.astro';
 import type { ProjectTemplateProps } from './template-props';
 
 type Props = ProjectTemplateProps;
-const { project, mode, heroBlock, heroCaptions, blocks, presentation, previous, next } = Astro.props;
+const { project, mode, heroBlock, heroCaptions, blocks, presentation, routeTransitionId, previous, next } = Astro.props;
 const style = projectPresentationStyle(presentation);
 const deliverables = project.types.filter(Boolean);
 ---
 
 <article
   class="project-template project-template--campaign"
-  data-project-template="campaign"
+  data-project-template="featured"
   data-project-theme={presentation.projectTheme}
   data-title-treatment={presentation.titleTreatment}
   data-hero-treatment={presentation.heroTreatment}
@@ -35,7 +35,7 @@ const deliverables = project.types.filter(Boolean);
       captions={heroCaptions}
       mode={mode}
       projectTitle={project.title}
-      projectSlug={project.slug}
+      projectSlug={routeTransitionId || project.slug}
     />
   </ProjectTemplateHeader>
   {deliverables.length ? (

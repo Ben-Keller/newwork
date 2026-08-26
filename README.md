@@ -2,6 +2,8 @@
 
 This archive is the implementation handoff for a complete New Work portfolio website. It combines the agreed product direction, an executable build brief, provisional CMS content, reference research, and a representative media library assembled from Oliver Hamilton's and Michael's public portfolios.
 
+The current GitHub, Sanity Studio, webhook, local content, and no-merge release process is documented in [`DEPLOYMENT.md`](DEPLOYMENT.md).
+
 ## Start here
 
 1. Give the repository-building agent the entire unzipped folder.

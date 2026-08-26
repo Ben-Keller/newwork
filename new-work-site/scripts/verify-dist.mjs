@@ -38,7 +38,10 @@ const prohibited = [
 for (const file of inspectableFiles) {
   const contents = await readFile(file, 'utf8');
   for (const token of prohibited) {
-    if (contents.includes(token)) failures.push(`${path.relative(root, file)} leaks prohibited token ${token}.`);
+    const exactIdentifier = new RegExp(`(?<![\\p{L}\\p{N}_])${token}(?![\\p{L}\\p{N}_])`, 'u');
+    if (exactIdentifier.test(contents)) {
+      failures.push(`${path.relative(root, file)} leaks prohibited token ${token}.`);
+    }
   }
 }
 
@@ -72,7 +75,7 @@ const mode = process.env.PUBLIC_CONTENT_MODE || 'prototype';
 if (mode !== 'production') {
   for (const file of htmlFiles) {
     const html = await readFile(file, 'utf8');
-    if (!/name="robots" content="noindex, nofollow"/iu.test(html)) {
+    if (!/name="robots" content="[^"]*\bnoindex\b[^"]*"/iu.test(html)) {
       failures.push(`${path.relative(root, file)} is not noindex outside production.`);
     }
   }

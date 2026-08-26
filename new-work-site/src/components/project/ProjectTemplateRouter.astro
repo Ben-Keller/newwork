@@ -7,7 +7,6 @@ import {
 } from '../../lib/project-layout';
 import CampaignProject from './CampaignProject.astro';
 import CinematicProject from './CinematicProject.astro';
-import ExperimentalProject from './ExperimentalProject.astro';
 import PhotoEssayProject from './PhotoEssayProject.astro';
 import '../../styles/project-templates.css';
 
@@ -16,19 +15,19 @@ interface Props {
   mode: ContentMode;
   previous?: ProjectView;
   next?: ProjectView;
+  routeTransitionId?: string;
 }
 
-const { project, mode, previous, next } = Astro.props;
+const { project, mode, previous, next, routeTransitionId } = Astro.props;
 const presentation = resolveProjectPresentation(project);
 const blocks = renderableProjectBlocks(project.contentBlocks);
 const { heroBlock, heroCaptions, bodyBlocks } = splitProjectContent(project, blocks);
 const templates = {
-  cinematic: CinematicProject,
-  photoEssay: PhotoEssayProject,
-  campaign: CampaignProject,
-  experimental: ExperimentalProject,
+  photo: PhotoEssayProject,
+  video: CinematicProject,
+  featured: CampaignProject,
 };
-const Template = templates[presentation.layoutVariant];
+const Template = templates[project.template];
 ---
 
 <Template
@@ -38,6 +37,7 @@ const Template = templates[presentation.layoutVariant];
   heroCaptions={heroCaptions}
   blocks={bodyBlocks}
   presentation={presentation}
+  routeTransitionId={routeTransitionId}
   previous={previous}
   next={next}
 />

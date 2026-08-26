@@ -4,6 +4,7 @@ import {ControlsIcon} from '@sanity/icons/Controls'
 import {HomeIcon} from '@sanity/icons/Home'
 import {ImagesIcon} from '@sanity/icons/Images'
 import {LaunchIcon} from '@sanity/icons/Launch'
+import {PlayIcon} from '@sanity/icons/Play'
 import {ProjectsIcon} from '@sanity/icons/Projects'
 import {Badge, Box, Card, Flex, Grid, Heading, Inline, Spinner, Stack, Text} from '@sanity/ui'
 import {defineQuery} from 'groq'
@@ -15,7 +16,7 @@ import {SANITY_API_VERSION} from '../sanity.constants'
 const PREVIEW_ENABLED = Boolean(process.env.SANITY_STUDIO_PREVIEW_ORIGIN) || process.env.NODE_ENV === 'development'
 
 type DashboardStats = {
-  projects: number
+  works: number
   review: number
   ready: number
   approved: number
@@ -25,7 +26,7 @@ type DashboardStats = {
 }
 
 const EMPTY_STATS: DashboardStats = {
-  projects: 0,
+  works: 0,
   review: 0,
   ready: 0,
   approved: 0,
@@ -35,10 +36,10 @@ const EMPTY_STATS: DashboardStats = {
 }
 
 const DASHBOARD_STATS_QUERY = defineQuery(/* groq */ `{
-  "projects": count(*[_type == "project" && !(_id in path("drafts.**"))]),
-  "review": count(*[_type == "project" && !(_id in path("drafts.**")) && editorialStatus == "review"]),
-  "ready": count(*[_type == "project" && !(_id in path("drafts.**")) && editorialStatus == "ready"]),
-  "approved": count(*[_type == "project" && !(_id in path("drafts.**")) && editorialStatus == "approved"]),
+  "works": count(*[_type == "work" && !(_id in path("drafts.**"))]),
+  "review": count(*[_type == "work" && !(_id in path("drafts.**")) && editorialStatus == "review"]),
+  "ready": count(*[_type == "work" && !(_id in path("drafts.**")) && editorialStatus == "ready"]),
+  "approved": count(*[_type == "work" && !(_id in path("drafts.**")) && editorialStatus == "approved"]),
   "assets": count(*[_type == "mediaItem" && !(_id in path("drafts.**"))]),
   "missingDescriptions": count(*[_type == "mediaItem" && !(_id in path("drafts.**")) && kind in ["image", "video"] && decorative != true && !defined(alt)]),
   "rightsPending": count(*[_type == "mediaItem" && !(_id in path("drafts.**")) && rightsApprovalStatus != "approved"])
@@ -156,28 +157,35 @@ const quickLinks = [
     icon: HomeIcon,
     eyebrow: 'CURATE',
     title: 'Work page & gallery',
-    description: 'Edit the opening copy, drag projects into order, and set gallery emphasis.',
+    description: 'Edit the opening copy, drag Work items into order, and choose photo doorways.',
   },
   {
-    href: '/structure/projects;projects-needs-attention',
+    href: '/structure/reelPage',
+    icon: PlayIcon,
+    eyebrow: 'PRESENT',
+    title: 'About page',
+    description: 'Edit the opening, accessible fallback, closing action, and About-page sharing copy.',
+  },
+  {
+    href: '/structure/work;work-needs-attention',
     icon: ProjectsIcon,
     eyebrow: 'REVIEW',
-    title: 'Project pages',
-    description: 'Finish project facts, page sections, credits, approvals, and sharing details.',
+    title: 'Work pages',
+    description: 'Choose a template and finish Work facts, media, credits, approvals, and sharing details.',
   },
   {
     href: '/structure/assets;assets-accessibility',
     icon: ImagesIcon,
     eyebrow: 'ORGANIZE',
     title: 'Asset library',
-    description: 'Add descriptions, confirm rights, and see which projects use each asset.',
+    description: 'Add descriptions, confirm rights, and see which Work items use each asset.',
   },
   {
-    href: '/structure/aboutPage',
+    href: '/structure/contactPage',
     icon: ComposeIcon,
     eyebrow: 'EDIT',
     title: 'Site copy',
-    description: 'Update About, Contact, the footer, and navigation from dedicated editors.',
+    description: 'Update Contact, the footer, and navigation from dedicated editors.',
   },
 ]
 
@@ -256,7 +264,7 @@ export function ClientDashboard() {
 
         <MetricGrid>
           {[
-            ['Projects', stats.projects, 'default'],
+            ['Work items', stats.works, 'default'],
             ['Needs review', stats.review, stats.review ? 'caution' : 'positive'],
             ['Missing descriptions', stats.missingDescriptions, stats.missingDescriptions ? 'caution' : 'positive'],
             ['Rights to confirm', stats.rightsPending, stats.rightsPending ? 'caution' : 'positive'],
@@ -317,7 +325,7 @@ export function ClientDashboard() {
                 <Heading size={2}>Safe by design</Heading>
               </Flex>
               <Text muted>
-                Editing creates a draft first. A project must also be marked “Approved for website”
+                Editing creates a draft first. A Work item must also be marked “Approved for website”
                 and have its rights checks completed before it is eligible for the public portfolio.
               </Text>
               <Grid columns={2} gap={3}>

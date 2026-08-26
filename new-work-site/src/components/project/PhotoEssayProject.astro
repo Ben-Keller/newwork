@@ -9,13 +9,14 @@ import ProjectTemplateHeader from './ProjectTemplateHeader.astro';
 import type { ProjectTemplateProps } from './template-props';
 
 type Props = ProjectTemplateProps;
-const { project, mode, heroBlock, heroCaptions, blocks, presentation, previous, next } = Astro.props;
+const { project, mode, heroBlock, heroCaptions, blocks, presentation, routeTransitionId, previous, next } = Astro.props;
 const style = projectPresentationStyle(presentation);
 ---
 
 <article
   class="project-template project-template--photo-essay"
-  data-project-template="photoEssay"
+  data-gallery-photo-page
+  data-project-template="photo"
   data-project-theme={presentation.projectTheme}
   data-title-treatment={presentation.titleTreatment}
   data-hero-treatment={presentation.heroTreatment}
@@ -35,7 +36,7 @@ const style = projectPresentationStyle(presentation);
         captions={heroCaptions}
         mode={mode}
         projectTitle={project.title}
-        projectSlug={project.slug}
+        projectSlug={routeTransitionId || project.slug}
       />
     </ProjectTemplateHeader>
   </div>
