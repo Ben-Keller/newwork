@@ -7,6 +7,7 @@
   "scripts": {
     "build": "sanity build",
     "migrate:project-ids": "sanity exec scripts/migrate-private-project-ids.ts --with-user-token --",
+    "migrate:legacy-settings": "sanity exec scripts/remove-legacy-site-settings.ts --with-user-token --",
     "seed:with-user-token": "sanity exec scripts/seed-with-user-token.ts --with-user-token",
     "deploy": "sanity deploy",
     "deploy-graphql": "sanity graphql deploy",
@@ -34,6 +35,12 @@
     "eslint": "^10.8.1",
     "prettier": "^3.5",
     "typescript": "^5.8"
+  },
+  "overrides": {
+    "js-yaml": "3.15.1",
+    "smol-toml": "1.6.1",
+    "undici": "7.29.0",
+    "uuid": "11.1.1"
   },
   "prettier": {
     "bracketSpacing": false,

@@ -22,7 +22,7 @@ const developmentImages = mode === 'production' ? [] : michaelDevelopmentGallery
 for (let index = 0; index < Math.max(projects.length, developmentImages.length); index += 1) {
   const project = projects[index];
   const item = developmentImages[index];
-  if (project && !excludedWorkGalleryItemIds.has(project.slug)) {
+  if (project && (mode === 'production' || !excludedWorkGalleryItemIds.has(project.slug))) {
     galleryEntries.push({ kind: 'project', project });
   }
   if (item && !excludedWorkGalleryItemIds.has(item.id)) {

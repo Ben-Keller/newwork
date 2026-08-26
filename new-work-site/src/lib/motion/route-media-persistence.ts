@@ -1,3 +1,5 @@
+/* v8 ignore file -- route media persistence is exercised by Playwright. */
+
 const persistAttribute = 'data-astro-transition-persist';
 
 export const supportsRouteMediaPersistence = (): boolean => (

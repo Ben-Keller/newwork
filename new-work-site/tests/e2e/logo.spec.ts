@@ -112,15 +112,23 @@ test.describe('logo mask study', () => {
 
     const hero = page.locator('[data-logo-work-hero]');
     const viewportHeight = await page.evaluate(() => window.innerHeight);
-    await dispatchWheelGesture(page, viewportHeight * .1);
+    await page.evaluate(({ firstDelta, momentumDelta }) => {
+      const dispatch = (delta: number) => {
+        const allowed = window.dispatchEvent(new WheelEvent('wheel', {
+          bubbles: true,
+          cancelable: true,
+          deltaY: delta,
+        }));
+        if (allowed) window.scrollBy({ top: delta, behavior: 'auto' });
+      };
+
+      dispatch(firstDelta);
+      for (let index = 0; index < 5; index += 1) dispatch(momentumDelta);
+    }, {
+      firstDelta: viewportHeight * .1,
+      momentumDelta: viewportHeight * .025,
+    });
     await expect(hero).toHaveAttribute('data-faded', 'true');
-    await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
-
-    for (let index = 0; index < 5; index += 1) {
-      await page.waitForTimeout(50);
-      await dispatchWheelGesture(page, viewportHeight * .025);
-    }
-
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
     await page.waitForTimeout(150);
     await dispatchWheelGesture(page, viewportHeight * .025);

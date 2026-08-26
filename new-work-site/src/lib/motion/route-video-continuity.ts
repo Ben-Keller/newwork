@@ -1,3 +1,5 @@
+/* v8 ignore file -- route video continuity is exercised by Playwright. */
+
 type RouteVideoState = {
   slug: string;
   currentTime: number;
