@@ -57,6 +57,10 @@ const { source, poster, mobilePoster, title, placeholder = false } = Astro.props
   state.refreshTimers ||= [];
   state.visibility ||= new Map();
   window.__newWorkPreviews = state;
+  const activePreviewVideos = (selector = '[data-preview-video]'): HTMLVideoElement[] => (
+    [...document.querySelectorAll<HTMLVideoElement>(selector)]
+      .filter((video) => !video.closest('[data-gallery-layer-state="background"]'))
+  );
 
   const holdsRouteContinuity = (video: HTMLVideoElement) => (
     Number(video.dataset.routeContinuityUntil || 0) > performance.now()
@@ -275,7 +279,7 @@ const { source, poster, mobilePoster, title, placeholder = false } = Astro.props
 
   const refreshPreviews = () => {
     state.refreshFrame = 0;
-    const videos = [...document.querySelectorAll<HTMLVideoElement>('[data-preview-video]')];
+    const videos = activePreviewVideos();
     state.visibility.clear();
     videos.forEach((video) => state.visibility.set(video, verticalVisibility(video)));
     reconcilePreviews(videos);
@@ -302,7 +306,7 @@ const { source, poster, mobilePoster, title, placeholder = false } = Astro.props
   };
 
   const setupPreviews = () => {
-    const videos = [...document.querySelectorAll<HTMLVideoElement>('[data-preview-video]')];
+    const videos = activePreviewVideos();
     videos.forEach((video) => {
       if (video.dataset.previewReady) return;
       video.dataset.previewReady = 'true';
@@ -330,7 +334,7 @@ const { source, poster, mobilePoster, title, placeholder = false } = Astro.props
     requestSettledRefreshes();
   }, { passive: true });
   window.addEventListener('resize', () => {
-    document.querySelectorAll<HTMLVideoElement>('[data-preview-video][src]').forEach(refreshPoster);
+    activePreviewVideos('[data-preview-video][src]').forEach(refreshPoster);
     requestPreviewRefresh();
     requestSettledRefreshes();
   }, { passive: true });

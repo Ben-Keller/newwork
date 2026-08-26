@@ -20,7 +20,8 @@ const SCROLL_LETTER_END_VIEWPORT = 0.38;
 const SCROLL_LETTER_DISTANCE_SCALE = 0.8;
 
 const selectAll = <ElementType extends Element>(root: ParentNode, selector: string): ElementType[] =>
-  Array.from(root.querySelectorAll<ElementType>(selector));
+  Array.from(root.querySelectorAll<ElementType>(selector))
+    .filter((element) => !element.closest('[data-gallery-layer-state="background"]'));
 
 const revealVars = (treatment: string): gsap.TweenVars => {
   if (treatment === 'clip') {

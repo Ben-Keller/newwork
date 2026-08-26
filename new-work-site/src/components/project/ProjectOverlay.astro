@@ -87,6 +87,10 @@ const backdropProjects = [...projects]
     document.querySelectorAll<HTMLElement>('[data-project-overlay]:not([data-overlay-ready])')
       .forEach((overlay) => {
         overlay.dataset.overlayReady = 'true';
+        if (document.querySelector('[data-route-gallery-layer] [data-work-gallery]')) {
+          overlay.dataset.overlayBackdrop = 'retained';
+          return;
+        }
         const destination = overlay.dataset.projectSlug;
         const snapshotLayer = overlay.querySelector<HTMLElement>('[data-project-overlay-snapshot]');
         if (!snapshotLayer) return;
@@ -160,6 +164,24 @@ const backdropProjects = [...projects]
     inset: 0;
     background: rgb(243 240 232 / 36%);
     content: '';
+  }
+
+  :global(body.project-page:has([data-route-gallery-layer] [data-work-gallery]))
+  .project-overlay__backdrop {
+    background: rgb(243 240 232 / 42%);
+    backdrop-filter: blur(clamp(12px, 1.45vw, 22px)) saturate(.78);
+  }
+
+  :global(body.project-page:has([data-route-gallery-layer] [data-work-gallery]))
+  .project-overlay__backdrop::after {
+    background: rgb(243 240 232 / 18%);
+  }
+
+  :global(body.project-page:has([data-route-gallery-layer] [data-work-gallery]))
+  .project-overlay__fallback,
+  :global(body.project-page:has([data-route-gallery-layer] [data-work-gallery]))
+  .project-overlay__snapshot {
+    display: none;
   }
 
   .project-overlay__fallback,

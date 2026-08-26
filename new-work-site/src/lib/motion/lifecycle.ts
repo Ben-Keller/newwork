@@ -18,7 +18,12 @@ export const MOTION_HOOK_SELECTOR = [
 export const routeNeedsMotionRuntime = (
   root: Pick<ParentNode, 'querySelector'>,
   hasCustomInitializers = false,
-): boolean => hasCustomInitializers || Boolean(root.querySelector(MOTION_HOOK_SELECTOR));
+): boolean => hasCustomInitializers || Boolean(
+  (root as ParentNode).querySelectorAll
+    ? [...(root as ParentNode).querySelectorAll<HTMLElement>(MOTION_HOOK_SELECTOR)]
+        .some((element) => !element.closest('[data-gallery-layer-state="background"]'))
+    : root.querySelector(MOTION_HOOK_SELECTOR),
+);
 
 interface MotionRuntimeState {
   activeMotionCleanup: MotionCleanup | null;
@@ -59,7 +64,8 @@ const POINTER_MOTION_SELECTOR = [
 
 const routeKey = (): string => `${window.location.pathname}${window.location.search}`;
 const activeRouteNeedsPointerMotion = (): boolean =>
-  Boolean(runtime.activeRoot?.querySelector(POINTER_MOTION_SELECTOR));
+  Boolean(runtime.activeRoot && [...runtime.activeRoot.querySelectorAll<HTMLElement>(POINTER_MOTION_SELECTOR)]
+    .some((element) => !element.closest('[data-gallery-layer-state="background"]')));
 
 const syncEnvironmentAttributes = (): void => {
   document.documentElement.dataset.motionPreference = runtime.reducedMotion ? 'reduced' : 'full';
@@ -85,14 +91,18 @@ const dispatchMotionReady = (environment: MotionEnvironment): void => {
 };
 
 const applyStaticMotionFallback = (environment: MotionEnvironment): MotionCleanup => {
-  const reveals = Array.from(environment.root.querySelectorAll<HTMLElement>('[data-motion-reveal]'));
-  const columns = Array.from(environment.root.querySelectorAll<HTMLElement>('[data-motion-column]'));
-  const splits = Array.from(environment.root.querySelectorAll<HTMLElement>('[data-motion-split]'));
-  const galleries = Array.from(environment.root.querySelectorAll<HTMLElement>('[data-work-gallery]'));
-  const galleryEntrances = Array.from(
-    environment.root.querySelectorAll<HTMLElement>('[data-gallery-entrance]'),
+  const active = <ElementType extends HTMLElement>(selector: string): ElementType[] => (
+    [...environment.root.querySelectorAll<ElementType>(selector)]
+      .filter((element) => !element.closest('[data-gallery-layer-state="background"]'))
   );
-  const media = Array.from(environment.root.querySelectorAll<HTMLElement>('[data-card-media]'));
+  const reveals = active<HTMLElement>('[data-motion-reveal]');
+  const columns = active<HTMLElement>('[data-motion-column]');
+  const splits = active<HTMLElement>('[data-motion-split]');
+  const galleries = active<HTMLElement>('[data-work-gallery]');
+  const galleryEntrances = Array.from(
+    active<HTMLElement>('[data-gallery-entrance]'),
+  );
+  const media = active<HTMLElement>('[data-card-media]');
 
   reveals.forEach((element) => { element.dataset.motionReady = 'static'; });
   columns.forEach((element) => {

@@ -10,11 +10,12 @@ test.describe('CMS production build', () => {
     await page.goto('/')
 
     const projectLinks = page.locator('[data-project-card] [data-project-link]')
-    await expect(projectLinks).toHaveCount(16)
+    await expect(projectLinks.first()).toBeVisible()
     const hrefs = await projectLinks.evaluateAll((links) =>
       links.map((link) => link.getAttribute('href')).filter((href): href is string => Boolean(href)),
     )
-    expect(new Set(hrefs).size).toBe(16)
+    expect(hrefs.length).toBeGreaterThan(0)
+    expect(new Set(hrefs).size).toBe(hrefs.length)
     expect(hrefs.every((href) => href.startsWith('/work/'))).toBe(true)
 
     for (const href of hrefs) {
@@ -26,8 +27,13 @@ test.describe('CMS production build', () => {
     await expect(page.locator('.draft-badge, .media-review-note, .prototype-media-note'))
       .toHaveCount(0)
 
+    const aboutPublished = await page.locator('[data-site-header] a[href="/about"]').count() > 0
     await page.goto('/about')
-    await expect(page.getByRole('heading', {level: 1})).toBeVisible()
+    if (aboutPublished) {
+      await expect(page.getByRole('heading', {level: 1})).toBeVisible()
+    } else {
+      await expect(page).toHaveURL(/\/$/u)
+    }
     await page.goto('/contact')
     await expect(page.getByRole('heading', {level: 1})).toBeVisible()
 

@@ -102,6 +102,13 @@ const tabletColumnStarts = tabletColumns.map((column, index) =>
   const queuedDetailPosters = new Set<string>();
   let activeDetailPosterWarms = 0;
   let detailPosterObserver: IntersectionObserver | undefined;
+  const inRetainedBackground = (element: Element) => Boolean(
+    element.closest('[data-gallery-layer-state="background"]'),
+  );
+  const activeProjectGrid = (): HTMLElement | undefined => (
+    [...document.querySelectorAll<HTMLElement>('[data-project-grid]')]
+      .find((grid) => !inRetainedBackground(grid))
+  );
 
   const detailPosterKey = (link: HTMLAnchorElement): string => link.href;
 
@@ -180,7 +187,7 @@ const tabletColumnStarts = tabletColumns.map((column, index) =>
   const setupDetailPosterWarmup = (): void => {
     detailPosterObserver?.disconnect();
     detailPosterObserver = undefined;
-    const grid = document.querySelector<HTMLElement>('[data-project-grid]');
+    const grid = activeProjectGrid();
     if (!grid || !('IntersectionObserver' in window)) return;
     detailPosterObserver = new IntersectionObserver((entries) => {
       entries.forEach((entry) => {
@@ -202,7 +209,8 @@ const tabletColumnStarts = tabletColumns.map((column, index) =>
 
   const queueNewlyReadyDetailPoster = (event: Event): void => {
     const image = event.target instanceof HTMLImageElement ? event.target : undefined;
-    const link = image?.closest<HTMLAnchorElement>('[data-project-link], [data-gallery-link]');
+      const link = image?.closest<HTMLAnchorElement>('[data-project-link], [data-gallery-link]');
+      if (link && inRetainedBackground(link)) return;
     if (!link || !link.matches('[data-project-link]')) return;
     const bounds = link.getBoundingClientRect();
     const margin = window.innerHeight * .85;
@@ -269,7 +277,7 @@ const tabletColumnStarts = tabletColumns.map((column, index) =>
   };
 
   const restoreGalleryOrder = (): void => {
-    const grid = document.querySelector<HTMLElement>('[data-project-grid]');
+    const grid = activeProjectGrid();
     if (!grid) return;
     window.__newWorkGalleryRemoved = new Set(readHiddenGalleryItems());
     getGalleryCards(grid).forEach((card) => {
@@ -289,6 +297,7 @@ const tabletColumnStarts = tabletColumns.map((column, index) =>
     document.querySelectorAll<HTMLAnchorElement>(
       ':is([data-project-link], [data-gallery-link]):not([data-warmup-ready])',
     ).forEach((link) => {
+      if (inRetainedBackground(link)) return;
       link.dataset.warmupReady = 'true';
       link.addEventListener('pointerenter', () => { void loadDetailPoster(link, 'high'); }, { passive: true });
       link.addEventListener('focus', () => { void loadDetailPoster(link, 'high'); });
@@ -298,7 +307,7 @@ const tabletColumnStarts = tabletColumns.map((column, index) =>
 
   const setupEditorialGrid = (immediate = false) => {
     window.__newWorkMasonryCleanup?.();
-    const grid = document.querySelector<HTMLElement>('[data-project-grid]');
+    const grid = activeProjectGrid();
     if (!grid) return;
 
     const cards = [...grid.querySelectorAll<HTMLElement>('[data-project-card]')];
@@ -352,7 +361,7 @@ const tabletColumnStarts = tabletColumns.map((column, index) =>
 
   const prepareGalleryReturn = (origin: GalleryReturnOrigin): void => {
     restoreGalleryOrder();
-    const gallery = document.querySelector<HTMLElement>('[data-work-gallery]');
+    const gallery = activeProjectGrid()?.closest<HTMLElement>('[data-work-gallery]');
     const entrance = gallery?.querySelector<HTMLElement>('[data-gallery-entrance]');
     if (!gallery || !entrance) return;
 
@@ -374,7 +383,7 @@ const tabletColumnStarts = tabletColumns.map((column, index) =>
     window.__newWorkGalleryOrderReady = true;
 
     document.addEventListener('new-work:gallery-shuffle', () => {
-      const grid = document.querySelector<HTMLElement>('[data-project-grid]');
+      const grid = activeProjectGrid();
       if (!grid) return;
       const cards = getGalleryCards(grid);
       const previous = cards.map(getCardId).filter((id): id is string => Boolean(id));
@@ -398,7 +407,7 @@ const tabletColumnStarts = tabletColumns.map((column, index) =>
     });
 
     document.addEventListener('new-work:gallery-save', () => {
-      const grid = document.querySelector<HTMLElement>('[data-project-grid]');
+      const grid = activeProjectGrid();
       if (!grid) return;
       const order = getGalleryCards(grid)
         .map(getCardId)

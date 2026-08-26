@@ -1663,8 +1663,54 @@ test('route media keeps the original node continuous through the centralized rou
       await video.play();
     });
 
+    type VideoPortalState = {
+      destinationEmpty: boolean;
+      destinationVideoCount: number;
+      paused: boolean;
+      posterVisibility: string | null;
+    };
+    await page.evaluate(() => {
+      const routeWindow = window as Window & {
+        __videoPortalState?: Promise<VideoPortalState | null>;
+      };
+      routeWindow.__videoPortalState = new Promise<VideoPortalState | null>((resolve) => {
+        const inspect = () => {
+          const portal = document.querySelector<HTMLElement>('[data-route-media-portal]');
+          const video = portal?.querySelector('video');
+          const destination = document.querySelector<HTMLElement>('[data-project-hero-media]');
+          if (!portal || !(video instanceof HTMLVideoElement) || !destination) return false;
+          const poster = destination.querySelector<HTMLElement>('.hosted-video > .responsive-image');
+          resolve({
+            destinationEmpty: destination.hasAttribute('data-route-media-destination-empty'),
+            destinationVideoCount: destination.querySelectorAll('video').length,
+            paused: video.paused,
+            posterVisibility: poster ? getComputedStyle(poster).visibility : null,
+          });
+          return true;
+        };
+        const interval = window.setInterval(() => {
+          if (inspect()) window.clearInterval(interval);
+        }, 16);
+        window.setTimeout(() => {
+          window.clearInterval(interval);
+          resolve(null);
+        }, 3_000);
+      });
+    });
+
     await motionLink.click({ noWaitAfter: true });
     await page.waitForURL((url) => url.pathname !== '/');
+    const videoPortalState = await page.evaluate(() => (
+      (window as Window & {
+        __videoPortalState?: Promise<VideoPortalState | null>;
+      }).__videoPortalState ?? null
+    ));
+    expect(videoPortalState).toEqual({
+      destinationEmpty: true,
+      destinationVideoCount: 0,
+      paused: false,
+      posterVisibility: 'hidden',
+    });
     const outboundVideoHandoff = page.locator('[data-continuity-probe="same-video-node"]');
     await expect(outboundVideoHandoff).toBeAttached();
     await expect(outboundVideoHandoff).toHaveAttribute(
@@ -2009,7 +2055,7 @@ test('route media keeps the original node continuous through the centralized rou
     .toHaveAttribute('data-gallery-entrance-state', 'settled');
 });
 
-test('landscape photos hand off on entry and return already settled in the gallery', async ({ page }, testInfo) => {
+test('landscape photos use the same reversible live portal without distortion', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name.startsWith('mobile-'), 'The desktop landscape-to-portrait morph exercises the largest aspect-ratio change.');
   await page.setViewportSize({ width: 1_440, height: 1_000 });
   await page.goto('/');
@@ -2022,6 +2068,7 @@ test('landscape photos hand off on entry and return already settled in the galle
     topmost: boolean;
     viewTransitionName: string;
     zIndex: number;
+    visualRatio: number;
   };
   const beginNextPortalCapture = () => page.evaluate(() => {
     const captureWindow = window as Window & {
@@ -2044,6 +2091,7 @@ test('landscape photos hand off on entry and return already settled in the galle
         portal.style.pointerEvents = previousPointerEvents;
         const portalStyle = getComputedStyle(portal);
         const imageStyle = getComputedStyle(image);
+        const visual = image.getBoundingClientRect();
         window.clearTimeout(timeout);
         window.clearInterval(interval);
         resolve({
@@ -2056,6 +2104,7 @@ test('landscape photos hand off on entry and return already settled in the galle
           )),
           viewTransitionName: portalStyle.viewTransitionName,
           zIndex: Number(portalStyle.zIndex),
+          visualRatio: visual.width / visual.height,
         });
         return true;
       };
@@ -2089,9 +2138,15 @@ test('landscape photos hand off on entry and return already settled in the galle
   expect(outboundPortal?.position).toBe('fixed');
   expect(outboundPortal?.viewTransitionName).toBe('none');
   expect(outboundPortal?.zIndex).toBeGreaterThan(2_147_483_000);
-  expect(outboundPortal?.objectFit).toBe('cover');
+  // The portal gives the exact image explicit intrinsic-ratio geometry while
+  // its clipping frame morphs from cover to contain. `fill` therefore cannot
+  // distort it, and avoids the discrete object-fit jump between those states.
+  expect(outboundPortal?.objectFit).toBe('fill');
   expect(outboundPortal?.topmost).toBe(true);
   expect(outboundPortal?.imageRatio).toBeGreaterThan(1.45);
+  expect(Math.abs(
+    (outboundPortal?.visualRatio ?? 0) - (outboundPortal?.imageRatio ?? 0),
+  )).toBeLessThan(.01);
   expect(outboundPortal?.frameRatio).toBeGreaterThan(0);
   await expect(page.locator('[data-gallery-photo-primary]')).toHaveCount(0);
   await expect(page.locator('[data-route-media-portal]')).toHaveCount(0, { timeout: 2_000 });
@@ -2114,8 +2169,7 @@ test('landscape photos hand off on entry and return already settled in the galle
     });
   });
   await page.locator('[data-project-overlay-return]').click({ noWaitAfter: true });
-  await expect(page.locator('[data-gallery-return-transition-style]'))
-    .toHaveAttribute('data-gallery-return-transition-style', 'settled');
+  await expect(page.locator('[data-gallery-return-transition-style]')).toHaveCount(0);
   await page.waitForURL((url) => url.pathname === '/');
   await page.waitForTimeout(450);
   expect(await page.evaluate(() => {
@@ -2125,7 +2179,7 @@ test('landscape photos hand off on entry and return already settled in the galle
     };
     routeWindow.__returnPortalObserver?.disconnect();
     return routeWindow.__returnPortalSeen;
-  })).toBe(false);
+  })).toBe(true);
   await expect(page.locator('[data-route-media-portal]')).toHaveCount(0, { timeout: 2_000 });
   await expect(page.locator('[data-photo-return-handoff]')).toHaveCount(0);
   const returnedMedia = page.locator(
@@ -2369,8 +2423,11 @@ test('ClientRouter navigation persists project media and restores the originatin
     currentSrc: (image as HTMLImageElement).currentSrc,
   }));
   expect(readyHeroPoster.complete && Boolean(readyHeroPoster.currentSrc)).toBe(true);
-  await expect(page.locator('[data-project-overlay]')).toHaveAttribute('data-overlay-backdrop', 'snapshot');
-  await expect(page.locator('[data-project-overlay-snapshot] img')).not.toHaveCount(0);
+  await expect(page.locator('[data-project-overlay]')).toHaveAttribute('data-overlay-backdrop', 'retained');
+  await expect(page.locator('[data-route-gallery-layer] [data-work-gallery]')).toBeAttached();
+  await expect(page.locator('[data-route-gallery-layer]'))
+    .toHaveAttribute('data-gallery-layer-state', 'background');
+  await expect(page.locator('[data-project-overlay-snapshot] img')).toHaveCount(0);
   await expect(page.locator('html')).toHaveAttribute('data-motion-route', `/work/${projectSlug}`);
   const projectTransitionName = await page.locator(
     '[data-project-hero-media][data-first-media="true"]',

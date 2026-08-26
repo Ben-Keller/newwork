@@ -110,6 +110,8 @@ const preloadMobileAvifSrcset = preloadMobileImage
   ? buildResponsiveAvifSrcset(preloadMobileImage)
   : undefined;
 const avifHref = (image: ImageView) => image.src.replace(/\.webp$/iu, '.avif');
+const isWorkIndex = pageClass.includes('home-page');
+const isWorkProject = pageClass.includes('project-page');
 ---
 <!doctype html>
 <html lang="en" transition:animate={routeTransition}>
@@ -197,7 +199,30 @@ const avifHref = (image: ImageView) => image.src.replace(/\.webp$/iu, '.avif');
       />
     ) : null}
     <main id="main-content" tabindex="-1" data-motion-root>
-      <slot />
+      {isWorkIndex ? (
+        <div
+          class="route-gallery-layer"
+          data-route-gallery-layer
+          transition:persist="new-work-gallery-scene"
+        >
+          <div class="route-gallery-layer__content" data-route-gallery-content>
+            <slot />
+          </div>
+        </div>
+      ) : isWorkProject ? (
+        <>
+          <div
+            class="route-gallery-layer"
+            data-route-gallery-layer
+            transition:persist="new-work-gallery-scene"
+          ></div>
+          <div class="route-project-layer" data-route-project-layer>
+            <slot />
+          </div>
+        </>
+      ) : (
+        <slot />
+      )}
     </main>
     {showSiteFooter ? (
       <SiteFooter

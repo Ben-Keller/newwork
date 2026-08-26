@@ -66,7 +66,7 @@ const initializeGalleryScroll = (gallery: HTMLElement): MotionCleanup => {
 export const initializeGalleryMotion = (environment: MotionEnvironment): MotionCleanup => {
   const galleries = Array.from(
     environment.root.querySelectorAll<HTMLElement>('[data-work-gallery]'),
-  );
+  ).filter((gallery) => !gallery.closest('[data-gallery-layer-state="background"]'));
   const cleanups: MotionCleanup[] = [];
 
   galleries.forEach((gallery) => {

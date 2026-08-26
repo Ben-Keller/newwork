@@ -7,7 +7,7 @@ export const initializeCardPointer = (environment: MotionEnvironment): MotionCle
 
   const links = Array.from(
     environment.root.querySelectorAll<HTMLElement>('[data-project-link], [data-gallery-link]'),
-  );
+  ).filter((link) => !link.closest('[data-gallery-layer-state="background"]'));
   const cleanups: MotionCleanup[] = [];
 
   links.forEach((link) => {

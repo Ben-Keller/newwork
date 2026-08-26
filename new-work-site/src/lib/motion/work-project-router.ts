@@ -13,6 +13,7 @@ import {
   persistMatchingVideo,
   persistResponsiveImage,
   restoreRouteMediaSnapshots,
+  routeMediaPersistKey,
   routeVideoIsVisiblyPlaying,
   skipRouteSnapshotTransition,
   supportsRouteMediaPersistence,
@@ -60,6 +61,8 @@ interface RouteSession {
   viewTransition?: ViewTransition;
   signal?: AbortSignal;
   detachAbort?: () => void;
+  animateReturn?: boolean;
+  releaseScrollLock?: () => void;
 }
 
 declare global {
@@ -76,9 +79,11 @@ const originStorageKey = 'new-work-origin';
 const restoreRequestKey = 'new-work-restore-requested';
 const persistedMediaAttribute = 'data-transition-persist-media';
 const returnStyleAttribute = 'data-work-project-return-transition';
-const routerVersion = 3;
+const routerVersion = 4;
 const projectLinkSelector = '[data-project-grid] :is([data-project-link], [data-gallery-link])';
 const returnLinkSelector = '[data-project-overlay] [data-project-return]';
+const galleryLayerSelector = '[data-route-gallery-layer]';
+const galleryPersistAttribute = 'data-astro-transition-persist';
 
 let sessionSequence = 0;
 let activeSession: RouteSession | undefined;
@@ -167,12 +172,58 @@ const markGallerySettled = (targetDocument: Document): void => {
   }
 };
 
+const liveGalleryLayer = (targetDocument: Document = document): HTMLElement | undefined => {
+  const layer = targetDocument.querySelector<HTMLElement>(galleryLayerSelector);
+  return layer?.querySelector('[data-work-gallery]') ? layer : undefined;
+};
+
+const retainGalleryLayer = (origin: WorkOrigin): void => {
+  const layer = liveGalleryLayer();
+  if (!layer) return;
+  const scrollY = typeof origin.scrollY === 'number' ? origin.scrollY : window.scrollY;
+  layer.dataset.galleryLayerState = 'background';
+  layer.style.setProperty('--route-gallery-offset', `${-scrollY}px`);
+  layer.setAttribute('aria-hidden', 'true');
+  layer.inert = true;
+  markGallerySettled(document);
+};
+
+const releaseGalleryLayer = (): void => {
+  const layer = liveGalleryLayer();
+  if (!layer) return;
+  layer.removeAttribute('data-gallery-layer-state');
+  layer.style.removeProperty('--route-gallery-offset');
+  layer.removeAttribute('aria-hidden');
+  layer.inert = false;
+};
+
 const settleGallery = (origin: WorkOrigin): void => {
+  releaseGalleryLayer();
   window.__newWorkPrepareGalleryReturn?.(origin);
   markGallerySettled(document);
   if (typeof origin.scrollY === 'number') {
     window.scrollTo({ top: origin.scrollY, left: 0, behavior: 'auto' });
   }
+};
+
+const holdGalleryScroll = (routeSession: RouteSession): void => {
+  const target = routeSession.origin.scrollY;
+  if (typeof target !== 'number') return;
+  let frame = 0;
+  let active = true;
+  const keepPosition = () => {
+    if (!active) return;
+    if (Math.abs(window.scrollY - target) > .5) {
+      window.scrollTo({top: target, left: 0, behavior: 'auto'});
+    }
+    frame = window.requestAnimationFrame(keepPosition);
+  };
+  frame = window.requestAnimationFrame(keepPosition);
+  routeSession.releaseScrollLock = () => {
+    active = false;
+    if (frame) window.cancelAnimationFrame(frame);
+    routeSession.releaseScrollLock = undefined;
+  };
 };
 
 const returnTransitionCss = `
@@ -217,6 +268,7 @@ const finishSession = (routeSession: RouteSession): void => {
   if (activeSession?.id !== routeSession.id) return;
   activeSession = undefined;
   routeSession.detachAbort?.();
+  routeSession.releaseScrollLock?.();
   routeSession.presentation?.cancel();
   routeSession.sourceVideo?.removeAttribute(persistedMediaAttribute);
   if (routeSession.sourceVideo && routeSession.slug) {
@@ -227,6 +279,8 @@ const finishSession = (routeSession: RouteSession): void => {
   pendingReturnTrigger = undefined;
   document.head.querySelector(`[${returnStyleAttribute}]`)?.remove();
   restoreRouteMediaSnapshots();
+  document.querySelectorAll<HTMLElement>('[data-route-media-destination-empty]')
+    .forEach((element) => element.removeAttribute('data-route-media-destination-empty'));
   delete document.documentElement.dataset.workProjectTransition;
   delete document.documentElement.dataset.workProjectMedia;
 };
@@ -242,7 +296,11 @@ const bindAbort = (routeSession: RouteSession, signal?: AbortSignal): void => {
 
 const finishAfterPresentation = (routeSession: RouteSession): void => {
   if (routeSession.presentation) {
-    void routeSession.presentation.finished.then(() => finishSession(routeSession));
+    void routeSession.presentation.finished.then(() => {
+      if (routeSession.direction === 'to-gallery') settleGallery(routeSession.origin);
+      routeSession.releaseScrollLock?.();
+      finishSession(routeSession);
+    });
     return;
   }
   const finished = routeSession.viewTransition?.finished;
@@ -289,6 +347,7 @@ const beginProjectNavigation = (
       };
   knownOrigin = origin;
   writeOrigin(origin);
+  retainGalleryLayer(origin);
   history.scrollRestoration = 'manual';
   if (sourceVideo && slug) {
     sourceVideo.setAttribute(persistedMediaAttribute, '');
@@ -325,10 +384,15 @@ const beginGalleryNavigation = (
   overlay: HTMLElement,
   trigger?: HTMLAnchorElement,
   signal?: AbortSignal,
+  sourceElement?: Element,
 ): RouteSession | undefined => {
   if (activeSession) return activeSession.direction === 'to-gallery' ? activeSession : undefined;
-  const origin = knownOrigin ?? readOrigin();
   const slug = overlay.dataset.projectSlug;
+  const storedOrigin = knownOrigin ?? readOrigin();
+  const returnsToTop = Boolean(sourceElement?.closest('[data-work-navigation]'));
+  const origin: WorkOrigin = storedOrigin.slug === slug
+    ? {...storedOrigin, scrollY: returnsToTop ? 0 : storedOrigin.scrollY}
+    : {slug, scrollY: 0};
   const sourceMedia = overlay.querySelector<HTMLElement>(
     '[data-project-hero-media][data-first-media="true"]',
   ) ?? undefined;
@@ -336,6 +400,13 @@ const beginGalleryNavigation = (
   const sourceImage = sourceVideo
     ? undefined
     : sourceMedia?.querySelector<HTMLElement>('.responsive-image') ?? undefined;
+  const handoffElement = sourceVideo || sourceImage;
+  if (!liveGalleryLayer()) {
+    // A direct project visit has an intentionally empty persistence target.
+    // Let the incoming home scene replace it instead of retaining that shell.
+    document.querySelector<HTMLElement>(galleryLayerSelector)
+      ?.removeAttribute(galleryPersistAttribute);
+  }
   if (sourceVideo && slug) {
     sourceVideo.setAttribute(persistedMediaAttribute, '');
     captureRouteVideo(sourceVideo, slug);
@@ -351,7 +422,11 @@ const beginGalleryNavigation = (
     sourceMedia,
     sourceImage,
     sourceVideo,
+    handoff: handoffElement && sourceMedia
+      ? captureRouteMediaHandoff(handoffElement, sourceMedia)
+      : undefined,
     persistedVideo: false,
+    animateReturn: !returnsToTop,
   };
   activeSession = routeSession;
   bindAbort(routeSession, signal);
@@ -359,7 +434,6 @@ const beginGalleryNavigation = (
   storageSet(restoreRequestKey, 'true');
   document.documentElement.dataset.workProjectTransition = 'to-gallery';
   disableRouteMediaSnapshots(document, false);
-  installReturnStyle(document);
   return routeSession;
 };
 
@@ -370,11 +444,26 @@ const persistToProject = (routeSession: RouteSession, event: RouteSwapEvent): vo
     '[data-project-hero-media][data-first-media="true"]',
   );
   if (!target) return;
+  target.dataset.routeMediaDestinationEmpty = 'true';
   if (sourceVideo) {
     const targetVideo = target.querySelector<HTMLVideoElement>('video[data-short-loop]');
-    if (targetVideo) routeSession.persistedVideo = persistMatchingVideo(sourceVideo, targetVideo, slug, event);
+    if (targetVideo) {
+      routeSession.persistedVideo = persistMatchingVideo(
+        sourceVideo,
+        targetVideo,
+        slug,
+        event,
+        {preserveOrigin: true},
+      );
+    }
   } else if (sourceImage && sourceMedia) {
-    routeSession.persistedImage = persistResponsiveImage(sourceMedia, target, slug, event);
+    routeSession.persistedImage = persistResponsiveImage(
+      sourceMedia,
+      target,
+      slug,
+      event,
+      {preserveOrigin: true},
+    );
   }
   if (routeSession.persistedImage || routeSession.persistedVideo) {
     event.newDocument.documentElement.dataset.workProjectMedia = 'live';
@@ -385,27 +474,52 @@ const persistToProject = (routeSession: RouteSession, event: RouteSwapEvent): vo
 
 const persistToGallery = (routeSession: RouteSession, event: RouteSwapEvent): void => {
   const { slug, origin, sourceImage, sourceVideo } = routeSession;
-  const targetMedia = slug
+  const retainedTargetMedia = slug
+    ? liveGalleryLayer()?.querySelector<HTMLElement>(
+      `[data-gallery-item-id="${CSS.escape(slug)}"] .project-card__media`,
+    )
+    : null;
+  const incomingTargetMedia = slug
     ? event.newDocument.querySelector<HTMLElement>(
       `[data-gallery-item-id="${CSS.escape(slug)}"] .project-card__media`,
     )
     : null;
+  const targetMedia = retainedTargetMedia || incomingTargetMedia;
   const canPersist = Boolean(
     supportsRouteMediaPersistence()
     && slug
     && origin.slug === slug,
   );
   if (canPersist && slug && sourceImage && targetMedia) {
-    routeSession.persistedImage = persistResponsiveImage(sourceImage, targetMedia, slug, event);
+    const imageOrigin = targetMedia.querySelector<HTMLElement>(
+      `[data-route-media-origin="${CSS.escape(routeMediaPersistKey(`${slug}-image`))}"]`,
+    );
+    targetMedia.dataset.routeMediaDestinationEmpty = 'true';
+    routeSession.persistedImage = persistResponsiveImage(
+      sourceImage,
+      imageOrigin || targetMedia,
+      slug,
+      event,
+    );
   }
-  const targetVideo = targetMedia?.querySelector<HTMLVideoElement>('[data-preview-video]');
+  const targetVideo = targetMedia?.querySelector<HTMLVideoElement>(
+    `[data-route-media-origin="${CSS.escape(routeMediaPersistKey(`${slug}-video`))}"], [data-preview-video]`,
+  );
   if (canPersist && slug && sourceVideo && targetVideo) {
+    targetMedia?.setAttribute('data-route-media-destination-empty', 'true');
     routeSession.persistedVideo = persistMatchingVideo(sourceVideo, targetVideo, slug, event);
   }
 
   markGallerySettled(event.newDocument);
   disableRouteMediaSnapshots(event.newDocument, false);
-  installReturnStyle(event.newDocument);
+  const hasLiveMedia = Boolean(routeSession.persistedImage || routeSession.persistedVideo);
+  if (hasLiveMedia) {
+    event.newDocument.documentElement.dataset.workProjectMedia = 'live';
+    disableRouteMediaSnapshots(event.newDocument);
+    skipRouteSnapshotTransition(event);
+  } else {
+    installReturnStyle(event.newDocument);
+  }
   const preparedSwap = event.swap;
   if (typeof preparedSwap === 'function') {
     event.swap = () => {
@@ -447,19 +561,41 @@ const handleAfterSwap = (): void => {
 
   if (routeSession.direction === 'to-gallery') {
     settleGallery(routeSession.origin);
+    holdGalleryScroll(routeSession);
     storageRemove(restoreRequestKey);
     if (routeSession.persistedImage) {
-      routeSession.persistedImage.dataset.routeMediaHandoff = 'settled';
+      if (routeSession.animateReturn && routeSession.slug) {
+        routeSession.presentation = animatePersistedRouteMedia(
+          routeSession.persistedImage,
+          routeSession.handoff,
+          routeSession.slug,
+        );
+      } else {
+        routeSession.persistedImage.dataset.routeMediaHandoff = 'settled';
+        routeSession.persistedImage.closest<HTMLElement>('[data-route-media-destination-empty]')
+          ?.removeAttribute('data-route-media-destination-empty');
+      }
     }
     if (routeSession.persistedVideo) {
       restorePersistedVideo(routeSession);
-      if (routeSession.sourceVideo) routeSession.sourceVideo.dataset.routeMediaHandoff = 'settled';
+      if (routeSession.sourceVideo && routeSession.animateReturn && routeSession.slug) {
+        routeSession.presentation = animatePersistedRouteMedia(
+          routeSession.sourceVideo,
+          routeSession.handoff,
+          routeSession.slug,
+        );
+      } else if (routeSession.sourceVideo) {
+        routeSession.sourceVideo.dataset.routeMediaHandoff = 'settled';
+        routeSession.sourceVideo.closest<HTMLElement>('[data-route-media-destination-empty]')
+          ?.removeAttribute('data-route-media-destination-empty');
+      }
     } else if (routeSession.origin.slug) {
       const targetVideo = document.querySelector<HTMLVideoElement>(
         `[data-gallery-item-id="${CSS.escape(routeSession.origin.slug)}"] [data-preview-video]`,
       );
       if (targetVideo) void restoreRouteVideo(targetVideo, routeSession.origin.slug);
     }
+    restoreRouteMediaSnapshots();
     finishAfterPresentation(routeSession);
     return;
   }
@@ -519,19 +655,20 @@ const handleBeforePreparation = (rawEvent: Event): void => {
   if (!event.to) return;
   if (activeSession) finishSession(activeSession);
 
+  const overlay = document.querySelector<HTMLElement>('[data-project-overlay]');
+  if (overlay && targetsGallery(overlay, event.to)) {
+    const sourceLink = event.sourceElement?.closest<HTMLAnchorElement>(returnLinkSelector)
+      ?? pendingReturnTrigger;
+    beginGalleryNavigation(overlay, sourceLink, event.signal, event.sourceElement);
+    return;
+  }
+
   const gallery = document.querySelector<HTMLElement>('[data-work-gallery]');
   if (gallery) {
     const link = projectLinkForDestination(event.to, event.sourceElement);
     if (link) beginProjectNavigation(link, event);
     return;
   }
-
-  const overlay = document.querySelector<HTMLElement>('[data-project-overlay]');
-  if (!overlay) return;
-  if (!targetsGallery(overlay, event.to)) return;
-  const sourceLink = event.sourceElement?.closest<HTMLAnchorElement>(returnLinkSelector)
-    ?? pendingReturnTrigger;
-  beginGalleryNavigation(overlay, sourceLink, event.signal);
 };
 
 const navigateToGallery = (link: HTMLAnchorElement): void => {

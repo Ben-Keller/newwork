@@ -203,7 +203,22 @@ export const work = defineType({
       group: 'page',
       description: 'Used when someone opens this Work directly. A clicked gallery photo overrides it for that visit.',
       to: [{type: 'mediaItem'}],
-      options: {disableNew: true, filter: 'kind == "image"'},
+      options: {
+        disableNew: true,
+        filter: ({document}) => {
+          const photoIds = ((document?.photos || []) as Array<{_ref?: string}>)
+            .flatMap((photo) => typeof photo?._ref === 'string'
+              ? [photo._ref.replace(/^drafts\./u, '')]
+              : [])
+          return {
+            filter: 'kind == "image" && (_id in $photoIds || _id in $draftPhotoIds)',
+            params: {
+              photoIds,
+              draftPhotoIds: photoIds.map((id) => `drafts.${id}`),
+            },
+          }
+        },
+      },
       hidden: ({document}) => document?.template !== 'photo',
       validation: (Rule) => Rule.custom((value, context) => {
         const document = context.document as {template?: string; editorialStatus?: string; photos?: Array<{_ref?: string}>}

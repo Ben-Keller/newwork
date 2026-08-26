@@ -2,7 +2,7 @@
 
 const persistAttribute = 'data-astro-transition-persist';
 const snapshotDisabledAttribute = 'data-route-media-snapshot-disabled';
-const routeMediaDuration = 900;
+const routeMediaDuration = 820;
 
 export interface RouteMediaAnimation {
   cancel: () => void;
@@ -68,12 +68,13 @@ export const captureRouteMediaHandoff = (
     : element.querySelector<HTMLElement>('img, video');
   const visualStyles = visual ? getComputedStyle(visual) : undefined;
   const transformFrame = element.closest<HTMLElement>('[data-card-media]');
+  const declaredFit = element.closest<HTMLElement>('[data-route-media-fit]')?.dataset.routeMediaFit;
   return {
     rect: rectRecord(rect),
     backgroundColor: frameStyles.backgroundColor,
     borderRadius: frameStyles.borderRadius,
     clipPath: frameStyles.clipPath,
-    objectFit: visualStyles?.objectFit === 'fill' ? 'cover' : visualStyles?.objectFit,
+    objectFit: declaredFit || (visualStyles?.objectFit === 'fill' ? 'cover' : visualStyles?.objectFit),
     objectPosition: visualStyles?.objectPosition,
     opacity: visualStyles?.opacity,
     visualTransform: transformFrame
@@ -177,6 +178,8 @@ export const animatePersistedRouteMedia = (
 
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
     element.dataset.routeMediaHandoff = 'settled';
+    element.closest<HTMLElement>('[data-route-media-destination-empty]')
+      ?.removeAttribute('data-route-media-destination-empty');
     return { cancel: () => undefined, finished: Promise.resolve() };
   }
 
@@ -192,10 +195,14 @@ export const animatePersistedRouteMedia = (
     ? element
     : element.querySelector<HTMLElement>('img, video');
   const targetVisualStyles = targetVisual ? getComputedStyle(targetVisual) : undefined;
-  const targetObjectFit = targetVisualStyles?.objectFit === 'fill'
+  const declaredTargetFit = element.closest<HTMLElement>('[data-route-media-fit]')
+    ?.dataset.routeMediaFit;
+  const targetObjectFit = declaredTargetFit || (targetVisualStyles?.objectFit === 'fill'
     ? 'cover'
-    : targetVisualStyles?.objectFit || 'cover';
+    : targetVisualStyles?.objectFit || 'cover');
   const targetObjectPosition = targetVisualStyles?.objectPosition || '50% 50%';
+  const targetFrameStyles = getComputedStyle(targetGeometry);
+  const destinationEmptyHost = element.closest<HTMLElement>('[data-route-media-destination-empty]');
   const placeholder = document.createElement('span');
   placeholder.setAttribute('aria-hidden', 'true');
   placeholder.dataset.routeMediaTarget = slug;
@@ -217,7 +224,7 @@ export const animatePersistedRouteMedia = (
   }
 
   const elementInlineStyle = element.getAttribute('style');
-  const styledDescendants = [...element.querySelectorAll<HTMLElement>('picture, img')]
+  const styledDescendants = [...element.querySelectorAll<HTMLElement>('picture, img, video')]
     .map((candidate) => ({ candidate, style: candidate.getAttribute('style') }));
   element.replaceWith(placeholder);
   const liveTarget = targetCardFrame || placeholder;
@@ -254,7 +261,19 @@ export const animatePersistedRouteMedia = (
     willChange: 'left, top, width, height',
   });
   document.body.append(portal);
-  portal.append(element);
+  const stage = document.createElement('div');
+  Object.assign(stage.style, {
+    position: 'absolute',
+    inset: '0',
+    width: '100%',
+    height: '100%',
+    overflow: 'visible',
+    transform: handoff.visualTransform || 'none',
+    transformOrigin: 'center',
+    willChange: 'transform',
+  });
+  portal.append(stage);
+  stage.append(element);
 
   element.dataset.routeMediaHandoff = 'animating';
   Object.assign(element.style, {
@@ -275,7 +294,7 @@ export const animatePersistedRouteMedia = (
     backgroundColor: 'transparent',
     borderRadius: '0',
     clipPath: 'none',
-    transform: handoff.visualTransform || 'none',
+    transform: 'none',
     transformOrigin: 'center',
     pointerEvents: 'none',
     opacity: '1',
@@ -283,8 +302,10 @@ export const animatePersistedRouteMedia = (
     willChange: 'transform',
   });
 
-  element.querySelectorAll<HTMLElement>('picture, img').forEach((candidate) => {
+  element.querySelectorAll<HTMLElement>('picture').forEach((candidate) => {
     Object.assign(candidate.style, {
+      position: 'absolute',
+      inset: '0',
       display: 'block',
       width: '100%',
       height: '100%',
@@ -293,26 +314,23 @@ export const animatePersistedRouteMedia = (
       minHeight: '0',
       maxHeight: 'none',
     });
-    if (candidate instanceof HTMLImageElement) {
-      candidate.style.objectFit = handoff.objectFit || 'cover';
-      candidate.style.objectPosition = handoff.objectPosition || '50% 50%';
-      candidate.style.opacity = handoff.opacity || '1';
-    }
   });
-  if (element instanceof HTMLVideoElement) {
-    element.style.objectFit = handoff.objectFit === 'fill' ? 'cover' : handoff.objectFit || 'cover';
-    element.style.objectPosition = handoff.objectPosition || '50% 50%';
-    element.style.opacity = '1';
-  }
 
   const activeVisual = element.matches('img, video')
     ? element
     : element.querySelector<HTMLElement>('img, video');
   if (activeVisual) {
-    activeVisual.style.objectFit = handoff.objectFit === 'fill'
-      ? 'cover'
-      : handoff.objectFit || 'cover';
-    activeVisual.style.objectPosition = handoff.objectPosition || '50% 50%';
+    Object.assign(activeVisual.style, {
+      position: 'absolute',
+      inset: 'auto',
+      minWidth: '0',
+      maxWidth: 'none',
+      minHeight: '0',
+      maxHeight: 'none',
+      margin: '0',
+      objectFit: 'fill',
+      objectPosition: '50% 50%',
+    });
     activeVisual.style.opacity = '1';
     activeVisual.style.transition = 'none';
   }
@@ -322,17 +340,99 @@ export const animatePersistedRouteMedia = (
     easing: 'cubic-bezier(.65, 0, .35, 1)',
     fill: 'forwards',
   };
-  const transformAnimation = element.animate([
+  const transformAnimation = stage.animate([
     { transform: handoff.visualTransform || 'none' },
     { transform: targetTransform },
   ], presentationOptions);
-  const framingAnimation = activeVisual?.animate([
+  const frameAnimation = portal.animate([
     {
-      objectFit: handoff.objectFit === 'fill' ? 'cover' : handoff.objectFit || 'cover',
-      objectPosition: handoff.objectPosition || '50% 50%',
+      backgroundColor: handoff.backgroundColor,
+      borderRadius: handoff.borderRadius,
+      clipPath: handoff.clipPath,
     },
-    { objectFit: targetObjectFit, objectPosition: targetObjectPosition },
+    {
+      backgroundColor: targetFrameStyles.backgroundColor,
+      borderRadius: targetFrameStyles.borderRadius,
+      clipPath: targetFrameStyles.clipPath,
+    },
   ], presentationOptions);
+
+  type FitMode = 'cover' | 'contain';
+  type VisualRect = { left: number; top: number; width: number; height: number };
+  const fitMode = (value: string | undefined): FitMode => value === 'contain' ? 'contain' : 'cover';
+  const positionAxis = (value: string | undefined, axis: 'x' | 'y'): number => {
+    const tokens = (value || '50% 50%').trim().split(/\s+/u);
+    const token = tokens[axis === 'x' ? 0 : 1] || tokens[0] || '50%';
+    if (token.endsWith('%')) {
+      const percentage = Number.parseFloat(token);
+      if (Number.isFinite(percentage)) return Math.min(1, Math.max(0, percentage / 100));
+    }
+    if (axis === 'x') {
+      if (token === 'left') return 0;
+      if (token === 'right') return 1;
+    } else {
+      if (token === 'top') return 0;
+      if (token === 'bottom') return 1;
+    }
+    return .5;
+  };
+  const intrinsicRatio = (() => {
+    if (activeVisual instanceof HTMLImageElement) {
+      const width = activeVisual.naturalWidth || activeVisual.width;
+      const height = activeVisual.naturalHeight || activeVisual.height;
+      return width > 0 && height > 0 ? width / height : undefined;
+    }
+    if (activeVisual instanceof HTMLVideoElement) {
+      return activeVisual.videoWidth > 0 && activeVisual.videoHeight > 0
+        ? activeVisual.videoWidth / activeVisual.videoHeight
+        : undefined;
+    }
+    return undefined;
+  })();
+  const fittedRect = (
+    width: number,
+    height: number,
+    ratio: number,
+    mode: FitMode,
+    position: string | undefined,
+  ): VisualRect => {
+    const frameRatio = width / Math.max(height, .001);
+    const fitWidth = mode === 'cover' ? ratio <= frameRatio : ratio >= frameRatio;
+    const mediaWidth = fitWidth ? width : height * ratio;
+    const mediaHeight = fitWidth ? width / ratio : height;
+    return {
+      left: (width - mediaWidth) * positionAxis(position, 'x'),
+      top: (height - mediaHeight) * positionAxis(position, 'y'),
+      width: mediaWidth,
+      height: mediaHeight,
+    };
+  };
+  const applyVisualRect = (width: number, height: number, progress: number): void => {
+    if (!activeVisual) return;
+    if (!intrinsicRatio) {
+      Object.assign(activeVisual.style, {left: '0', top: '0', width: '100%', height: '100%'});
+      return;
+    }
+    const start = fittedRect(
+      width,
+      height,
+      intrinsicRatio,
+      fitMode(handoff.objectFit),
+      handoff.objectPosition,
+    );
+    const end = fittedRect(
+      width,
+      height,
+      intrinsicRatio,
+      fitMode(targetObjectFit),
+      targetObjectPosition,
+    );
+    const interpolate = (from: number, to: number) => from + (to - from) * progress;
+    activeVisual.style.left = `${interpolate(start.left, end.left)}px`;
+    activeVisual.style.top = `${interpolate(start.top, end.top)}px`;
+    activeVisual.style.width = `${interpolate(start.width, end.width)}px`;
+    activeVisual.style.height = `${interpolate(start.height, end.height)}px`;
+  };
 
   let animationFrame = 0;
   let settledAt = 0;
@@ -346,10 +446,13 @@ export const animatePersistedRouteMedia = (
     const liveTargetRect = liveTarget.getBoundingClientRect();
     if (liveTargetRect.width <= 0 || liveTargetRect.height <= 0) return false;
     const interpolate = (start: number, end: number) => start + (end - start) * progress;
+    const width = interpolate(handoff.rect.width, liveTargetRect.width);
+    const height = interpolate(handoff.rect.height, liveTargetRect.height);
     portal.style.left = `${interpolate(handoff.rect.left, liveTargetRect.left)}px`;
     portal.style.top = `${interpolate(handoff.rect.top, liveTargetRect.top)}px`;
-    portal.style.width = `${interpolate(handoff.rect.width, liveTargetRect.width)}px`;
-    portal.style.height = `${interpolate(handoff.rect.height, liveTargetRect.height)}px`;
+    portal.style.width = `${width}px`;
+    portal.style.height = `${height}px`;
+    applyVisualRect(width, height, progress);
     return true;
   };
   const cleanup = (): void => {
@@ -358,15 +461,17 @@ export const animatePersistedRouteMedia = (
     detachNavigationGuards();
     if (animationFrame) cancelAnimationFrame(animationFrame);
     transformAnimation.cancel();
-    framingAnimation?.cancel();
+    frameAnimation.cancel();
     if (placeholder.isConnected) placeholder.replaceWith(element);
     else element.remove();
+    destinationEmptyHost?.removeAttribute('data-route-media-destination-empty');
     portal.remove();
     restoreInlineStyle(element, elementInlineStyle);
     styledDescendants.forEach(({ candidate, style }) => restoreInlineStyle(candidate, style));
     element.dataset.routeMediaHandoff = 'settled';
     resolveFinished();
   };
+  applyVisualRect(handoff.rect.width, handoff.rect.height, 0);
   const onNavigationClick = (event: MouseEvent): void => {
     if ((event.target as Element | null)?.closest('a[href]')) cleanup();
   };
@@ -439,11 +544,63 @@ const copyResponsiveHints = (source: HTMLElement, target: HTMLElement): void => 
   }
 };
 
+export interface PersistRouteMediaOptions {
+  preserveOrigin?: boolean;
+}
+
+const stripClonedIds = (element: HTMLElement): void => {
+  element.removeAttribute('id');
+  element.querySelectorAll<HTMLElement>('[id]').forEach((candidate) => candidate.removeAttribute('id'));
+};
+
+const cloneImageOrigin = (source: HTMLElement, key: string): HTMLElement => {
+  const origin = source.cloneNode(true) as HTMLElement;
+  stripClonedIds(origin);
+  origin.dataset.routeMediaOrigin = key;
+  origin.removeAttribute('data-continuity-probe');
+  origin.querySelectorAll<HTMLElement>('[data-continuity-probe]')
+    .forEach((candidate) => candidate.removeAttribute('data-continuity-probe'));
+  origin.setAttribute('aria-hidden', 'true');
+  Object.assign(origin.style, {
+    visibility: 'hidden',
+    pointerEvents: 'none',
+    transition: 'none',
+  });
+  return origin;
+};
+
+const cloneVideoOrigin = (source: HTMLVideoElement, key: string): HTMLVideoElement => {
+  const origin = source.cloneNode(true) as HTMLVideoElement;
+  stripClonedIds(origin);
+  origin.dataset.routeMediaOrigin = key;
+  origin.removeAttribute('data-continuity-probe');
+  origin.removeAttribute('src');
+  origin.removeAttribute('poster');
+  origin.removeAttribute('data-playing');
+  origin.removeAttribute('data-preview-frame-pending');
+  origin.removeAttribute('data-preview-starting');
+  origin.removeAttribute('data-route-transition-active');
+  origin.removeAttribute('data-transition-persist-media');
+  origin.preload = 'none';
+  origin.setAttribute('aria-hidden', 'true');
+  origin.tabIndex = -1;
+  origin.querySelectorAll<HTMLSourceElement>('source[src]').forEach((candidate) => {
+    candidate.removeAttribute('src');
+  });
+  Object.assign(origin.style, {
+    visibility: 'hidden',
+    pointerEvents: 'none',
+    transition: 'none',
+  });
+  return origin;
+};
+
 export const persistResponsiveImage = (
   sourceScope: HTMLElement,
   targetScope: HTMLElement,
   slug: string,
   swapEvent: RouteSwapEvent,
+  options: PersistRouteMediaOptions = {},
 ): HTMLElement | undefined => {
   if (!supportsRouteMediaPersistence()) return undefined;
   const source = sourceScope.matches('.responsive-image')
@@ -459,6 +616,7 @@ export const persistResponsiveImage = (
 
   const key = routeMediaPersistKey(`${slug}-image`);
   const originalSwap = swapEvent.swap;
+  const origin = options.preserveOrigin ? cloneImageOrigin(source, key) : undefined;
   target.dataset.routeImagePersistTarget = key;
   source.dataset.routeMediaContinuity = slug;
 
@@ -471,6 +629,7 @@ export const persistResponsiveImage = (
       originalSwap();
       return;
     }
+    if (origin) source.replaceWith(origin);
     source.removeAttribute(persistAttribute);
     document.documentElement.append(source);
     originalSwap();
@@ -478,7 +637,8 @@ export const persistResponsiveImage = (
       `[data-route-image-persist-target="${CSS.escape(key)}"]`,
     );
     if (!liveTarget) {
-      document.body.append(source);
+      if (origin?.isConnected) origin.replaceWith(source);
+      else document.body.append(source);
       return;
     }
     copyResponsiveHints(source, liveTarget);
@@ -502,7 +662,9 @@ const applyVideoTargetSemantics = (
     if (name !== 'src') source.removeAttribute(name);
   });
   [...target.attributes].forEach(({ name, value }) => {
-    if (name !== 'src') source.setAttribute(name, value);
+    if (name !== 'src' && name !== 'style' && name !== 'data-route-media-origin') {
+      source.setAttribute(name, value);
+    }
   });
   // Reassigning an unchanged `src` is enough to restart media selection in
   // WebKit and some Chromium builds. Keep the resource attribute untouched
@@ -512,6 +674,7 @@ const applyVideoTargetSemantics = (
   }
   if (continuityProbe) source.setAttribute('data-continuity-probe', continuityProbe);
   source.removeAttribute('data-route-video-persist-target');
+  source.setAttribute('data-transition-persist-media', '');
   source.dataset.routeMediaContinuity = slug;
   source.dataset.routeVideoPersisted = 'true';
   source.dataset.routeMediaWasPlaying = wasPlaying ? 'true' : 'false';
@@ -532,6 +695,7 @@ export const persistMatchingVideo = (
   target: HTMLVideoElement,
   slug: string,
   swapEvent: RouteSwapEvent,
+  options: PersistRouteMediaOptions = {},
 ): boolean => {
   if (!supportsRouteMediaPersistence()) return false;
   const outgoingSource = sourceUrl(source);
@@ -548,6 +712,7 @@ export const persistMatchingVideo = (
   const continuityProbe = source.getAttribute('data-continuity-probe');
   const wasPlaying = !source.paused && !source.ended;
   const originalSwap = swapEvent.swap;
+  const origin = options.preserveOrigin ? cloneVideoOrigin(source, key) : undefined;
   target.dataset.routeVideoPersistTarget = key;
 
   // Astro reconstructs every media element after its normal DOM persistence
@@ -558,6 +723,7 @@ export const persistMatchingVideo = (
       originalSwap();
       return;
     }
+    if (origin) source.replaceWith(origin);
     source.removeAttribute(persistAttribute);
     document.documentElement.append(source);
     originalSwap();
@@ -565,7 +731,8 @@ export const persistMatchingVideo = (
       `[data-route-video-persist-target="${CSS.escape(key)}"]`,
     );
     if (!liveTarget) {
-      document.body.append(source);
+      if (origin?.isConnected) origin.replaceWith(source);
+      else document.body.append(source);
       return;
     }
     liveTarget.replaceWith(source);

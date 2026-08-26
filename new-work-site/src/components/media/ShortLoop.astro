@@ -85,6 +85,12 @@ const videoId = `short-loop-${block._key.replace(/[^a-zA-Z0-9_-]/gu, '-')}`;
       ? new IntersectionObserver((entries) => {
           entries.forEach(async (entry) => {
             const video = entry.target as HTMLVideoElement;
+            if (video.hasAttribute('data-transition-persist-media')) {
+              if (video.paused) {
+                try { await video.play(); } catch { /* the current frame remains */ }
+              }
+              return;
+            }
             if (entry.intersectionRatio >= 0.6 && video.dataset.userPaused !== 'true') {
               attach(video);
               try { await video.play(); } catch { /* poster remains */ }

@@ -13,7 +13,13 @@ export default defineConfig({
     coverage: {
       reporter: ['text', 'json-summary'],
       include: ['src/lib/**/*.ts', 'shared/**/*.ts'],
-      exclude: ['src/lib/groq.ts'],
+      exclude: [
+        'src/lib/groq.ts',
+        // The WebGL runtime is exercised by Playwright in a real browser, while
+        // the asset module is a declarative media catalog with no unit behavior.
+        'src/lib/reel/engine.ts',
+        'src/lib/reel/reel-assets.ts',
+      ],
       thresholds: {
         branches: 55,
         functions: 80,

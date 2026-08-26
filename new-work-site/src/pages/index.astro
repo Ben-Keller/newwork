@@ -166,6 +166,7 @@ const preloadImageSizes = preloadEntry
     window.__newWorkLogoPageCleanup?.();
 
     const page = document.querySelector<HTMLElement>('[data-logo-work-page]');
+    if (page?.closest('[data-gallery-layer-state="background"]')) return;
     const hero = page?.querySelector<HTMLElement>('[data-logo-work-hero]');
     const content = page?.querySelector<HTMLElement>('[data-logo-work-content]');
     const header = document.querySelector<HTMLElement>('[data-site-header]');
@@ -413,7 +414,7 @@ const preloadImageSizes = preloadEntry
     };
 
     const handleScrollFallback = () => {
-      if (handoffActive || window.scrollY <= 0) return;
+      if (restoreWorkOnLoad || handoffActive || window.scrollY <= 0) return;
       setHandoff(true);
       window.scrollTo(0, 0);
     };

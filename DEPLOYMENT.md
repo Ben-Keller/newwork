@@ -53,6 +53,8 @@ https://ben-keller.github.io/newwork/
 
 The token is exposed only to the Studio deployment step. It is never added to Astro, committed to Git, or included in the Studio bundle.
 
+If the Studio action reports `You must login first`, `SANITY_AUTH_TOKEN` is missing, expired, or no longer authorized. Replace that repository secret with a current deploy token, then rerun the workflow.
+
 ### 3. Test both workflows manually
 
 In GitHub **Actions**:
@@ -60,7 +62,7 @@ In GitHub **Actions**:
 1. Open **Deploy Sanity Studio** and choose **Run workflow** on `main`.
 2. Confirm the TypeGen, Studio build, schema upload, and Studio deployment steps pass.
 3. Open **Deploy production site** and choose **Run workflow** on `main`.
-4. Confirm all 16 project routes pass the production CMS smoke test and Pages deploys.
+4. Confirm every published homepage project route passes the production CMS smoke test and Pages deploys.
 
 The hosted Studio remains:
 
