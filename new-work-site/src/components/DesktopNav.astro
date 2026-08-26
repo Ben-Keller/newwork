@@ -16,7 +16,7 @@ export interface Props {
 
 const {
   items = [
-    { href: withBase('/#work-gallery'), label: 'Work', match: 'section' },
+    { href: withBase('/'), label: 'Work', match: 'section' },
     { href: withBase('/about'), label: 'About', match: 'section' },
     { href: withBase('/contact'), label: 'Contact', match: 'section' },
   ],
@@ -55,6 +55,7 @@ const isCurrent = (item: NavItem): boolean => {
             class:list={['desktop-nav__link', { 'is-current': isCurrent(item) }]}
             href={item.href}
             aria-current={isExactPage(item) ? 'page' : undefined}
+            data-work-navigation={normalizePath(withoutBase(item.href)) === '/' ? '' : undefined}
           >
             {item.label}
           </a>

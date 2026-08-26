@@ -97,7 +97,12 @@ const videoId = `short-loop-${block._key.replace(/[^a-zA-Z0-9_-]/gu, '-')}`;
     });
     const unregister = registerMediaController({
       destroy: () => observer?.disconnect(),
-      pause: () => videos.forEach((video) => video.pause()),
+      pause: () => videos.forEach((video) => {
+        if (
+          video.dataset.routeTransitionActive !== 'true'
+          && !video.hasAttribute('data-transition-persist-media')
+        ) video.pause();
+      }),
       refresh: () => observer?.takeRecords(),
     });
 
@@ -105,7 +110,10 @@ const videoId = `short-loop-${block._key.replace(/[^a-zA-Z0-9_-]/gu, '-')}`;
       observer?.disconnect();
       unregister();
       videos.forEach((video) => {
-        if (video.dataset.routeTransitionActive !== 'true') video.pause();
+        if (
+          video.dataset.routeTransitionActive !== 'true'
+          && !video.hasAttribute('data-transition-persist-media')
+        ) video.pause();
       });
       disposeShortLoops = () => undefined;
     };

@@ -10,7 +10,6 @@ The CSS and TypeScript token layers intentionally mirror one another.
 | Interface settle | `--duration-ui` | `MOTION_DURATION.ui` | 240ms |
 | Viewport reveal | `--duration-reveal` | `MOTION_DURATION.reveal` | 560ms |
 | Route fallback | — | `MOTION_DURATION.route` | 160ms |
-| Pointer following | — | `MOTION_DURATION.pointerFollow` | 420ms |
 | Editorial ease | `--ease-out` | `MOTION_EASE.customOut` | `cubic-bezier(.22, 1, .36, 1)` |
 
 The first-session title stage uses the same custom ease across a five-second, non-blocking media-mask sequence. At its cap the media layer is detached and the identical solid black name remains; reduced-motion and Save-Data skip directly to that resting state.
@@ -20,7 +19,6 @@ The first-session title stage uses the same custom ease across a five-second, no
 | Property | Limit |
 |---|---|
 | Card scale | 1.02 maximum; shipped value 1.018 |
-| Gallery horizontal response | ±36px |
 | Card-local media response | ±5px |
 | Column lag compensation | ±100px |
 | Column response | `0.095`, `0.075`, `0.125`, `0.110` left to right; delta-time compensated first-order filtering |

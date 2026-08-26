@@ -11,7 +11,6 @@ export const MOTION_DURATION = Object.freeze({
   fast: 0.16,
   ui: 0.24,
   reveal: 0.56,
-  pointerFollow: 0.42,
   galleryEntranceDelay: 0.45,
   galleryEntrance: 1.8,
 });
@@ -20,7 +19,6 @@ export const MOTION_LIMIT = Object.freeze({
   cardPan: 5,
   cardScale: 1.02,
   galleryEntranceScale: 1.12,
-  galleryPointerX: 36,
   columnLagOffset: 100,
   parallaxPercent: 8,
   revealDelay: 0.8,

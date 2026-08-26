@@ -66,7 +66,7 @@ const resolvedPeople = people.flatMap((link) => {
   return href ? [{ href, label: link.label }] : [];
 });
 const defaultExploreLinks = [
-  { href: withBase('/#work-gallery'), label: 'Work' },
+  { href: withBase('/'), label: 'Work' },
   { href: withBase('/about'), label: 'About' },
   ...(showNotes ? [{ href: withBase('/notes'), label: 'Notes' }] : []),
   { href: withBase('/contact'), label: 'Contact' },

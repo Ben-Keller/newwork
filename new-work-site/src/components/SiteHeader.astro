@@ -42,7 +42,7 @@ const {
 } = Astro.props;
 
 const defaultItems: NavItem[] = [
-  { href: withBase('/#work-gallery'), label: 'Work', match: 'section' },
+  { href: withBase('/'), label: 'Work', match: 'section' },
   { href: withBase('/about'), label: 'About', match: 'section' },
   ...(showNotes ? [{ href: withBase('/notes'), label: 'Notes', match: 'section' as const }] : []),
   { href: withBase('/contact'), label: 'Contact', match: 'section' },
@@ -134,6 +134,41 @@ const showGalleryTools = galleryEditing && currentPath === '/';
   const LEGACY_TITLE_MASK_KEY = 'new-work:title-mask';
   const LEGACY_TITLE_ALIGNMENT_KEY = 'new-work:title-alignment';
   const LEGACY_HEADER_LOGO_KEY = 'new-work:header-logo';
+  const GALLERY_RESTORE_REQUEST_KEY = 'new-work-restore-requested';
+
+  const handleWorkNavigation = (event: MouseEvent): void => {
+    if (
+      event.button !== 0
+      || event.metaKey
+      || event.ctrlKey
+      || event.shiftKey
+      || event.altKey
+    ) return;
+
+    const target = event.target instanceof Element ? event.target : null;
+    const link = target?.closest<HTMLAnchorElement>('a[data-work-navigation]');
+    if (!link || link.target === '_blank') return;
+
+    try {
+      window.sessionStorage.removeItem(GALLERY_RESTORE_REQUEST_KEY);
+    } catch {
+      // A top-of-page navigation still works when storage is unavailable.
+    }
+
+    const destination = new URL(link.href, window.location.href);
+    if (
+      destination.origin !== window.location.origin
+      || destination.pathname !== window.location.pathname
+    ) return;
+
+    event.preventDefault();
+    window.history.replaceState(
+      window.history.state,
+      '',
+      `${destination.pathname}${destination.search}${destination.hash}`,
+    );
+    window.queueMicrotask(() => window.dispatchEvent(new Event('new-work:work-navigation')));
+  };
 
   const removeStoredValue = (key: string): void => {
     try {
@@ -212,6 +247,7 @@ const showGalleryTools = galleryEditing && currentPath === '/';
 
   setupGalleryOrderTools();
   resetHeaderPreviewState();
+  document.addEventListener('click', handleWorkNavigation, { capture: true });
   document.addEventListener('astro:page-load', setupGalleryOrderTools);
   document.addEventListener('astro:page-load', resetHeaderPreviewState);
   document.addEventListener('astro:before-swap', () => window.__newWorkGalleryToolsFeedbackCleanup?.());

@@ -4,6 +4,11 @@ const persistAttribute = 'data-astro-transition-persist';
 const snapshotDisabledAttribute = 'data-route-media-snapshot-disabled';
 const routeMediaDuration = 900;
 
+export interface RouteMediaAnimation {
+  cancel: () => void;
+  finished: Promise<void>;
+}
+
 export const supportsRouteMediaPersistence = (): boolean => (
   Boolean(document.querySelector('meta[name="astro-view-transitions-enabled"]'))
 );
@@ -83,9 +88,12 @@ const routeMediaSelectors = [
   '.related-projects__media',
 ].join(',');
 
-export const disableRouteMediaSnapshots = (targetDocument: Document): void => {
+export const disableRouteMediaSnapshots = (
+  targetDocument: Document,
+  includeRoot = true,
+): void => {
   const elements = [
-    targetDocument.documentElement,
+    ...(includeRoot ? [targetDocument.documentElement] : []),
     ...targetDocument.querySelectorAll<HTMLElement>(routeMediaSelectors),
   ];
   elements.forEach((element) => {
@@ -160,21 +168,20 @@ export const animatePersistedRouteMedia = (
   element: HTMLElement,
   handoff: RouteMediaHandoff | undefined,
   slug: string,
-  layer = 0,
-): boolean => {
-  if (!handoff || !element.isConnected) return false;
+): RouteMediaAnimation | undefined => {
+  if (!handoff || !element.isConnected) return undefined;
   const targetCardFrame = element.closest<HTMLElement>('.project-card__media');
   const targetGeometry = targetCardFrame || element;
   const targetRect = targetGeometry.getBoundingClientRect();
-  if (targetRect.width <= 0 || targetRect.height <= 0) return false;
+  if (targetRect.width <= 0 || targetRect.height <= 0) return undefined;
 
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
     element.dataset.routeMediaHandoff = 'settled';
-    return true;
+    return { cancel: () => undefined, finished: Promise.resolve() };
   }
 
   const parent = element.parentNode;
-  if (!parent) return false;
+  if (!parent) return undefined;
   const targetStyles = getComputedStyle(element);
   const targetElementRect = element.getBoundingClientRect();
   const targetTransformFrame = element.closest<HTMLElement>('[data-card-media]');
@@ -219,7 +226,10 @@ export const animatePersistedRouteMedia = (
   portal.dataset.routeMediaPortal = slug;
   Object.assign(portal.style, {
     position: 'fixed',
-    zIndex: String(2_147_483_600 + layer),
+    // Only one visible medium is transported for a route. Use the browser's
+    // maximum stacking value so the clicked pixels can never fall beneath the
+    // incoming project panel, toolbar, captions, or gallery chrome.
+    zIndex: '2147483647',
     inset: 'auto',
     left: `${handoff.rect.left}px`,
     top: `${handoff.rect.top}px`,
@@ -328,6 +338,8 @@ export const animatePersistedRouteMedia = (
   let settledAt = 0;
   let cleaned = false;
   let detachNavigationGuards = (): void => undefined;
+  let resolveFinished = (): void => undefined;
+  const finished = new Promise<void>((resolve) => { resolveFinished = resolve; });
   const startedAt = performance.now();
   const applyRect = (progress: number): boolean => {
     if (!liveTarget.isConnected || !portal.isConnected || !element.isConnected) return false;
@@ -353,6 +365,7 @@ export const animatePersistedRouteMedia = (
     restoreInlineStyle(element, elementInlineStyle);
     styledDescendants.forEach(({ candidate, style }) => restoreInlineStyle(candidate, style));
     element.dataset.routeMediaHandoff = 'settled';
+    resolveFinished();
   };
   const onNavigationClick = (event: MouseEvent): void => {
     if ((event.target as Element | null)?.closest('a[href]')) cleanup();
@@ -386,7 +399,7 @@ export const animatePersistedRouteMedia = (
   window.setTimeout(() => {
     if (element.dataset.routeMediaHandoff === 'animating') cleanup();
   }, 2_000);
-  return true;
+  return { cancel: cleanup, finished };
 };
 
 const copyResponsiveHints = (source: HTMLElement, target: HTMLElement): void => {

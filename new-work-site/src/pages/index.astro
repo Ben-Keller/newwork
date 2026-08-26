@@ -102,6 +102,7 @@ const preloadImageSizes = preloadEntry
   .logo-work-page__title {
     position: relative;
     z-index: 5;
+    pointer-events: none;
   }
 
   .logo-work-page__gallery-anchor {
@@ -239,6 +240,20 @@ const preloadImageSizes = preloadEntry
     const revealGallery = () => {
       setHandoff(true);
       requestGalleryScroll();
+    };
+
+    const returnToWorkTop = () => {
+      if (galleryScrollFrame) {
+        window.cancelAnimationFrame(galleryScrollFrame);
+        galleryScrollFrame = 0;
+      }
+      document.querySelector<HTMLElement>('[data-work-gallery]')
+        ?.removeAttribute('data-gallery-restore');
+      setHandoff(false);
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+      window.requestAnimationFrame(() => {
+        window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+      });
     };
 
     const automaticColor = (hue: number) => {
@@ -412,6 +427,7 @@ const preloadImageSizes = preloadEntry
     window.addEventListener('keyup', handleKeyUp, { signal: controller.signal });
     window.addEventListener('click', handlePageClick, { signal: controller.signal });
     window.addEventListener('scroll', handleScrollFallback, { passive: true, signal: controller.signal });
+    window.addEventListener('new-work:work-navigation', returnToWorkTop, { signal: controller.signal });
     window.addEventListener('hashchange', () => {
       if (window.location.hash === '#work-gallery') revealGallery();
     }, { signal: controller.signal });

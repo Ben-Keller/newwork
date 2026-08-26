@@ -105,9 +105,7 @@
     column-gap: clamp(4px, .5vw, 8px);
     row-gap: 8px;
     align-items: start;
-    transform: translate3d(var(--gallery-pointer-x), 0, 0);
   }
-  .work-index[data-gallery-pointer="active"] .project-grid { will-change: transform; }
   .project-grid[data-masonry-ready="true"] {
     /* Explicit editorial columns can move the placement cursor backwards.
        Dense placement lets each lane use its earliest available row while the

@@ -59,7 +59,6 @@ describe('motion tokens and transition names', () => {
     expect(MOTION_EASE.softInOut).toBe('power2.inOut');
     expect(MOTION_LIMIT.galleryEntranceScale).toBe(1.12);
     expect(MOTION_DURATION.galleryEntranceDelay).toBe(0.45);
-    expect(MOTION_LIMIT.galleryPointerX).toBe(36);
     expect(clampMotionValue(32, -18, 18)).toBe(18);
     expect(parseMotionValue('not-a-number', 3, -8, 8)).toBe(3);
     expect(MOTION_LIMIT.columnLagOffset).toBe(100);
