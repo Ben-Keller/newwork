@@ -99,10 +99,9 @@ export const mediaItem = defineType({
       title: 'Project',
       type: 'reference',
       group: 'usage',
-      description: 'The Project is this asset’s collection. Assets remain independent library records.',
+      description: 'Optionally link this asset to the Project it belongs to. Assets remain independent library records.',
       to: [{type: 'work'}],
       options: {disableNew: true},
-      validation: (Rule) => Rule.required(),
     }),
     defineField({
       name: 'projectOrder',
@@ -111,7 +110,13 @@ export const mediaItem = defineType({
       group: 'usage',
       description: 'Assets with lower numbers appear first on the Project page.',
       initialValue: 0,
-      validation: (Rule) => Rule.required().integer().min(0),
+      hidden: ({document}) => !document?.project,
+      validation: (Rule) => [
+        Rule.integer().min(0),
+        Rule.custom((value, context) => (context.document as {project?: unknown})?.project && typeof value !== 'number'
+          ? 'Set the order for this Project asset.'
+          : true),
+      ],
     }),
     ...rightsApprovalFields,
   ],

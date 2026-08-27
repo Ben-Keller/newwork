@@ -22,7 +22,7 @@ export const workPage = defineType({
   icon: HomeIcon,
   groups: [
     {name: 'copy', title: 'Page copy', default: true},
-    {name: 'gallery', title: 'Work gallery'},
+    {name: 'gallery', title: 'Front gallery'},
     {name: 'modules', title: 'Homepage reel preview'},
     {name: 'seo', title: 'Search & sharing'},
     hiddenAllFieldsGroup,
@@ -55,7 +55,7 @@ export const workPage = defineType({
     }),
     defineField({
       name: 'gallery',
-      title: 'Work gallery',
+      title: 'Front gallery',
       type: 'array',
       group: 'gallery',
       description: 'Drag flat Assets into order. Every Asset links to its Project and becomes an individual doorway into that Project.',

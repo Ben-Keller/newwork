@@ -247,8 +247,8 @@ export const selectWorkPhoto = (project: ProjectView, requestedPhotoId?: string)
 };
 
 /**
- * Every Sanity Asset is a flat record linked to one Project. A gallery doorway
- * can select any visual Asset without changing the Project's identity.
+ * Assets stay flat. A gallery doorway can select any visual Asset linked to
+ * this Project without changing the Project's identity.
  */
 export const selectWorkAsset = (project: ProjectView, requestedAssetId?: string): ProjectView => {
   if (project.assets.length === 0) return selectWorkPhoto(project, requestedAssetId);

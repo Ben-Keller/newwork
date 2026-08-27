@@ -41,6 +41,10 @@ necessarily block a release.
 
 The deployed editorial app is available at `https://new-work.sanity.studio/`. The website remains a separate Astro deployment; publishing content triggers a website rebuild only after the hosting webhook is configured.
 
+## Content model
+
+Every photo, video, or file is a flat **Asset** record and follows the same publishing workflow. An Asset can optionally link to one **Project** and receive an order within that Project. Project is the only grouping concept; there is no second grouping type. The front gallery also selects Asset records directly, so any eligible Project Asset can be featured without duplicating it.
+
 The normal client workflow is documented in `CLIENT_GUIDE.md`. Repository deployment and local synchronization are documented in `../DEPLOYMENT.md`. One-time data maintenance scripts live under `scripts/` and are intentionally not part of the Studio navigation.
 
 After deploying the unified `work` schema, preview and then apply the non-destructive Project-to-Work conversion with:

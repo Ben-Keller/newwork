@@ -99,7 +99,8 @@ function mediaProjectId(media: DocumentValue): string | undefined {
 }
 
 async function main() {
-  const [mediaItems, workPage, existingMichaelWork, existingMichaelMedia] = await Promise.all([
+  const [works, mediaItems, workPage, existingMichaelWork, existingMichaelMedia] = await Promise.all([
+    client.fetch<DocumentValue[]>(`*[_type == "work" && !(_id in path("drafts.**"))]`),
     client.fetch<DocumentValue[]>(`*[_type == "mediaItem" && !(_id in path("drafts.**"))] | order(_createdAt asc)`),
     client.fetch<DocumentValue | null>(`*[_id == "workPage"][0]`),
     client.fetch<DocumentValue | null>(`*[_type == "work" && legacyId == $legacyId][0]`, {legacyId: michaelWorkLegacyId}),
@@ -114,14 +115,11 @@ async function main() {
   const unassigned = mediaItems.filter((media) => !mediaProjectId(media))
   const plan = {
     existingAssets: mediaItems.length,
-    existingAssetsToLink: mediaItems.filter((media) => !referenceId(media.project)).length,
+    existingAssetsToLink: mediaItems.filter((media) => !referenceId(media.project) && mediaProjectId(media)).length,
     unassignedAssets: unassigned.map((media) => media._id),
     michaelWork: existingMichaelWork ? 'reuse' : 'create',
     michaelAssetsToCreate: michaelAssets.length - existingMichaelMedia.length,
     michaelGalleryDoorways: michaelAssets.length,
-  }
-  if (unassigned.length) {
-    throw new Error(`Every existing Asset must resolve to one Project: ${unassigned.map((media) => media._id).join(', ')}`)
   }
   if (!apply) {
     console.log(JSON.stringify({dryRun: true, ...plan}, null, 2))
@@ -170,6 +168,12 @@ async function main() {
   const existingMichaelByKey = new Map(existingMichaelMedia.flatMap((media) => (
     typeof media.migrationSourceKey === 'string' ? [[media.migrationSourceKey, media]] : []
   )))
+  const coverAssetByWork = new Map(works.flatMap((work) => {
+    const cover = work.cover && typeof work.cover === 'object' ? work.cover as RecordValue : undefined
+    const poster = cover?.poster && typeof cover.poster === 'object' ? cover.poster as RecordValue : undefined
+    const assetId = referenceId(poster?.asset)
+    return assetId ? [[work._id, assetId] as const] : []
+  }))
   const michaelMedia: DocumentValue[] = []
   for (const [index, [sourceKey, title, relativePath, alt]] of michaelAssets.entries()) {
     const migrationSourceKey = `michael-gallery:${sourceKey}`
@@ -203,16 +207,26 @@ async function main() {
   const migratedExisting: DocumentValue[] = []
   for (const media of mediaItems.filter((item) => !existingMichaelByKey.has(String(item.migrationSourceKey)))) {
     const projectId = mediaProjectId(media)
-    if (!projectId) continue
-    const order = orderByProject.get(projectId) || 0
-    orderByProject.set(projectId, order + 1)
     const currentSlug = media.slug && typeof media.slug === 'object' && 'current' in media.slug
       ? String(media.slug.current || '')
       : ''
     const slug = currentSlug || uniqueSlug(String(media.title || media._id), usedSlugs)
+    const order = projectId ? orderByProject.get(projectId) || 0 : undefined
+    if (projectId) orderByProject.set(projectId, Number(order) + 1)
+    const existingPoster = media.poster && typeof media.poster === 'object'
+      ? media.poster as RecordValue
+      : undefined
+    const fallbackPosterAssetId = projectId && media.kind === 'video' && !referenceId(existingPoster?.asset)
+      ? coverAssetByWork.get(projectId)
+      : undefined
     const patched = await client.patch(media._id).set({
-      project: reference(projectId),
-      projectOrder: typeof media.projectOrder === 'number' ? media.projectOrder : order,
+      ...(projectId ? {
+        project: reference(projectId),
+        projectOrder: typeof media.projectOrder === 'number' ? media.projectOrder : order,
+      } : {}),
+      ...(fallbackPosterAssetId ? {
+        poster: {_type: 'image', asset: reference(fallbackPosterAssetId)},
+      } : {}),
       slug: {_type: 'slug', current: slug},
     }).unset(['works']).commit()
     migratedExisting.push(patched as DocumentValue)
@@ -268,7 +282,6 @@ async function main() {
   for (const list of mediaByProject.values()) {
     list.sort((left, right) => Number(left.projectOrder || 0) - Number(right.projectOrder || 0))
   }
-
   if (!workPage || !Array.isArray(workPage.gallery)) throw new Error('The published workPage gallery is missing.')
   const michaelIds = new Set(michaelMedia.map((media) => media._id))
   const existingPlacements = workPage.gallery.flatMap((raw) => {
@@ -279,7 +292,16 @@ async function main() {
     let assetId = currentAssetId
     if (!assetId) {
       const workId = referenceId(placement.work) || referenceId(placement.project)
-      assetId = workId ? mediaByProject.get(workId)?.[0]?._id : undefined
+      const candidates = workId ? mediaByProject.get(workId) || [] : []
+      const coverAssetId = workId ? coverAssetByWork.get(workId) : undefined
+      const coverMatch = coverAssetId
+        ? candidates.find((media) => {
+            const image = media.image && typeof media.image === 'object' ? media.image as RecordValue : undefined
+            const poster = media.poster && typeof media.poster === 'object' ? media.poster as RecordValue : undefined
+            return referenceId(image?.asset) === coverAssetId || referenceId(poster?.asset) === coverAssetId
+          })
+        : undefined
+      assetId = coverMatch?._id || candidates[0]?._id
     }
     if (!assetId) throw new Error(`Gallery placement ${String(placement._key || 'unknown')} has no Project Asset.`)
     return [{

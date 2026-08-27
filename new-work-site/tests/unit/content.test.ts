@@ -69,6 +69,16 @@ function approvedRawProject() {
       },
       previewIsPlaceholder: false,
     },
+    assets: [{
+      _id: 'asset-approved',
+      slug: 'approved-asset',
+      kind: 'image',
+      image: {
+        asset: {url: 'https://cdn.sanity.io/images/example/asset.jpg'},
+        alt: 'Approved flat project asset',
+      },
+      alt: 'Approved flat project asset',
+    }],
     publishAt: '2026-08-13T12:00:00.000Z',
     contentBlocks: [
       {

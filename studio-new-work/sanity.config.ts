@@ -43,7 +43,7 @@ export default defineConfig({
     templates: (previous) => [
       {
         id: 'work-video',
-        title: 'Video work',
+        title: 'Video project',
         schemaType: 'work',
         value: {
           types: ['Film'],
@@ -55,7 +55,7 @@ export default defineConfig({
       },
       {
         id: 'work-photo',
-        title: 'Photo work',
+        title: 'Photo project',
         schemaType: 'work',
         value: {
           types: ['Photography'],
@@ -67,7 +67,7 @@ export default defineConfig({
       },
       {
         id: 'work-featured',
-        title: 'Featured work',
+        title: 'Featured project',
         schemaType: 'work',
         value: {
           types: ['Campaign'],

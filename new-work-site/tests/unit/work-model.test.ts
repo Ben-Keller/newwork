@@ -1,9 +1,47 @@
 import {describe, expect, it} from 'vitest';
 import {michaelPhotoWork} from '../../src/content/local/michael-gallery';
 import {buildWorkGallery} from '../../src/lib/content';
-import {selectWorkPhoto} from '../../src/lib/project-layout';
+import {selectWorkAsset, selectWorkPhoto} from '../../src/lib/project-layout';
 
-describe('unified Work photo doorways', () => {
+describe('unified Project asset doorways', () => {
+  it('treats linked images and videos as the same kind of front-gallery doorway', () => {
+    const [imagePhoto, videoPhoto] = michaelPhotoWork.photos;
+    const work = {
+      ...michaelPhotoWork,
+      assets: [
+        {
+          id: 'asset.image',
+          slug: 'image-asset',
+          kind: 'image' as const,
+          poster: imagePhoto!.image,
+        },
+        {
+          id: 'asset.video',
+          slug: 'video-asset',
+          kind: 'video' as const,
+          poster: videoPhoto!.image,
+          video: {src: 'https://cdn.sanity.io/files/example/video.mp4', poster: videoPhoto!.image},
+        },
+      ],
+      photos: [],
+      defaultPhotoId: undefined,
+    };
+    const entries = buildWorkGallery([work], [
+      {_key: 'image', workId: work.id, assetId: 'asset.image', cardSize: 'standard', treatment: 'standard'},
+      {_key: 'video', workId: work.id, assetId: 'asset.video', cardSize: 'large', treatment: 'framed'},
+    ]);
+
+    expect(entries.map((entry) => [entry.asset?.kind, entry.href])).toEqual([
+      ['image', `/work/${work.slug}/image-asset`],
+      ['video', `/work/${work.slug}/video-asset`],
+    ]);
+    expect(selectWorkAsset(work, 'video-asset').cover).toMatchObject({
+      poster: videoPhoto!.image,
+      mediaType: 'motion',
+      previewVideo: 'https://cdn.sanity.io/files/example/video.mp4',
+    });
+  });
+
   it('creates multiple gallery placements that all point to one Work document', () => {
     const [first, second] = michaelPhotoWork.photos;
     const entries = buildWorkGallery([michaelPhotoWork], [

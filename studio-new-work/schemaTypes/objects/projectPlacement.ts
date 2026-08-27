@@ -4,7 +4,7 @@ import {SANITY_API_VERSION} from '../../sanity.constants'
 
 export const workPlacement = defineType({
   name: 'workPlacement',
-  title: 'Work-page placement',
+  title: 'Front-gallery placement',
   type: 'object',
   icon: ProjectsIcon,
   fields: [

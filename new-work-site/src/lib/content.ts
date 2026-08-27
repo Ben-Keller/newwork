@@ -31,7 +31,7 @@ import {
   preferUnifiedWorkDocuments,
   sortProjects,
   workGalleryEntryId,
-} from './content/work-collection';
+} from './content/work-gallery';
 import {isApprovedSanityAsset, safeHttpsUrl, sourceUrl} from './content/assets';
 import {
   hasBlockedContent,

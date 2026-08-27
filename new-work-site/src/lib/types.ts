@@ -244,7 +244,7 @@ export interface WorkGalleryPlacementView {
   _key: string;
   workId: string;
   assetId?: string;
-  /** @deprecated Prototype compatibility only. Sanity gallery placements use assetId. */
+  /** Prototype compatibility only. Sanity gallery placements use assetId. */
   photoId?: string;
   cardSize: HomeCardSize;
   treatment: HomeTreatment;

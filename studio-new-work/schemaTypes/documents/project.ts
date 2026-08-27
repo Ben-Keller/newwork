@@ -29,7 +29,7 @@ async function duplicateHomeOrderWarning(value: number | undefined, context: Val
     `count(*[_type == "work" && homeOrder == $homeOrder && !(_id in [$publishedId, $draftId])])`,
     {homeOrder: value, publishedId: documentId, draftId: `drafts.${documentId}`},
   ) as number
-  return duplicateCount === 0 ? true : 'Another Work item uses this home order.'
+  return duplicateCount === 0 ? true : 'Another Project uses this home order.'
 }
 
 async function approvedProjectAssetsError(
@@ -67,13 +67,13 @@ async function approvedProjectAssetsError(
 
 export const work = defineType({
   name: 'work',
-  title: 'Work',
+  title: 'Project',
   type: 'document',
   icon: ProjectsIcon,
   groups: [
-    {name: 'overview', title: 'Work details', default: true},
+    {name: 'overview', title: 'Project details', default: true},
     {name: 'card', title: 'Work-page card'},
-    {name: 'page', title: 'Work page'},
+    {name: 'page', title: 'Project page'},
     {name: 'credits', title: 'Credits'},
     {name: 'publishing', title: 'Approval & publishing'},
     {name: 'seo', title: 'Search & sharing'},
@@ -84,13 +84,13 @@ export const work = defineType({
     {
       name: 'artDirection',
       title: 'Advanced art direction',
-      description: 'Use these overrides only when the standard Work-page template is not sufficient.',
+      description: 'Use these overrides only when the standard Project-page template is not sufficient.',
       options: {collapsible: true, collapsed: true},
     },
     {
       name: 'legacyGallery',
       title: 'Legacy gallery placement',
-      description: 'The Work page gallery now controls public order and card presentation.',
+      description: 'The Front gallery now controls public order and card presentation.',
       options: {collapsible: true, collapsed: true},
     },
   ],
@@ -202,7 +202,7 @@ export const work = defineType({
         if (!publicProject) return true
         return isRecord(value) && hasAssetReference(value.poster)
           ? true
-          : 'A visible or featured Work requires a cover poster.'
+          : 'A visible or featured Project requires a cover poster.'
       }),
     }),
     defineField({
@@ -210,7 +210,7 @@ export const work = defineType({
       title: 'Project page sections',
       type: 'array',
       group: 'page',
-      description: 'Add sections, then drag them into the order they should appear on the Work page.',
+      description: 'Add sections, then drag them into the order they should appear on the Project page.',
       of: [
         defineArrayMember({type: 'heroImage'}),
         defineArrayMember({type: 'heroVideo'}),
@@ -231,7 +231,7 @@ export const work = defineType({
         if (!publicProject) return true
         return blocks.some((block) => isRecord(block) && PUBLIC_MEDIA_BLOCK_TYPES.has(String(block._type)))
           ? true
-          : 'A public Work requires at least one media block.'
+          : 'A public Project requires at least one media block.'
       }),
     }),
     defineField({
@@ -257,7 +257,7 @@ export const work = defineType({
       group: 'advanced',
       fieldset: 'legacyGallery',
       initialValue: false,
-      deprecated: {reason: 'Add and order this Work item from Work page → Work gallery.'},
+      deprecated: {reason: 'Add and order this Project’s Assets from Work page → Front gallery.'},
     }),
     defineField({
       name: 'homeOrder',
@@ -265,8 +265,8 @@ export const work = defineType({
       type: 'number',
       group: 'advanced',
       fieldset: 'legacyGallery',
-      description: 'Preserved for migration. The Work page gallery now controls order.',
-      deprecated: {reason: 'Drag Work placements into order from Work page → Work gallery.'},
+      description: 'Preserved for migration. The Front gallery now controls order.',
+      deprecated: {reason: 'Drag Asset placements into order from Work page → Front gallery.'},
       validation: (Rule) => [
         Rule.integer(),
         Rule.custom((value, context) =>
@@ -383,7 +383,7 @@ export const work = defineType({
       title: 'Project page style',
       type: 'string',
       group: 'page',
-      description: 'Choose the presentation that best matches the work. The website handles the detailed layout.',
+      description: 'Choose the presentation that best matches the Project. The website handles the detailed layout.',
       options: {list: [
         {title: 'Cinematic', value: 'cinematic'},
         {title: 'Photo essay', value: 'photoEssay'},
@@ -512,7 +512,7 @@ export const work = defineType({
       year: 'year',
     },
     prepare: ({title, media, blocked, status, types, year}) => ({
-      title: title || 'Untitled work',
+      title: title || 'Untitled Project',
       subtitle: [
         status === 'approved' ? 'Approved' : status === 'ready' ? 'Ready to publish' : status === 'review' ? 'Needs review' : 'Working draft',
         Array.isArray(types) ? types.join(' / ') : undefined,

@@ -204,7 +204,7 @@ Project presentation is editable independently from its ordered content blocks. 
 
 On project pages, the same cover used by the home gallery appears once in the opening hero: copy remains first in the document, desktop places the cover on the right, and mobile stacks it immediately after the copy. The ordered content blocks render below without repeating a cover-equivalent legacy block. Provisional fixtures include gated Lorem Ipsum copy; the non-production renderer supplies neutral geometric media studies where project-specific secondary media is absent. Replace both kinds of scaffolding with approved content before publication.
 
-The portfolio is presented as an open-ended, non-ranked selection. Project detail pages intentionally omit position labels, collection totals, and index-style reading progress. Previous/next controls remain browsing paths only and do not communicate a fixed sequence.
+The portfolio is presented as an open-ended, non-ranked selection. Project detail pages intentionally omit position labels, project totals, and index-style reading progress. Previous/next controls remain browsing paths only and do not communicate a fixed sequence.
 
 ### 4. Approve a project deliberately
 

@@ -50,7 +50,7 @@ export const coverMedia = defineType({
         Rule.custom((value, context) => {
           const document = context.document as {visible?: boolean; featuredOnHome?: boolean}
           return document?.visible === true || document?.featuredOnHome === true
-            ? hasAssetReference(value) || 'A public or featured Work item requires a cover poster.'
+            ? hasAssetReference(value) || 'A public or featured Project requires a cover poster.'
             : true
         }),
     }),
@@ -72,7 +72,7 @@ export const coverMedia = defineType({
       type: 'boolean',
       group: 'media',
       initialValue: false,
-      description: 'Use only if adjacent Work identity fully duplicates the image meaning.',
+      description: 'Use only if adjacent Project identity fully duplicates the image meaning.',
     }),
     defineField({
       name: 'previewVideo',
@@ -151,7 +151,7 @@ export const coverMedia = defineType({
       group: 'internal',
       initialValue: false,
       hidden: hideResolvedReviewField,
-      description: 'Replace this still-derived interaction test before approving the Work item for the website.',
+      description: 'Replace this still-derived interaction test before approving the Project for the website.',
     }),
     defineField({name: 'prototypeOnly', title: 'Prototype only', type: 'boolean', group: 'internal', initialValue: false, hidden: hideResolvedReviewField}),
     defineField({name: 'needsReview', title: 'Needs review', type: 'boolean', group: 'internal', initialValue: false, hidden: hideResolvedReviewField}),

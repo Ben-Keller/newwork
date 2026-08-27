@@ -40,6 +40,7 @@ const project = {
   slug: {current: 'one'},
   cover: {},
   types: [],
+  assets: [],
   contentBlocks: [],
 };
 

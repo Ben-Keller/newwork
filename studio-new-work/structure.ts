@@ -35,19 +35,19 @@ export const structure: StructureResolver = (S) =>
       singleton(S, 'aboutPage', 'About page', PlayIcon),
       S.listItem()
         .id('work')
-        .title('Work')
+        .title('Projects')
         .icon(ProjectsIcon)
         .child(
           S.list()
-            .title('Work')
+            .title('Projects')
             .items([
               S.listItem()
                 .id('work-all')
-                .title('All work')
+                .title('All projects')
                 .child(
                   S.documentList()
                     .id('work-all-list')
-                    .title('All work')
+                    .title('All projects')
                     .schemaType('work')
                     .filter('_type == "work"')
                     .defaultOrdering([{field: 'title', direction: 'asc'}]),

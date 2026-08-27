@@ -35,9 +35,9 @@ export const presentationResolve: PresentationPluginOptions['resolve'] = {
         locations: document?.slug
           ? [
               {title: document.title || 'Work page', href: `/work/${document.slug}`},
-              {title: 'Work page gallery', href: '/'},
+              {title: 'Front gallery', href: '/'},
             ]
-          : [{title: 'Work page gallery', href: '/'}],
+          : [{title: 'Front gallery', href: '/'}],
       }),
     }),
   },
