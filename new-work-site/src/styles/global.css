@@ -11,10 +11,11 @@
 ::view-transition-old(root) { animation: new-work-fade-out 120ms ease-in both; }
 ::view-transition-new(root) { animation: new-work-fade-in 180ms ease-out both; }
 
-html[data-work-project-transition][data-work-project-media="live"]::view-transition-old(root),
-html[data-work-project-transition][data-work-project-media="live"]::view-transition-new(root) {
-  animation: none;
-  mix-blend-mode: normal;
+/* Project handoffs transport the exact live media node themselves. Opt the
+   document root out before native capture so no temporary full-page surface
+   can reveal the incoming backdrop between the click and the live portal. */
+html[data-work-project-transition][data-work-project-media="live"] {
+  view-transition-name: none;
 }
 
 html[data-work-project-transition] .site-footer {
@@ -103,6 +104,36 @@ html[data-work-project-transition="to-project"] .project-overlay__panel {
     contain: paint;
     pointer-events: none;
     user-select: none;
+  }
+  /* The opening hero belongs only to the home reveal. Astro keeps the gallery
+     DOM alive behind projects but removes index-only styles during the swap;
+     without this route-global guard, its video reverts to a huge visible box. */
+  body.project-page .route-gallery-layer[data-gallery-layer-state="background"]
+  [data-logo-work-hero] {
+    display: none !important;
+  }
+  /* The title is in normal flow above the gallery, so retain its measured box
+     while taking it out of paint. Collapsing it would move every background
+     card during the handoff. */
+  body.project-page .route-gallery-layer[data-gallery-layer-state="background"]
+  [data-logo-work-title][data-route-gallery-title-locked="true"] {
+    height: var(--route-gallery-title-height) !important;
+    min-height: var(--route-gallery-title-height) !important;
+    max-height: var(--route-gallery-title-height) !important;
+    overflow: hidden !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+  }
+  /* These are decoder surfaces for the title canvases and must never paint as
+     standalone videos, even while their component stylesheet is between pages. */
+  body.project-page .route-gallery-layer[data-gallery-layer-state="background"]
+  [data-type-letter-video] {
+    position: fixed !important;
+    width: 1px !important;
+    height: 1px !important;
+    inset: auto auto 0 0 !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
   }
   .route-gallery-layer[data-gallery-layer-state="background"]
   > .route-gallery-layer__content {

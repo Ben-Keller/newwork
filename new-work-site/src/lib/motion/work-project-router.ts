@@ -87,12 +87,13 @@ const originStorageKey = 'new-work-origin';
 const restoreRequestKey = 'new-work-restore-requested';
 const persistedMediaAttribute = 'data-transition-persist-media';
 const returnStyleAttribute = 'data-work-project-return-transition';
-const routerVersion = 5;
+const routerVersion = 6;
 const projectLinkSelector = '[data-project-grid] :is([data-project-link], [data-gallery-link])';
 const returnLinkSelector = '[data-project-overlay] [data-project-return]';
 const galleryLayerSelector = '[data-route-gallery-layer]';
 const galleryFlowHoldSelector = '[data-route-gallery-flow-hold]';
 const galleryPersistAttribute = 'data-astro-transition-persist';
+const galleryTitleHeightProperty = '--route-gallery-title-height';
 
 let sessionSequence = 0;
 let activeSession: RouteSession | undefined;
@@ -259,6 +260,12 @@ const retainGalleryLayer = (origin: WorkOrigin): void => {
   const scrollY = typeof origin.scrollY === 'number' ? origin.scrollY : window.scrollY;
   const layerRect = layer.getBoundingClientRect();
   const documentTop = layerRect.top + window.scrollY;
+  const openingTitle = layer.querySelector<HTMLElement>('[data-logo-work-title]');
+  const openingTitleHeight = openingTitle?.getBoundingClientRect().height ?? 0;
+  if (openingTitle && openingTitleHeight > 0) {
+    openingTitle.dataset.routeGalleryTitleLocked = 'true';
+    openingTitle.style.setProperty(galleryTitleHeightProperty, `${openingTitleHeight}px`);
+  }
   installGalleryFlowHold(layer, layerRect.height);
   layer.dataset.galleryLayerState = 'background';
   // A fixed layer loses the normal-flow offset contributed by the site
@@ -277,6 +284,9 @@ const releaseGalleryLayer = (): void => {
   layer.style.removeProperty('--route-gallery-offset');
   layer.removeAttribute('aria-hidden');
   layer.inert = false;
+  const openingTitle = layer.querySelector<HTMLElement>('[data-logo-work-title]');
+  openingTitle?.removeAttribute('data-route-gallery-title-locked');
+  openingTitle?.style.removeProperty(galleryTitleHeightProperty);
   document.dispatchEvent(new Event('new-work:gallery-layer-released'));
 };
 
@@ -428,7 +438,10 @@ const beginProjectNavigation = (
   const sourceMedia = link.querySelector<HTMLElement>('.project-card__media') ?? undefined;
   const preview = sourceMedia?.querySelector<HTMLVideoElement>('[data-preview-video]');
   const sourceVideo = routeVideoIsVisiblyPlaying(preview) ? preview : undefined;
-  const sourceImage = sourceVideo
+  // A video poster is only a loading surface, never the project medium. If the
+  // preview is not ready to travel as a live node, use the normal page fade so
+  // a poster cannot flash into a video-only destination and then disappear.
+  const sourceImage = preview
     ? undefined
     : sourceMedia?.querySelector<HTMLElement>('.responsive-image') ?? undefined;
   const handoffElement = sourceVideo || sourceImage;

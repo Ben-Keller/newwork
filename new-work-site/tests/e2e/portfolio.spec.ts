@@ -1717,6 +1717,139 @@ test('project return keeps site chrome stable and the footer outside the transit
   await expect(page.locator('[data-route-gallery-flow-hold]')).toHaveCount(0);
 });
 
+test('live project handoffs never expose the transient incoming root snapshot', async ({ page }) => {
+  await page.setViewportSize({ width: 1_440, height: 1_000 });
+  await page.goto('/');
+
+  const rootTransitionName = async () => page.evaluate(() => (
+    getComputedStyle(document.documentElement).viewTransitionName
+  ));
+  expect(await rootTransitionName()).toBe('root');
+
+  const projectLink = page.locator('[data-project-link]').first();
+  await projectLink.scrollIntoViewIfNeeded();
+  await projectLink.evaluate((element) => (element as HTMLAnchorElement).click());
+  await page.waitForFunction(() => (
+    document.documentElement.dataset.workProjectMedia === 'live'
+  ));
+  await expect.poll(rootTransitionName).toBe('none');
+
+  await page.waitForURL(/\/work\//u);
+  await page.waitForFunction(() => (
+    !document.documentElement.hasAttribute('data-work-project-transition')
+  ));
+  await expect.poll(rootTransitionName).toBe('root');
+  const returnLink = page.locator('[data-project-overlay-return]');
+  await returnLink.evaluate((element) => (element as HTMLAnchorElement).click());
+  await page.waitForFunction(() => (
+    document.documentElement.dataset.workProjectMedia === 'live'
+  ));
+  await expect.poll(rootTransitionName).toBe('none');
+  await page.waitForURL((url) => url.pathname === '/');
+  await page.waitForFunction(() => (
+    !document.documentElement.hasAttribute('data-work-project-transition')
+  ));
+  await expect.poll(rootTransitionName).toBe('root');
+});
+
+test('first-session opening gallery photo navigation never reveals retained title videos', async ({ page }) => {
+  test.setTimeout(60_000);
+  await page.setViewportSize({ width: 1_280, height: 720 });
+  await page.goto('/', {waitUntil: 'domcontentloaded'});
+  await expect(page.locator('[data-logo-mask-experience]'))
+    .toHaveAttribute('data-logo-reveal-ready', 'true');
+
+  await page.mouse.wheel(0, 800);
+  await expect(page.locator('[data-logo-work-page]')).toHaveAttribute('data-handoff', 'true');
+  await expect(page.locator('[data-logo-work-content]')).toHaveCSS('opacity', '1');
+  const photoLink = page.locator(
+    '[data-project-link][href="/work/michael-selected-photography/michael-poolside-product"]',
+  );
+  await expect(photoLink.locator('video')).toHaveCount(0);
+  const originGeometry = await page.evaluate(() => {
+    const title = document.querySelector<HTMLElement>('[data-logo-work-title]');
+    const media = document.querySelector<HTMLElement>(
+      '[data-project-link][href="/work/michael-selected-photography/michael-poolside-product"] '
+      + '.project-card__media',
+    );
+    if (!title || !media) throw new Error('The fresh gallery geometry is incomplete.');
+    const titleRect = title.getBoundingClientRect();
+    const mediaRect = media.getBoundingClientRect();
+    return {
+      titleHeight: titleRect.height,
+      media: {x: mediaRect.x, y: mediaRect.y, width: mediaRect.width, height: mediaRect.height},
+    };
+  });
+  expect(originGeometry.media.y).toBeLessThan(720);
+  expect(originGeometry.media.y + originGeometry.media.height).toBeGreaterThan(0);
+  await photoLink.evaluate((element) => (element as HTMLAnchorElement).click());
+
+  await page.waitForURL(/\/work\//u);
+  const retainedHero = page.locator(
+    '[data-route-gallery-layer][data-gallery-layer-state="background"] [data-logo-work-hero]',
+  );
+  const retainedTitle = page.locator(
+    '[data-route-gallery-layer][data-gallery-layer-state="background"] [data-logo-work-title]',
+  );
+  await expect(retainedHero).toHaveCSS('display', 'none');
+  await expect(retainedTitle).toHaveCSS('visibility', 'hidden');
+  expect(await retainedTitle.evaluate((element) => element.getBoundingClientRect().height))
+    .toBeCloseTo(originGeometry.titleHeight, 2);
+  await expect(retainedHero.locator('[data-logo-video]').first()).toBeHidden();
+  const retainedTitleVideo = retainedTitle.locator('[data-type-letter-video]').first();
+  await expect(retainedTitleVideo).toBeHidden();
+  await expect(retainedTitleVideo).toHaveCSS('opacity', '0');
+  await expect(retainedTitleVideo).toHaveCSS('width', '1px');
+  await expect(retainedTitleVideo).toHaveCSS('height', '1px');
+  expect(await retainedHero.locator('[data-logo-video]').first().boundingBox()).toBeNull();
+  const retainedMediaGeometry = await page.locator(
+    '[data-route-gallery-layer] '
+    + '[data-project-link][href="/work/michael-selected-photography/michael-poolside-product"] '
+    + '.project-card__media',
+  ).evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    return {x: rect.x, y: rect.y, width: rect.width, height: rect.height};
+  });
+  expect(Math.abs(retainedMediaGeometry.x - originGeometry.media.x)).toBeLessThan(2);
+  expect(Math.abs(retainedMediaGeometry.y - originGeometry.media.y)).toBeLessThan(2);
+  expect(Math.abs(retainedMediaGeometry.width - originGeometry.media.width)).toBeLessThan(2);
+  expect(Math.abs(retainedMediaGeometry.height - originGeometry.media.height)).toBeLessThan(2);
+});
+
+test('a cold video card fades normally without carrying its poster into the project', async ({ page }) => {
+  await page.setViewportSize({ width: 1_440, height: 1_000 });
+  await page.goto('/');
+
+  const motionLink = page.locator('[data-project-link]:has([data-preview-video])').first();
+  await motionLink.scrollIntoViewIfNeeded();
+  await motionLink.evaluate((element) => {
+    const preview = element.querySelector<HTMLVideoElement>('[data-preview-video]');
+    preview?.pause();
+    preview?.removeAttribute('data-playing');
+    element.querySelector<HTMLElement>('.responsive-image')
+      ?.setAttribute('data-cold-video-poster-probe', 'true');
+    (element as HTMLAnchorElement).click();
+  });
+
+  await page.waitForFunction(() => (
+    document.documentElement.dataset.workProjectTransition === 'to-project'
+  ));
+  expect(await page.evaluate(() => ({
+    media: document.documentElement.dataset.workProjectMedia ?? null,
+    rootName: getComputedStyle(document.documentElement).viewTransitionName,
+  }))).toEqual({media: null, rootName: 'root'});
+
+  await page.waitForURL(/\/work\//u);
+  await expect(page.locator(
+    '[data-project-hero-media] [data-cold-video-poster-probe], '
+    + '[data-route-media-portal] [data-cold-video-poster-probe]',
+  )).toHaveCount(0);
+  await expect(page.locator('[data-route-media-portal]')).toHaveCount(0);
+  await expect(page.locator(
+    '[data-project-hero-media][data-first-media="true"] video[data-short-loop]',
+  )).toBeAttached();
+});
+
 test('route media keeps the original node continuous through the centralized route transaction', async ({ page }, testInfo) => {
   test.setTimeout(180_000);
   test.skip(testInfo.project.name.startsWith('mobile-'), 'Desktop persistent-video timing is covered here; mobile still-media continuity and video fallbacks have dedicated tests.');
