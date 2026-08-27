@@ -61,6 +61,7 @@ export const michaelPhotoWork: ProjectView = {
   owner: 'michael',
   types: ['Photography'],
   template: 'photo',
+  assets: [],
   photos: michaelWorkPhotos.map((item): WorkPhotoView => ({
     id: item.id,
     title: item.label,

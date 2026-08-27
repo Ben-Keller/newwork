@@ -4,7 +4,6 @@ import canonicalFixtureSettingsJson from '../../../content/site-settings.json';
 import localFixtureProjectsJson from '../../src/content/local/projects.json';
 import localFixtureSettingsJson from '../../src/content/local/site-settings.json';
 import {
-  aboutProjectsForPerson,
   adjacentProjects,
   getContentMode,
   getFixtureProjects,
@@ -92,6 +91,16 @@ describe('content mode', () => {
   });
 });
 
+describe('About page availability', () => {
+  it('uses safe copy defaults and accepts About-page text overrides', () => {
+    expect(normalizeSiteSettings({}, 'production').aboutPage.closingHeadline)
+      .toBe('What should we make next?');
+    expect(normalizeSiteSettings({
+      aboutPage: {openingHeadline: 'A custom opening.'},
+    }, 'production').aboutPage.openingHeadline).toBe('A custom opening.');
+  });
+});
+
 describe('fixture ordering', () => {
   it('returns all 16 provisional records in the exact editorial order', () => {
     const projects = getFixtureProjects();
@@ -132,7 +141,7 @@ describe('fixture ordering', () => {
   });
 });
 
-describe('About people content', () => {
+describe('site settings content', () => {
   it('keeps the canonical seed and prototype runtime settings in exact sync', () => {
     expect(localFixtureSettingsJson).toEqual(canonicalFixtureSettingsJson);
   });
@@ -154,67 +163,11 @@ describe('About people content', () => {
     expect(settings.defaultSeo.shareImageAlt).toBe('New Work Agency');
   });
 
-  it('retains provisional profiles in the prototype fixture and dedicated preview singleton', () => {
-    const prototypePeople = normalizeSiteSettings(localFixtureSettingsJson, 'prototype').aboutPeople;
-    const previewPeople = normalizeSiteSettings({
-      ...localFixtureSettingsJson,
-      aboutPage: {people: localFixtureSettingsJson.aboutPeople},
-    }, 'preview').aboutPeople;
-
-    for (const people of [prototypePeople, previewPeople]) {
-      expect(people.map((person) => [person.name, person.projectOwner])).toEqual([
-        ['Michael', 'michael'],
-        ['Oliver', 'oliver'],
-      ]);
-      expect(people.every((person) => person.needsReview && person.prototypeOnly)).toBe(true);
-      expect(people.every((person) => String(person.bio[0]?.spans[0]?.text || '').length > 120)).toBe(true);
-    }
-  });
-
-  it('filters provisional profiles individually in production without dropping approved profiles', () => {
-    const settings = {
-      ...localFixtureSettingsJson,
-      aboutPage: {
-        people: localFixtureSettingsJson.aboutPeople.map((person) => (
-          person.projectOwner === 'michael' ? {
-            ...person,
-            needsReview: false,
-            prototypeOnly: false,
-          } : person
-        )),
-      },
-    };
-
-    expect(normalizeSiteSettings(settings, 'production').aboutPeople.map((person) => person.name))
-      .toEqual(['Michael']);
-  });
-
   it('does not use removed legacy page fields outside prototype mode', () => {
     const normalized = normalizeSiteSettings(localFixtureSettingsJson, 'production');
 
     expect(normalized.manifesto).toBeUndefined();
-    expect(normalized.about).toBeUndefined();
-    expect(normalized.aboutPeople).toEqual([]);
     expect(normalized.notesEnabled).toBe(false);
-  });
-
-  it('derives ordered supporting projects for each profile owner', () => {
-    const projects = getFixtureProjects();
-    const oliver = aboutProjectsForPerson(projects, 'oliver');
-    const michael = aboutProjectsForPerson(projects, 'michael');
-    const oliverTessellation = aboutProjectsForPerson(projects, 'oliver', 5);
-    const michaelTessellation = aboutProjectsForPerson(projects, 'michael', 5);
-
-    expect(oliver).toHaveLength(3);
-    expect(michael).toHaveLength(3);
-    expect(oliver.every((project) => project.owner === 'oliver')).toBe(true);
-    expect(michael.every((project) => project.owner === 'michael')).toBe(true);
-    expect(oliver.map((project) => project.homeOrder)).toEqual([20, 40, 60]);
-    expect(michael.map((project) => project.homeOrder)).toEqual([10, 30, 50]);
-    expect(oliverTessellation).toHaveLength(5);
-    expect(michaelTessellation).toHaveLength(5);
-    expect(oliverTessellation.every((project) => project.owner === 'oliver')).toBe(true);
-    expect(michaelTessellation.every((project) => project.owner === 'michael')).toBe(true);
   });
 });
 

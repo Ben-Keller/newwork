@@ -70,6 +70,12 @@ const tabletColumnStarts = tabletColumns.map((column, index) =>
 </section>
 
 <script>
+  import {
+    readStorageStringArray,
+    removeStorageValue,
+    writeStorageJson,
+  } from '../lib/browser-storage';
+
   declare global {
     interface Window {
       __newWorkMasonryCleanup?: () => void;
@@ -224,23 +230,13 @@ const tabletColumnStarts = tabletColumns.map((column, index) =>
 
   const getCardId = (card: HTMLElement): string | undefined => card.dataset.galleryItemId;
 
-  const readGalleryOrder = (): string[] => {
-    try {
-      const value: unknown = JSON.parse(localStorage.getItem(galleryOrderStorageKey) || '[]');
-      return Array.isArray(value) ? value.filter((slug): slug is string => typeof slug === 'string') : [];
-    } catch {
-      return [];
-    }
-  };
+  const readGalleryOrder = (): string[] => (
+    readStorageStringArray('local', galleryOrderStorageKey)
+  );
 
-  const readHiddenGalleryItems = (): string[] => {
-    try {
-      const value: unknown = JSON.parse(localStorage.getItem(galleryHiddenStorageKey) || '[]');
-      return Array.isArray(value) ? value.filter((id): id is string => typeof id === 'string') : [];
-    } catch {
-      return [];
-    }
-  };
+  const readHiddenGalleryItems = (): string[] => (
+    readStorageStringArray('local', galleryHiddenStorageKey)
+  );
 
 
   const applyGalleryOrder = (grid: HTMLElement, order: string[]): void => {
@@ -412,21 +408,23 @@ const tabletColumnStarts = tabletColumns.map((column, index) =>
       const order = getGalleryCards(grid)
         .map(getCardId)
         .filter((id): id is string => Boolean(id));
-      try {
-        const hiddenItems = window.__newWorkGalleryRemoved ?? new Set<string>();
-        localStorage.setItem(
-          galleryOrderStorageKey,
-          JSON.stringify(orderWithHiddenSlots(order, readGalleryOrder(), hiddenItems)),
-        );
-        localStorage.setItem(
-          galleryHiddenStorageKey,
-          JSON.stringify([...hiddenItems]),
-        );
+      const hiddenItems = window.__newWorkGalleryRemoved ?? new Set<string>();
+      const orderSaved = writeStorageJson(
+        'local',
+        galleryOrderStorageKey,
+        orderWithHiddenSlots(order, readGalleryOrder(), hiddenItems),
+      );
+      const hiddenSaved = writeStorageJson(
+        'local',
+        galleryHiddenStorageKey,
+        [...hiddenItems],
+      );
+      if (orderSaved && hiddenSaved) {
         grid.dataset.galleryOrder = 'saved';
         document.dispatchEvent(new CustomEvent('new-work:gallery-order-feedback', {
           detail: { action: 'saved' },
         }));
-      } catch {
+      } else {
         document.dispatchEvent(new CustomEvent('new-work:gallery-order-feedback', {
           detail: { action: 'error' },
         }));
@@ -443,21 +441,22 @@ const tabletColumnStarts = tabletColumns.map((column, index) =>
       event.stopPropagation();
       window.__newWorkGalleryRemoved ??= new Set<string>();
       window.__newWorkGalleryRemoved.add(id);
-      try {
-        // Removal is an immediate curation decision. Persist it separately
-        // from the optional shuffled order so route changes cannot revive it.
-        const recordedOrder = readGalleryOrder();
-        if (!recordedOrder.includes(id)) {
-          const currentOrder = getGalleryCards(grid)
-            .map(getCardId)
-            .filter((cardId): cardId is string => Boolean(cardId));
-          localStorage.setItem(galleryOrderStorageKey, JSON.stringify(currentOrder));
-        }
-        localStorage.setItem(
-          galleryHiddenStorageKey,
-          JSON.stringify([...window.__newWorkGalleryRemoved]),
-        );
-      } catch {
+      // Removal is an immediate curation decision. Persist it separately
+      // from the optional shuffled order so route changes cannot revive it.
+      const recordedOrder = readGalleryOrder();
+      const currentOrderSaved = recordedOrder.includes(id) || writeStorageJson(
+        'local',
+        galleryOrderStorageKey,
+        getGalleryCards(grid)
+          .map(getCardId)
+          .filter((cardId): cardId is string => Boolean(cardId)),
+      );
+      const hiddenItemsSaved = writeStorageJson(
+        'local',
+        galleryHiddenStorageKey,
+        [...window.__newWorkGalleryRemoved],
+      );
+      if (!currentOrderSaved || !hiddenItemsSaved) {
         document.dispatchEvent(new CustomEvent('new-work:gallery-order-feedback', {
           detail: { action: 'error' },
         }));
@@ -482,7 +481,7 @@ const tabletColumnStarts = tabletColumns.map((column, index) =>
     });
 
     document.addEventListener('new-work:gallery-restore-all', () => {
-      localStorage.removeItem(galleryHiddenStorageKey);
+      removeStorageValue('local', galleryHiddenStorageKey);
       window.__newWorkGalleryRemoved?.clear();
       window.location.reload();
     });

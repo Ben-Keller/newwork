@@ -20,7 +20,7 @@ export const footerLink = defineType({
       options: {
         list: [
           {title: 'Work page', value: 'work'},
-          {title: 'About page', value: 'reel'},
+          {title: 'About page', value: 'about'},
           {title: 'Contact page', value: 'contact'},
           {title: 'External website', value: 'external'},
         ],

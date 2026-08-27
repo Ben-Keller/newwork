@@ -1,4 +1,6 @@
 <script>
+  import {writeStorageJson} from '../lib/browser-storage';
+
   declare global {
     interface Window {
       __newWorkBackdropCaptureReady?: boolean;
@@ -66,12 +68,7 @@
 
     if (!items.length) return;
 
-    try {
-      sessionStorage.setItem(backdropStorageKey, JSON.stringify({ destination, items }));
-    } catch {
-      // Storage can be unavailable in hardened browsing modes. The overlay has
-      // a complete server-rendered gallery fallback for that case.
-    }
+    writeStorageJson('session', backdropStorageKey, {destination, items});
   };
 
   if (!window.__newWorkBackdropCaptureReady) {

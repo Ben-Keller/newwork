@@ -34,6 +34,11 @@ npm run content:snapshot
 npm run content:validate
 ```
 
+For CI-equivalent release checks, use `npm run schema:validate` and
+`npm run content:validate:ci`. The latter reports only errors, while the normal
+editorial command also reports warnings that should be reviewed but do not
+necessarily block a release.
+
 The deployed editorial app is available at `https://new-work.sanity.studio/`. The website remains a separate Astro deployment; publishing content triggers a website rebuild only after the hosting webhook is configured.
 
 The normal client workflow is documented in `CLIENT_GUIDE.md`. Repository deployment and local synchronization are documented in `../DEPLOYMENT.md`. One-time data maintenance scripts live under `scripts/` and are intentionally not part of the Studio navigation.

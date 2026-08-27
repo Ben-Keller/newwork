@@ -12,9 +12,6 @@ import {
 const BANDS = 8;
 const COLUMNS = 10;
 const TOTAL_SLOTS = BANDS * COLUMNS;
-const INTRO_TOP_MIN_TILES = 4;
-const INTRO_TOP_WIDTH = 0.85;
-const REEL_TILE_SCALE = 0.1696460033;
 const CAMERA_Z = 7.5;
 const CAMERA_FOV = 38;
 const CONTACT_SCALE = 0.86;
@@ -53,7 +50,6 @@ type MediaUniforms = SharedUniforms & {
   uUseAtlas: Uniform;
   uSourceAspect: Uniform;
   uIntroTop: Uniform;
-  uIntroTileCount: Uniform;
 };
 
 type FeatureUniforms = {
@@ -259,7 +255,6 @@ function createMediaMaterial(
   useAtlas: boolean,
   sourceAspect = 16 / 9,
   introTop = false,
-  introTileCount = COLUMNS,
 ) : TypedShaderMaterial<MediaUniforms> {
   const uniforms: MediaUniforms = {
       ...sharedUniforms,
@@ -267,7 +262,6 @@ function createMediaMaterial(
       uUseAtlas: { value: useAtlas ? 1 : 0 },
       uSourceAspect: { value: sourceAspect },
       uIntroTop: { value: introTop ? 1 : 0 },
-      uIntroTileCount: { value: introTileCount },
   };
   return new THREE.ShaderMaterial({
     uniforms,
@@ -301,10 +295,12 @@ function createFeatureSurface(texture: THREE.Texture) {
     fragmentShader: featureFragmentShader,
     side: THREE.DoubleSide,
     transparent: true,
-    // The portal mask defines the handoff boundary. Rendering this surface
-    // above the winding mesh keeps the selected feature from being occluded
-    // by an unrelated tile as the tunnel reaches the camera.
-    depthTest: false,
+    // The portal is a backdrop seen through the reel opening. Keep it in the
+    // cylinder's depth field so the exact media geometry always wins at the
+    // rim; the soft ellipse only limits the backdrop and can never cut into
+    // the foreground cylinder.
+    depthTest: true,
+    depthFunc: THREE.LessEqualDepth,
     depthWrite: false,
   }) as TypedShaderMaterial<FeatureUniforms>;
   const mesh = new THREE.Mesh(geometry, material);
@@ -396,27 +392,26 @@ export async function createExperience(
   baseMesh.renderOrder = 1;
   scene.add(baseMesh);
 
-  const introTopSlots = Array.from(
-    { length: COLUMNS },
-    (_, index) => TOTAL_SLOTS - COLUMNS + index,
+  const introPathSlots = Array.from(
+    { length: COLUMNS * 2 },
+    (_, index) => TOTAL_SLOTS - COLUMNS * 2 + index,
   );
-  const introTopGeometry = createMediaGeometry(
-    introTopSlots,
+  const introPathGeometry = createMediaGeometry(
+    introPathSlots,
     atlasMap,
     mobile,
   );
-  const introTopMaterial = createMediaMaterial(
+  const introPathMaterial = createMediaMaterial(
     atlasTexture,
     sharedUniforms,
     true,
     16 / 9,
     true,
-    COLUMNS,
   );
-  const introTopMesh = new THREE.Mesh(introTopGeometry, introTopMaterial);
-  introTopMesh.frustumCulled = false;
-  introTopMesh.renderOrder = 0;
-  scene.add(introTopMesh);
+  const introPathMesh = new THREE.Mesh(introPathGeometry, introPathMaterial);
+  introPathMesh.frustumCulled = false;
+  introPathMesh.renderOrder = 0;
+  scene.add(introPathMesh);
 
   const featureGroup = new THREE.Group();
   const feature = createFeatureSurface(featurePoster);
@@ -432,7 +427,6 @@ export async function createExperience(
 
   for (const spec of requestedVideos) {
     const video = document.createElement("video");
-    video.src = assetUrl(spec.src);
     video.muted = true;
     video.loop = true;
     video.playsInline = true;
@@ -483,9 +477,19 @@ export async function createExperience(
     };
     video.addEventListener("loadeddata", record.loadedData);
     video.addEventListener("error", record.error);
-    video.load();
     videoRecords.push(record);
   }
+
+  let destroyed = false;
+  let videoLoadsStarted = false;
+  const startVideoLoads = () => {
+    if (videoLoadsStarted || destroyed) return;
+    videoLoadsStarted = true;
+    for (const record of videoRecords) {
+      record.video.src = assetUrl(record.spec.src);
+      record.video.load();
+    }
+  };
 
   let width = 1;
   let height = 1;
@@ -508,17 +512,6 @@ export async function createExperience(
     const viewWidth = viewHeight * camera.aspect;
     sharedUniforms.uViewWidth.value = viewWidth;
     sharedUniforms.uViewHeight.value = viewHeight;
-    const openingRadius = 0.27 * Math.min(viewWidth, viewHeight);
-    const openingDepthScale = (CAMERA_Z - openingRadius) / CAMERA_Z;
-    const projectedReelTileWidth = REEL_TILE_SCALE
-      * Math.min(viewWidth, viewHeight);
-    introTopMaterial.uniforms.uIntroTileCount.value = THREE.MathUtils.clamp(
-      (INTRO_TOP_WIDTH * viewWidth * openingDepthScale)
-        / projectedReelTileWidth,
-      INTRO_TOP_MIN_TILES,
-      COLUMNS,
-    );
-
     const featureDistance = CAMERA_Z - FEATURE_Z;
     const featureViewHeight =
       2 * featureDistance * Math.tan(THREE.MathUtils.degToRad(CAMERA_FOV * 0.5));
@@ -538,7 +531,6 @@ export async function createExperience(
   let targetProgress = 0;
   let displayProgress = 0;
   let raf = 0;
-  let destroyed = false;
   let inView = true;
   let lastTime = performance.now();
   let frameAccumulator = 0;
@@ -823,10 +815,24 @@ export async function createExperience(
     renderer.compile(scene, camera);
   }
 
+  // Paint the exact opening geometry while the loading placeholder still sits
+  // above the canvas. Only reveal the canvas after the browser has had a frame
+  // to composite it, so the two identically placed reels exchange in place.
+  sharedUniforms.uProgress.value = 0;
+  sharedUniforms.uTime.value = 0;
+  updateFeature(0);
+  options.onProgress(0);
+  renderer.render(scene, camera);
+  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
   // onReady expands the root from its loading height to the full narrative
-  // scroll range. Wait for that layout before ScrollTrigger measures its end.
+  // scroll range after the opening frame is already visible.
   options.onReady();
   await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+  // The atlas already supplies the opening frames. Let the first WebGL scene
+  // become interactive before video networking and decoding begin, then
+  // progressively replace those stills as each clip becomes ready.
+  startVideoLoads();
 
   const scrollTrigger = ScrollTrigger.create({
     trigger: options.scrollRoot,
@@ -871,11 +877,11 @@ export async function createExperience(
         record.mesh.geometry.dispose();
       }
 
-      scene.remove(baseMesh, introTopMesh, featureGroup);
+      scene.remove(baseMesh, introPathMesh, featureGroup);
       baseGeometry.dispose();
       baseMaterial.dispose();
-      introTopGeometry.dispose();
-      introTopMaterial.dispose();
+      introPathGeometry.dispose();
+      introPathMaterial.dispose();
       atlasTexture.dispose();
       featurePoster.dispose();
       feature.geometry.dispose();

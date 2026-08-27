@@ -1,13 +1,12 @@
 ---
 import ErrorMedia from '../ErrorMedia.astro';
-import ResponsiveImage from '../ResponsiveImage.astro';
 import VideoControls from '../VideoControls.astro';
 import MediaCaption from './MediaCaption.astro';
 import MediaAccessibility from './MediaAccessibility.astro';
 import { inferVideoMimeType } from './video-mime';
 import type { ShortLoopBlock } from '../../lib/types';
 interface Props { block: ShortLoopBlock; projectTitle: string; eager?: boolean; sizes?: string }
-const { block, projectTitle, eager = false, sizes = '100vw' } = Astro.props;
+const { block, projectTitle } = Astro.props;
 const displayRatio = block.video.poster
   ? `${block.video.poster.width} / ${block.video.poster.height}`
   : '16 / 9';
@@ -15,15 +14,7 @@ const sourceMime = inferVideoMimeType(block.video.src, block.video.mimeType);
 const videoId = `short-loop-${block._key.replace(/[^a-zA-Z0-9_-]/gu, '-')}`;
 ---
 <figure class="media-block media-block--loop">
-  <div class:list={['hosted-video', 'hosted-video--loop', block.video.poster && 'hosted-video--poster-backed']} data-media-frame style={`--video-ratio:${displayRatio}`}>
-    {block.video.poster ? (
-      <ResponsiveImage
-        image={block.video.poster}
-        sizes={sizes}
-        eager={eager}
-        projectPoster={eager}
-      />
-    ) : null}
+  <div class="hosted-video hosted-video--loop" data-media-frame style={`--video-ratio:${displayRatio}`}>
     {block.video.src ? (
       <video
         id={videoId}
@@ -41,11 +32,8 @@ const videoId = `short-loop-${block._key.replace(/[^a-zA-Z0-9_-]/gu, '-')}`;
       </video>
     ) : null}
     {block.video.src ? <VideoControls targetId={videoId} showFullscreen={false} showMute={false} /> : null}
-    <ErrorMedia message={`Motion loop unavailable for ${projectTitle}`} visible={!block.video.src && !block.video.poster} />
+    <ErrorMedia message={`Motion loop unavailable for ${projectTitle}`} visible={!block.video.src} />
   </div>
-  {!block.video.src && block.video.poster ? (
-    <p class="embed-fallback" role="status">Motion loop unavailable. The poster remains visible.</p>
-  ) : null}
   <MediaAccessibility transcript={block.video.transcript} captionsFile={block.video.captionsFile} />
   {block.video.src ? <noscript><p class="embed-fallback"><a href={block.video.src}>Open motion clip</a></p></noscript> : null}
   <MediaCaption caption={block.caption} credit={block.credit} />

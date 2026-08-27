@@ -67,6 +67,8 @@ const backdropProjects = [...projects]
 
 
 <script>
+  import {readStorageJson, removeStorageValue} from '../../lib/browser-storage';
+
   interface GalleryBackdropItem {
     src: string;
     x: number;
@@ -96,9 +98,10 @@ const backdropProjects = [...projects]
         if (!snapshotLayer) return;
 
         try {
-          const snapshot = JSON.parse(
-            sessionStorage.getItem(backdropStorageKey) || '{}',
-          ) as GalleryBackdropSnapshot;
+          const storedSnapshot = readStorageJson('session', backdropStorageKey);
+          const snapshot = storedSnapshot && typeof storedSnapshot === 'object'
+            ? storedSnapshot as GalleryBackdropSnapshot
+            : {};
           if (snapshot.destination !== destination || !Array.isArray(snapshot.items)) return;
 
           snapshot.items.slice(0, 20).forEach((item) => {
@@ -128,7 +131,7 @@ const backdropProjects = [...projects]
 
           if (snapshotLayer.childElementCount > 0) overlay.dataset.overlayBackdrop = 'snapshot';
         } catch {
-          sessionStorage.removeItem(backdropStorageKey);
+          removeStorageValue('session', backdropStorageKey);
         }
       });
   };
@@ -234,24 +237,6 @@ const backdropProjects = [...projects]
     background: var(--page-background, var(--color-project, #e8e8e4));
     border: 1px solid color-mix(in srgb, var(--color-ink, #101010) 14%, transparent);
     box-shadow: 0 22px 80px rgb(16 16 16 / 18%);
-  }
-
-  :global(html[data-work-project-transition="to-project"][data-work-project-media="live"])
-  .project-overlay__backdrop {
-    animation: project-route-backdrop-in 460ms cubic-bezier(.22, 1, .36, 1) both;
-  }
-
-  :global(html[data-work-project-transition="to-project"][data-work-project-media="live"])
-  .project-overlay__panel {
-    animation: project-route-panel-in 520ms cubic-bezier(.22, 1, .36, 1) both;
-  }
-
-  @keyframes project-route-backdrop-in {
-    from { opacity: .28; }
-  }
-
-  @keyframes project-route-panel-in {
-    from { opacity: .08; }
   }
 
   .project-overlay__toolbar {

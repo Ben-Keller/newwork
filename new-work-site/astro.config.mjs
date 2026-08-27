@@ -124,6 +124,14 @@ export default defineConfig({
   base,
   output: 'static',
   trailingSlash: 'never',
+  // Production and prototype builds share the same output directory locally.
+  // Always clear it so a later production artifact cannot retain prototype-only
+  // routes (or work pages removed from the current Sanity release).
+  vite: {
+    build: {
+      emptyOutDir: true,
+    },
+  },
   integrations: [
     sanity({
       projectId: sanityProjectId,

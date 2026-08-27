@@ -39,6 +39,71 @@ const scrollGesture = async (page: Page, deltaY: number, mobile: boolean) => {
 
 test.describe('logo mask study', () => {
   test.describe.configure({ mode: 'serial' });
+
+  test('paints the color field first while requesting the title video immediately', async ({page}, testInfo) => {
+    test.skip(testInfo.project.name !== 'desktop-chromium', 'The first-paint sequence is browser-independent and covered once.');
+    await page.addInitScript(() => {
+      type BootFrame = {
+        background: string;
+        opacity: string;
+        phase?: string;
+        videoRequested: boolean;
+      };
+      const routeWindow = window as Window & {__logoBootFrames?: BootFrame[]};
+      routeWindow.__logoBootFrames = [];
+      const sample = (): void => {
+        const root = document.querySelector<HTMLElement>('[data-logo-mask-experience]');
+        const stage = root?.querySelector<HTMLElement>('[data-logo-stage]');
+        const hero = document.querySelector<HTMLElement>('[data-logo-work-hero]');
+        if (root && stage && hero) {
+          routeWindow.__logoBootFrames?.push({
+            background: getComputedStyle(hero).backgroundColor,
+            opacity: getComputedStyle(stage).opacity,
+            phase: root.dataset.logoRevealPhase,
+            videoRequested: Boolean(root.querySelector('source[data-src][src]')),
+          });
+          if (root.dataset.logoRevealReady === 'true') return;
+        }
+        requestAnimationFrame(sample);
+      };
+      requestAnimationFrame(sample);
+    });
+
+    await page.goto('/', {waitUntil: 'domcontentloaded'});
+    const experience = page.locator('[data-logo-mask-experience]');
+    await expect(experience).toHaveAttribute('data-logo-reveal-ready', 'true');
+    const frames = await page.evaluate(() => (
+      (window as Window & {
+        __logoBootFrames?: Array<{
+          background: string;
+          opacity: string;
+          phase?: string;
+          videoRequested: boolean;
+        }>;
+      }).__logoBootFrames ?? []
+    ));
+    const backgroundFrames = frames.filter((frame) => frame.phase === 'background');
+    const backgroundFrame = backgroundFrames[0];
+    const contentFrameIndex = frames.findIndex((frame) => frame.phase === 'content');
+    const backgroundFrameIndex = frames.findIndex((frame) => frame === backgroundFrame);
+
+    expect(backgroundFrame).toBeDefined();
+    expect(backgroundFrame?.background).toBe('rgb(71, 0, 0)');
+    expect(backgroundFrame?.opacity).toBe('0');
+    expect(backgroundFrames.some((frame) => frame.videoRequested)).toBe(true);
+    const backgroundChannels = backgroundFrames.map((frame) =>
+      (frame.background.match(/\d+/gu) ?? []).slice(0, 3).map(Number));
+    const largestFrameJump = backgroundChannels.slice(1).reduce((largest, channels, index) => {
+      const previous = backgroundChannels[index] ?? [];
+      const jump = channels.reduce((sum, channel, channelIndex) =>
+        sum + Math.abs(channel - (previous[channelIndex] ?? channel)), 0);
+      return Math.max(largest, jump);
+    }, 0);
+    expect(largestFrameJump).toBeLessThanOrEqual(2);
+    expect(contentFrameIndex).toBeGreaterThan(backgroundFrameIndex);
+    await expect(experience.locator('source[data-src]').first()).toHaveAttribute('src', /.+/u);
+  });
+
   test('is merged into Work with no standalone Logo navigation or route', async ({ page }) => {
     await page.goto('/');
     await expectLogoPageReady(page);
@@ -105,6 +170,51 @@ test.describe('logo mask study', () => {
     await expect(stage).toHaveCSS('animation-name', 'logo-reveal-seam');
   });
 
+  test('restarts the persisted title video after leaving Work and returning', async ({page}, testInfo) => {
+    test.setTimeout(60_000);
+    test.skip(testInfo.project.name !== 'desktop-chromium', 'Persisted route playback is covered once on desktop.');
+    await page.goto('/');
+    await expectLogoPageReady(page);
+
+    const titleVideo = page.locator(
+      '[data-logo-mask-experience] [data-single-layer][data-active="true"] [data-logo-video]',
+    );
+    await expect(titleVideo).toBeAttached();
+    await expect.poll(() => titleVideo.evaluate((element) => (
+      (element as HTMLVideoElement).readyState
+    ))).toBeGreaterThanOrEqual(1);
+    await expect.poll(() => titleVideo.evaluate((element) => (
+      (element as HTMLVideoElement).paused
+    ))).toBe(false);
+    await titleVideo.evaluate((element) => {
+      const video = element as HTMLVideoElement;
+      video.dataset.restartProbe = 'ready';
+      video.currentTime = Math.min(1, Math.max(0, video.duration / 2));
+    });
+
+    await page.mouse.wheel(0, 700);
+    const projectLink = page.locator('[data-project-link]').first();
+    await projectLink.scrollIntoViewIfNeeded();
+    await projectLink.click({noWaitAfter: true});
+    await page.waitForURL(/\/work\//u);
+    const retainedVideo = page.locator('[data-logo-video][data-restart-probe="ready"]');
+    await expect(retainedVideo).toBeAttached();
+    await expect.poll(() => retainedVideo.evaluate((element) => (
+      (element as HTMLVideoElement).paused
+    ))).toBe(true);
+
+    await page.locator('[data-desktop-nav]').getByRole('link', {name: 'Work'}).click();
+    await page.waitForURL(/\/$/u);
+    const returnedVideo = page.locator('[data-logo-video][data-restart-probe="ready"]');
+    await expect(returnedVideo).toBeAttached();
+    await expect.poll(() => returnedVideo.evaluate((element) => (
+      (element as HTMLVideoElement).paused
+    ))).toBe(false);
+    expect(await returnedVideo.evaluate((element) => (
+      (element as HTMLVideoElement).currentTime
+    ))).toBeLessThan(1);
+  });
+
   test('absorbs transition momentum, then releases instantly for a secondary gesture', async ({ page }, testInfo) => {
     test.skip(testInfo.project.name.startsWith('mobile-'), 'Trackpad momentum is desktop-only.');
     await page.goto('/');
@@ -135,7 +245,7 @@ test.describe('logo mask study', () => {
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
   });
 
-  test('uses the side gutter as the visible top minimum in short viewports', async ({ page }) => {
+  test('centers the title stage instead of pinning overflow to the top in short viewports', async ({ page }) => {
     await page.setViewportSize({ width: 900, height: 500 });
     await page.goto('/');
     await expectLogoPageReady(page);
@@ -146,12 +256,38 @@ test.describe('logo mask study', () => {
       const rect = element.getBoundingClientRect();
       const root = element.closest<HTMLElement>('[data-logo-mask-experience]');
       const gutter = Number.parseFloat(getComputedStyle(root!).paddingLeft);
-      return { top: rect.top, left: rect.left, right: window.innerWidth - rect.right, gutter };
+      return {
+        centerY: rect.top + rect.height / 2,
+        viewportCenterY: window.innerHeight / 2,
+        left: rect.left,
+        right: window.innerWidth - rect.right,
+        gutter,
+      };
     });
 
-    expect(Math.abs(placement.top - placement.gutter)).toBeLessThan(1);
+    expect(Math.abs(placement.centerY - placement.viewportCenterY)).toBeLessThan(1);
     expect(Math.abs(placement.left - placement.gutter)).toBeLessThan(1);
     expect(Math.abs(placement.right - placement.gutter)).toBeLessThan(1);
+  });
+
+  test('balances the visible title without clipping through its top edge', async ({ page }) => {
+    await page.setViewportSize({ width: 1_642, height: 902 });
+    await page.goto('/');
+    await expectLogoPageReady(page);
+
+    const stage = page.locator('[data-logo-stage]');
+    const maskedTitle = page.locator('.logo-mask-stage__single');
+    await stage.evaluate((element) => Promise.all(element.getAnimations().map((animation) => animation.finished)));
+    const placement = await stage.evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      return {
+        centerY: rect.top + rect.height / 2,
+        viewportCenterY: window.innerHeight / 2,
+      };
+    });
+
+    expect(Math.abs(placement.centerY - placement.viewportCenterY)).toBeLessThan(1);
+    await expect(maskedTitle).toHaveCSS('clip-path', 'none');
   });
 
   test('tightens and subtly compresses the title in wide, short viewports', async ({ page }) => {
@@ -170,7 +306,12 @@ test.describe('logo mask study', () => {
     });
 
     expect(layout.paddingTop).toBeLessThan(layout.paddingLeft);
-    await expect(maskedTitle).toHaveCSS('transform', /matrix\(1, 0, 0, 0\.94, 0, 0\)/u);
+    const transform = await maskedTitle.evaluate((element) => {
+      const matrix = new DOMMatrix(getComputedStyle(element).transform);
+      return {scaleY: matrix.d, translateY: matrix.f};
+    });
+    expect(transform.scaleY).toBeCloseTo(0.94, 2);
+    expect(transform.translateY).toBeGreaterThan(0);
   });
 
   test('uses the first scroll gesture for the crossfade, then scrolls normally', async ({ page }, testInfo) => {

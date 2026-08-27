@@ -1,102 +1,168 @@
-import {UsersIcon} from '@sanity/icons/Users'
-import {defineArrayMember, defineField, defineType} from 'sanity'
-import {collectBlockingSafetyFlags, isRecord} from '../validation'
-import {hiddenAllFieldsGroup} from '../clientGroups'
-
-function uniqueAboutOwner(value: unknown): true | string {
-  if (!Array.isArray(value)) return true
-  const owners = value.flatMap((candidate) => {
-    if (!isRecord(candidate) || typeof candidate.projectOwner !== 'string') return []
-    return [candidate.projectOwner]
-  })
-  return new Set(owners).size === owners.length
-    ? true
-    : 'Each project owner can appear only once on the About page.'
-}
+import {PlayIcon} from '@sanity/icons/Play'
+import {defineField, defineType} from 'sanity'
 
 export const aboutPage = defineType({
   name: 'aboutPage',
   title: 'About page',
   type: 'document',
-  icon: UsersIcon,
+  icon: PlayIcon,
   groups: [
-    {name: 'copy', title: 'Page copy', default: true},
-    {name: 'people', title: 'People'},
-    {name: 'image', title: 'Page image'},
+    {name: 'opening', title: 'Opening', default: true},
+    {name: 'story', title: 'Story text'},
+    {name: 'accessible', title: 'Accessible version'},
+    {name: 'closing', title: 'Closing action'},
     {name: 'seo', title: 'Search & sharing'},
-    hiddenAllFieldsGroup,
   ],
   fields: [
-    defineField({name: 'heading', title: 'Page heading', type: 'string', group: 'copy', initialValue: 'About', validation: (Rule) => Rule.required().max(80)}),
-    defineField({name: 'about', title: 'About text', type: 'portableText', group: 'copy'}),
     defineField({
-      name: 'capabilities',
-      title: 'Expertise',
-      type: 'array',
-      group: 'copy',
-      of: [defineArrayMember({type: 'string'})],
-      validation: (Rule) => Rule.unique(),
-    }),
-    defineField({
-      name: 'peopleHeading',
-      title: 'People section heading',
+      name: 'openingLabel',
+      title: 'Opening label',
       type: 'string',
-      group: 'people',
-      initialValue: 'The Creatives',
-      validation: (Rule) => Rule.required().max(80),
+      group: 'opening',
+      initialValue: 'Lorem ipsum dolor',
+      validation: (Rule) => Rule.required().max(60),
     }),
     defineField({
-      name: 'peopleIntroduction',
-      title: 'People section introduction',
+      name: 'openingHeadline',
+      title: 'Opening headline',
+      type: 'string',
+      group: 'opening',
+      initialValue: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
+      validation: (Rule) => Rule.required().max(120),
+    }),
+    defineField({
+      name: 'openingNote',
+      title: 'Opening note',
+      type: 'string',
+      group: 'opening',
+      initialValue: 'Consectetur adipiscing',
+      validation: (Rule) => Rule.required().max(60),
+    }),
+    defineField({
+      name: 'windingHeadline',
+      title: 'Winding headline',
+      type: 'string',
+      group: 'story',
+      initialValue: 'Consectetur adipiscing elit.',
+      validation: (Rule) => Rule.required().max(120),
+    }),
+    defineField({
+      name: 'orbitHeadline',
+      title: 'Orbit headline',
+      type: 'string',
+      group: 'story',
+      initialValue: 'Sed do eiusmod tempor incididunt.',
+      validation: (Rule) => Rule.required().max(120),
+    }),
+    defineField({
+      name: 'indexHeadline',
+      title: 'Index headline',
+      type: 'string',
+      group: 'story',
+      initialValue: 'Ut enim ad minim veniam.',
+      validation: (Rule) => Rule.required().max(120),
+    }),
+    defineField({
+      name: 'chaptersHeadline',
+      title: 'Chapters headline',
+      type: 'string',
+      group: 'story',
+      initialValue: 'Duis aute irure dolor.',
+      validation: (Rule) => Rule.required().max(120),
+    }),
+    defineField({
+      name: 'apertureHeadline',
+      title: 'Aperture headline',
+      type: 'string',
+      group: 'story',
+      initialValue: 'Excepteur sint occaecat cupidatat.',
+      validation: (Rule) => Rule.required().max(120),
+    }),
+    defineField({
+      name: 'fallbackLabel',
+      title: 'Accessible-version label',
+      type: 'string',
+      group: 'accessible',
+      initialValue: 'Lorem ipsum dolor',
+      validation: (Rule) => Rule.required().max(60),
+    }),
+    defineField({
+      name: 'fallbackHeadline',
+      title: 'Accessible-version headline',
+      type: 'string',
+      group: 'accessible',
+      initialValue: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
+      validation: (Rule) => Rule.required().max(120),
+    }),
+    defineField({
+      name: 'fallbackDescription',
+      title: 'Accessible-version description',
       type: 'text',
       rows: 3,
-      group: 'people',
-      validation: (Rule) => Rule.max(220),
+      group: 'accessible',
+      initialValue:
+        'Consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.',
+      validation: (Rule) => Rule.required().max(240),
     }),
     defineField({
-      name: 'people',
-      title: 'People',
-      type: 'array',
-      group: 'people',
-      description: 'Drag profiles into the order they should appear.',
-      of: [defineArrayMember({type: 'aboutPerson'})],
-      validation: (Rule) => Rule.max(6).custom(uniqueAboutOwner),
-    }),
-    defineField({name: 'image', title: 'About image', type: 'editorialImage', group: 'image'}),
-    defineField({
-      name: 'imageAlt',
-      title: 'Image description',
+      name: 'closingLabel',
+      title: 'Closing label',
       type: 'string',
-      group: 'image',
-      hidden: ({document}) => !document?.image || document?.imageDecorative === true,
-      validation: (Rule) => Rule.max(220),
+      group: 'closing',
+      initialValue: 'Lorem ipsum dolor',
+      validation: (Rule) => Rule.required().max(60),
     }),
     defineField({
-      name: 'imageDecorative',
-      title: 'Image is decorative',
-      type: 'boolean',
-      group: 'image',
-      initialValue: false,
-      hidden: ({document}) => !document?.image,
+      name: 'closingHeadline',
+      title: 'Closing headline',
+      type: 'string',
+      group: 'closing',
+      initialValue: 'What should we make next?',
+      validation: (Rule) => Rule.required().max(100),
+    }),
+    defineField({
+      name: 'ctaLabel',
+      title: 'Button label',
+      type: 'string',
+      group: 'closing',
+      initialValue: 'Lorem ipsum',
+      validation: (Rule) => Rule.required().max(60),
+    }),
+    defineField({
+      name: 'ctaDestination',
+      title: 'Button destination',
+      type: 'string',
+      group: 'closing',
+      initialValue: 'contact',
+      options: {
+        list: [
+          {title: 'Contact page', value: 'contact'},
+          {title: 'Work page', value: 'work'},
+        ],
+        layout: 'radio',
+      },
+      validation: (Rule) => Rule.required(),
     }),
     defineField({name: 'seo', title: 'About-page SEO', type: 'seoFields', group: 'seo'}),
   ],
-  initialValue: {heading: 'About', peopleHeading: 'The Creatives', imageDecorative: false},
-  validation: (Rule) =>
-    Rule.custom((value) => {
-      if (!isRecord(value)) return true
-      const blockers = collectBlockingSafetyFlags({
-        image: value.image,
-        people: value.people,
-        seo: value.seo,
-      })
-      if (blockers.length) {
-        return `Clear About-page publication flags: ${blockers.join(', ')}.`
-      }
-      if (!value.image || value.imageDecorative === true) return true
-      return typeof value.imageAlt === 'string' && value.imageAlt.trim()
-        ? true
-        : 'Describe the About image or mark it decorative.'
-    }),
-  preview: {prepare: () => ({title: 'About page', subtitle: 'Copy, people and expertise'})},
+  initialValue: {
+    openingLabel: 'Lorem ipsum dolor',
+    openingHeadline: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
+    openingNote: 'Consectetur adipiscing',
+    windingHeadline: 'Consectetur adipiscing elit.',
+    orbitHeadline: 'Sed do eiusmod tempor incididunt.',
+    indexHeadline: 'Ut enim ad minim veniam.',
+    chaptersHeadline: 'Duis aute irure dolor.',
+    apertureHeadline: 'Excepteur sint occaecat cupidatat.',
+    fallbackLabel: 'Lorem ipsum dolor',
+    fallbackHeadline: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
+    fallbackDescription:
+      'Consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.',
+    closingLabel: 'Lorem ipsum dolor',
+    closingHeadline: 'What should we make next?',
+    ctaLabel: 'Lorem ipsum',
+    ctaDestination: 'contact',
+    seo: {noIndex: true},
+  },
+  preview: {prepare: () => ({title: 'About page', subtitle: 'Motion story and page copy'})},
 })

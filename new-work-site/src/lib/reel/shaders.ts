@@ -6,7 +6,6 @@ export const mediaVertexShader = /* glsl */ `
   uniform float uViewWidth;
   uniform float uViewHeight;
   uniform float uIntroTop;
-  uniform float uIntroTileCount;
 
   attribute float aSlot;
   attribute float aBand;
@@ -18,6 +17,7 @@ export const mediaVertexShader = /* glsl */ `
   varying vec3 vViewPosition;
   varying float vGridReveal;
   varying float vReelFrame;
+  varying float vIntroTopReturn;
 
   const float PI = 3.141592653589793;
   const float TAU = 6.283185307179586;
@@ -26,6 +26,7 @@ export const mediaVertexShader = /* glsl */ `
   const float TOTAL = 80.0;
   const float REEL_TILE_ASPECT = 1.7777777778;
   const float REEL_TILE_SCALE = 0.1696460033;
+  const float INTRO_PATH_SPEED = 1.28;
   const float FEED_RESERVE_FRAMES = 3.0;
   const float CONTACT_DRAPE_FRAMES = 3.25;
   const float PANEL_ROW_OFFSET = 0.032;
@@ -84,6 +85,43 @@ export const mediaVertexShader = /* glsl */ `
     float h21 = 0.5 * (t3 - 2.0 * t4 + t5);
     return h00 * p0 + h10 * v0 + h20 * a0
       + h01 * p1 + h11 * v1 + h21 * a1;
+  }
+
+  vec3 introPathPosition(
+    float pathDistance,
+    float crossOffset,
+    float depthScale,
+    float depth
+  ) {
+    float lowerY = -0.23 * uViewHeight * depthScale;
+    float upperY = 0.25 * uViewHeight * depthScale;
+    float lowerStartX = 0.02 * uViewWidth * depthScale;
+    float lowerRunLength = 0.53 * uViewWidth * depthScale;
+    float turnRadius = 0.5 * (upperY - lowerY);
+    float turnLength = PI * turnRadius;
+    float turnX = lowerStartX + lowerRunLength;
+    vec2 center;
+    vec2 tangent;
+
+    if (pathDistance < lowerRunLength) {
+      center = vec2(lowerStartX + pathDistance, lowerY);
+      tangent = vec2(1.0, 0.0);
+    } else if (pathDistance < lowerRunLength + turnLength) {
+      float turnDistance = pathDistance - lowerRunLength;
+      float angle = -0.5 * PI + turnDistance / max(turnRadius, 0.0001);
+      center = vec2(
+        turnX + turnRadius * cos(angle),
+        0.5 * (lowerY + upperY) + turnRadius * sin(angle)
+      );
+      tangent = vec2(-sin(angle), cos(angle));
+    } else {
+      float upperDistance = pathDistance - lowerRunLength - turnLength;
+      center = vec2(turnX - upperDistance, upperY);
+      tangent = vec2(-1.0, 0.0);
+    }
+
+    vec2 crossDirection = vec2(-tangent.y, tangent.x);
+    return vec3(center + crossDirection * crossOffset, depth);
   }
 
   void main() {
@@ -427,25 +465,36 @@ export const mediaVertexShader = /* glsl */ `
         + tunnelTravel * tunnelDistance
     );
 
-    // A second, flat run establishes the opening reel across the upper-left
-    // viewport. It uses a complementary run of atlas frames, then clears left
-    // as soon as the user begins conducting the piece.
-    float introTopFirstColumn = COLUMNS - uIntroTileCount;
-    float introTopU = (
-      aColumn - introTopFirstColumn + uv.x
-    ) / uIntroTileCount;
-    float introTopWidth = 0.85 * uViewWidth * openingDepthScale;
-    float introTopTileWidth = introTopWidth / uIntroTileCount;
-    float introTopTileHeight = introTopTileWidth / REEL_TILE_ASPECT;
-    vec3 introTopPosition = vec3(
-      -0.5 * uViewWidth * openingDepthScale
-        + introTopU * introTopWidth
-        - reelAdvance,
-      0.25 * uViewHeight * openingDepthScale
-        + localY * introTopTileHeight,
-      radiusSmall
+    // The opening extension is one continuous strip: it begins as the new
+    // lower-right run, rounds a broad offscreen U-turn, then returns left as
+    // the original upper reel. Advancing distance moves media right along the
+    // lower run and naturally carries it around into the upper run.
+    float introFirstSlot = TOTAL - 2.0 * COLUMNS;
+    float introTileCount = 2.0 * COLUMNS;
+    float introSequence = (aSlot - introFirstSlot + uv.x) / introTileCount;
+    float introLowerLength = 0.53 * uViewWidth * openingDepthScale;
+    float introTurnRadius = 0.24 * uViewHeight * openingDepthScale;
+    float introTurnLength = PI * introTurnRadius;
+    float introUpperLength = 1.05 * uViewWidth * openingDepthScale;
+    float introPathLength = introLowerLength + introTurnLength + introUpperLength;
+    float introTileLength = introPathLength / introTileCount;
+    float introAdvance = INTRO_PATH_SPEED * (
+      entryPhase * entryDistance
+        + feedCursorFrames * introTileLength
     );
-    surfacePosition = mix(surfacePosition, introTopPosition, uIntroTop);
+    float introPathDistance = introSequence * introPathLength + introAdvance;
+    float introReturnStart = introLowerLength + introTurnLength;
+    vec3 introPathSurface = introPathPosition(
+      introPathDistance,
+      localY * introTileLength / REEL_TILE_ASPECT,
+      openingDepthScale,
+      radiusSmall - 0.008 * minView
+    );
+    surfacePosition = mix(surfacePosition, introPathSurface, uIntroTop);
+    // The turn happens beyond the right edge. Once the strip returns across
+    // the upper run, rotate each frame's artwork back upright; the physical
+    // ribbon can wrap without changing the established image orientation.
+    vIntroTopReturn = uIntroTop * step(introReturnStart, introPathDistance);
 
     vec4 viewPosition = modelViewMatrix * vec4(surfacePosition, 1.0);
     vec4 clipPosition = projectionMatrix * viewPosition;
@@ -471,6 +520,7 @@ export const mediaFragmentShader = /* glsl */ `
   varying vec3 vViewPosition;
   varying float vGridReveal;
   varying float vReelFrame;
+  varying float vIntroTopReturn;
 
   vec2 atlasUv(float atlasIndex, vec2 tileUv) {
     float column = mod(atlasIndex, 10.0);
@@ -495,9 +545,14 @@ export const mediaFragmentShader = /* glsl */ `
   }
 
   void main() {
+    vec2 displayUv = mix(
+      vUv,
+      vec2(1.0) - vUv,
+      step(0.5, vIntroTopReturn)
+    );
     vec2 sampleUv = uUseAtlas > 0.5
-      ? atlasUv(vAtlasIndex, vUv)
-      : coverUv(vUv, uSourceAspect);
+      ? atlasUv(vAtlasIndex, displayUv)
+      : coverUv(displayUv, uSourceAspect);
     vec4 media = texture2D(uTexture, sampleUv);
 
     float edge = min(min(vUv.x, 1.0 - vUv.x), min(vUv.y, 1.0 - vUv.y));

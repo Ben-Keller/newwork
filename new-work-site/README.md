@@ -46,6 +46,7 @@ The prototype deliberately omits both a page-wide disclaimer bar and per-item re
 | `npm --prefix ../studio-new-work run dev` | Start the standalone Sanity Studio on port 3333. |
 | `pnpm sanity:seed` | Idempotently upload/map fixture assets and merge source-matched seed documents with preservation-first defaults. |
 | `pnpm sanity:seed:dry-run` | Produce the proposed document/asset plan without uploads or dataset writes. |
+| `pnpm sanity:audit` | Read the published dataset and fail on singleton, migration, gallery-reference, slug, or silent publication-filter drift. |
 | `pnpm sanity:typegen` | Extract the Studio schema and regenerate query-aware frontend types. |
 
 For a first Playwright run, install the configured browser if it is not already present:
@@ -122,7 +123,7 @@ Keep fixture source IDs, block `_key` values, provenance, and every safety flag 
 
 Every fixture project also carries two deterministic `textNote` blocks as prototype layout copy. They intentionally use raw `body` strings so the seed importer can convert them to Portable Text, and both `needsReview` and `prototypeOnly` must remain `true` until an editor replaces and approves the copy in Sanity.
 
-Legacy `aboutPeople` fixture entries remain review-gated migration data only; the public About experience and footer no longer render those profiles. Keep canonical `../content/site-settings.json` identical to the app-local mirror. The seed importer prefers the canonical file; the prototype runtime reads the app-local file.
+The About page uses the dedicated `aboutPage` singleton for its motion-story copy, accessible fallback, closing action, and sharing details. Keep canonical `../content/site-settings.json` identical to the app-local mirror. The seed importer prefers the canonical file; the prototype runtime reads the app-local file.
 
 Changing `visible` in a fixture does not authorize publication. Local fixtures are for internal composition and behavior review only.
 

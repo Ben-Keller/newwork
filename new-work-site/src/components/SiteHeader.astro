@@ -125,6 +125,8 @@ const showGalleryTools = galleryEditing && currentPath === '/';
 </header>
 
 <script>
+  import {removeStorageValue} from '../lib/browser-storage';
+
   declare global {
     interface Window {
       __newWorkGalleryToolsFeedbackCleanup?: () => void;
@@ -149,11 +151,7 @@ const showGalleryTools = galleryEditing && currentPath === '/';
     const link = target?.closest<HTMLAnchorElement>('a[data-work-navigation]');
     if (!link || link.target === '_blank') return;
 
-    try {
-      window.sessionStorage.removeItem(GALLERY_RESTORE_REQUEST_KEY);
-    } catch {
-      // A top-of-page navigation still works when storage is unavailable.
-    }
+    removeStorageValue('session', GALLERY_RESTORE_REQUEST_KEY);
 
     const destination = new URL(link.href, window.location.href);
     if (
@@ -170,23 +168,15 @@ const showGalleryTools = galleryEditing && currentPath === '/';
     window.queueMicrotask(() => window.dispatchEvent(new Event('new-work:work-navigation')));
   };
 
-  const removeStoredValue = (key: string): void => {
-    try {
-      window.localStorage.removeItem(key);
-    } catch {
-      // The fixed left alignment still applies when storage is unavailable.
-    }
-  };
-
   const resetHeaderPreviewState = (): void => {
     const header = document.querySelector<HTMLElement>('[data-site-header]');
     if (!header) return;
     header.removeAttribute('data-header-logo');
     delete document.documentElement.dataset.titleAlign;
     delete document.documentElement.dataset.titleMask;
-    removeStoredValue(LEGACY_TITLE_ALIGNMENT_KEY);
-    removeStoredValue(LEGACY_TITLE_MASK_KEY);
-    removeStoredValue(LEGACY_HEADER_LOGO_KEY);
+    removeStorageValue('local', LEGACY_TITLE_ALIGNMENT_KEY);
+    removeStorageValue('local', LEGACY_TITLE_MASK_KEY);
+    removeStorageValue('local', LEGACY_HEADER_LOGO_KEY);
     const defaultSrc = header.dataset.defaultLogoSrc;
     const defaultWidth = Number(header.dataset.defaultLogoWidth);
     const defaultHeight = Number(header.dataset.defaultLogoHeight);

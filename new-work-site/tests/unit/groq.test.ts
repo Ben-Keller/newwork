@@ -5,6 +5,7 @@ import {
   HOME_PROJECTS_QUERY,
   PREVIEW_PROJECT_DETAILS_QUERY,
   PREVIEW_SITE_SETTINGS_QUERY,
+  PUBLIC_ASSET_FILTER,
   PUBLIC_NOTE_FILTER,
   PUBLIC_PROJECT_FILTER,
   SITE_SETTINGS_QUERY,
@@ -47,6 +48,22 @@ function approvedProject() {
   };
 }
 
+function approvedAsset(projectId = 'project.approved') {
+  return {
+    _id: `asset.${projectId}`,
+    _type: 'mediaItem',
+    title: 'Approved image',
+    slug: {current: `asset-${projectId}`},
+    kind: 'image',
+    project: {_type: 'reference', _ref: projectId},
+    projectOrder: 0,
+    image: {asset: {_ref: 'image-asset'}},
+    alt: 'A confirmed project image.',
+    rightsApprovalStatus: 'approved',
+    rightsApprovalEvidence: 'Owner approval recorded in ticket NW-3.',
+  };
+}
+
 function approvedNote() {
   return {
     _id: 'note.approved',
@@ -78,7 +95,22 @@ describe('public GROQ safety filters', () => {
       {...approved, _id: 'blocker', contentBlocks: [{...approved.contentBlocks[0], needsApprovedMaster: true}]},
       {...approved, _id: 'missing-image', contentBlocks: [{...approved.contentBlocks[0], image: undefined}]},
     ];
-    expect(await idsFor(PUBLIC_PROJECT_FILTER, [approved, ...blocked])).toEqual(['project.approved']);
+    const assets = [approved, ...blocked].map((project) => approvedAsset(project._id));
+    expect(await idsFor(PUBLIC_PROJECT_FILTER, [approved, ...blocked, ...assets])).toEqual(['project.approved']);
+  });
+
+  it('treats every linked Asset equally and blocks an invalid Project asset', async () => {
+    const project = approvedProject();
+    const approved = approvedAsset(project._id);
+    const pending = {
+      ...approvedAsset(project._id),
+      _id: 'asset.pending',
+      slug: {current: 'pending'},
+      projectOrder: 1,
+      rightsApprovalStatus: 'pending',
+    };
+    expect(await idsFor(PUBLIC_ASSET_FILTER, [approved, pending])).toEqual([approved._id]);
+    expect(await idsFor(PUBLIC_PROJECT_FILTER, [project, approved, pending])).toEqual([]);
   });
 
   it('accepts only the fully approved note', async () => {
@@ -115,42 +147,7 @@ describe('project presentation projections', () => {
   });
 });
 
-describe('About people projections', () => {
-  const people = [
-    {
-      _key: 'approved',
-      _type: 'aboutPerson',
-      name: 'Approved person',
-      projectOwner: 'oliver',
-      bio: [{_type: 'block', children: [{_type: 'span', text: 'Approved biography.'}]}],
-      selectedWork: [
-        {
-          _key: 'approved-work',
-          _type: 'aboutWork',
-          title: 'Approved work',
-          image: {asset: {_ref: 'image-about-work'}},
-        },
-        {
-          _key: 'blocked-work',
-          _type: 'aboutWork',
-          title: 'Blocked work',
-          image: {asset: {_ref: 'image-about-work-blocked'}},
-          prototypeOnly: true,
-        },
-      ],
-      needsReview: false,
-      prototypeOnly: false,
-    },
-    {
-      _key: 'prototype',
-      _type: 'aboutPerson',
-      name: 'Prototype person',
-      projectOwner: 'michael',
-      bio: [{_type: 'block', children: [{_type: 'span', text: 'Placeholder biography.'}]}],
-      needsReview: true,
-      prototypeOnly: true,
-    },
-  ];
+describe('About page projection', () => {
   const settings = {
     _id: 'siteSettings',
     _type: 'siteSettings',
@@ -162,31 +159,24 @@ describe('About people projections', () => {
       shareImageAlt: 'Approved share image.',
     },
   };
-  const aboutPage = {_id: 'aboutPage', _type: 'aboutPage', people};
+  const aboutPage = {
+    _id: 'aboutPage',
+    _type: 'aboutPage',
+    openingHeadline: 'A custom opening.',
+    closingHeadline: 'What should we make next?',
+  };
 
-  it('filters provisional profiles individually from the public projection', async () => {
-    const result = await queryResult<{aboutPage: {people: Array<{name: string; selectedWork: Array<{title: string}>}>}}>(
-      SITE_SETTINGS_QUERY,
-      [settings, aboutPage],
-    );
+  it.each([SITE_SETTINGS_QUERY, PREVIEW_SITE_SETTINGS_QUERY])(
+    'returns the editable About text',
+    async (query) => {
+      const result = await queryResult<{
+        aboutPage: {openingHeadline: string; closingHeadline: string};
+      }>(query, [settings, aboutPage]);
 
-    expect(result.aboutPage.people.map((person) => person.name)).toEqual(['Approved person']);
-    expect(result.aboutPage.people[0]?.selectedWork.map((work) => work.title)).toEqual(['Approved work']);
-  });
-
-  it('retains provisional profiles in the preview projection', async () => {
-    const result = await queryResult<{aboutPage: {people: Array<{name: string; selectedWork?: Array<{title: string}>}>}}>(
-      PREVIEW_SITE_SETTINGS_QUERY,
-      [settings, aboutPage],
-    );
-
-    expect(result.aboutPage.people.map((person) => person.name)).toEqual([
-      'Approved person',
-      'Prototype person',
-    ]);
-    expect(result.aboutPage.people[0]?.selectedWork?.map((work) => work.title)).toEqual([
-      'Approved work',
-      'Blocked work',
-    ]);
-  });
+      expect(result.aboutPage).toEqual(expect.objectContaining({
+        openingHeadline: 'A custom opening.',
+        closingHeadline: 'What should we make next?',
+      }));
+    },
+  );
 });

@@ -33,6 +33,7 @@ function validateProject(project: UnknownRecord, index: number): void {
     slug ? undefined : 'slug',
     isRecord(project.cover) ? undefined : 'cover',
     Array.isArray(project.types) ? undefined : 'types array',
+    Array.isArray(project.assets) ? undefined : 'assets array',
     Array.isArray(project.contentBlocks) ? undefined : 'contentBlocks array',
   ].filter(Boolean);
   if (errors.length) throw new Error(`${label} is missing or has invalid: ${errors.join(', ')}.`);
@@ -50,6 +51,11 @@ function validateNote(note: UnknownRecord, index: number): void {
   if (errors.length) throw new Error(`${label} is missing or has invalid: ${errors.join(', ')}.`);
 }
 
+function requireNonEmptyFields(record: UnknownRecord, fields: readonly string[], label: string): void {
+  const missing = fields.filter((field) => !isNonEmptyString(record[field]));
+  if (missing.length) throw new Error(`${label} is missing required fields: ${missing.join(', ')}.`);
+}
+
 export function parseCmsPayload(input: {
   settings: unknown;
   projects: unknown;
@@ -61,11 +67,25 @@ export function parseCmsPayload(input: {
   if (!isRecord(input.settings.workPage)) throw new Error('The workPage singleton is required.');
   if (!isRecord(input.settings.workPage.reel)) throw new Error('workPage.reel must be an object.');
   if (!isRecord(input.settings.aboutPage)) throw new Error('The aboutPage singleton is required.');
+  requireNonEmptyFields(input.settings.aboutPage, [
+    'openingLabel',
+    'openingHeadline',
+    'openingNote',
+    'windingHeadline',
+    'orbitHeadline',
+    'indexHeadline',
+    'chaptersHeadline',
+    'apertureHeadline',
+    'fallbackLabel',
+    'fallbackHeadline',
+    'fallbackDescription',
+    'closingLabel',
+    'closingHeadline',
+    'ctaLabel',
+    'ctaDestination',
+  ], 'aboutPage');
   if (!isRecord(input.settings.contactPage)) throw new Error('The contactPage singleton is required.');
   if (!isRecord(input.settings.footer)) throw new Error('The footerSettings singleton is required.');
-  if (input.settings.aboutPage.people !== undefined) {
-    recordArray(input.settings.aboutPage.people, 'aboutPage.people');
-  }
 
   const projects = recordArray(input.projects, 'projects');
   const notes = recordArray(input.notes, 'notes');

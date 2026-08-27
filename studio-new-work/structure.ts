@@ -32,7 +32,7 @@ export const structure: StructureResolver = (S) =>
         .child(S.component(ClientDashboard).id('client-dashboard').title('Start here')),
       S.divider(),
       singleton(S, 'workPage', 'Work page', HomeIcon),
-      singleton(S, 'reelPage', 'About page', PlayIcon),
+      singleton(S, 'aboutPage', 'About page', PlayIcon),
       S.listItem()
         .id('work')
         .title('Work')
@@ -107,6 +107,28 @@ export const structure: StructureResolver = (S) =>
             .title('Asset library')
             .items([
               S.documentTypeListItem('mediaItem').title('All assets'),
+              S.listItem()
+                .id('assets-by-project')
+                .title('By project')
+                .child(
+                  S.documentTypeList('work')
+                    .id('asset-projects-list')
+                    .title('Projects')
+                    .filter('_type == "work"')
+                    .defaultOrdering([{field: 'title', direction: 'asc'}])
+                    .child((workId) =>
+                      S.documentList()
+                        .id(`assets-for-${workId}`)
+                        .title('Project assets')
+                        .schemaType('mediaItem')
+                        .filter('_type == "mediaItem" && project._ref == $workId')
+                        .params({workId})
+                        .defaultOrdering([
+                          {field: 'projectOrder', direction: 'asc'},
+                          {field: 'title', direction: 'asc'},
+                        ]),
+                    ),
+                ),
               S.listItem()
                 .id('assets-images')
                 .title('Images')

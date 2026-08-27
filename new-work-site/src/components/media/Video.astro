@@ -21,7 +21,6 @@ const sourceMime = inferVideoMimeType(block.video.src, block.video.mimeType);
         controls
         playsinline
         preload={eager ? 'metadata' : 'none'}
-        poster={block.video.poster?.src}
         width={block.video.width}
         height={block.video.height}
         crossorigin={block.video.captionsFile ? 'anonymous' : undefined}
@@ -45,18 +44,8 @@ const sourceMime = inferVideoMimeType(block.video.src, block.video.mimeType);
 </figure>
 
 <script>
-  const setupHostedVideoErrors = (): void => {
-    document.querySelectorAll<HTMLVideoElement>('video[data-error-managed-video]:not([data-ready])').forEach((video) => {
-      video.dataset.ready = 'true';
-      video.addEventListener('error', () => {
-        video.pause();
-        video.controls = false;
-        const error = video.parentElement?.querySelector<HTMLElement>('[data-error-media]');
-        if (error) error.hidden = false;
-      }, { once: true });
-    });
-  };
+  import {setupManagedVideoErrors} from '../../lib/media/video-errors';
 
-  setupHostedVideoErrors();
-  document.addEventListener('astro:page-load', setupHostedVideoErrors);
+  setupManagedVideoErrors();
+  document.addEventListener('astro:page-load', setupManagedVideoErrors);
 </script>

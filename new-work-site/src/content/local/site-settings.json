@@ -4,7 +4,7 @@
   "siteName": "New Work Agency",
   "navigation": [
     {"_key": "work", "label": "Work", "destination": "work", "visible": true},
-    {"_key": "about", "label": "About", "destination": "reel", "visible": true},
+    {"_key": "about", "label": "About", "destination": "about", "visible": true},
     {"_key": "contact", "label": "Contact", "destination": "contact", "visible": true}
   ],
   "wordmark": {
@@ -21,35 +21,6 @@
   },
   "manifesto": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.",
   "manifestoNeedsReview": true,
-  "about": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
-  "aboutPeople": [
-    {
-      "_key": "about-person-michael",
-      "name": "Michael",
-      "projectOwner": "michael",
-      "roleLabel": "Consectetur / Adipiscing elit",
-      "bio": "Sed posuere consectetur est at lobortis. Aenean lacinia bibendum nulla sed consectetur. Cras mattis consectetur purus sit amet fermentum. Integer posuere erat a ante venenatis dapibus posuere velit aliquet, donec id elit non mi porta gravida at eget metus.",
-      "needsReview": true,
-      "prototypeOnly": true,
-      "doNotPublishWithoutExplicitApproval": false
-    },
-    {
-      "_key": "about-person-oliver",
-      "name": "Oliver",
-      "projectOwner": "oliver",
-      "roleLabel": "Lorem ipsum / Dolor sit amet",
-      "bio": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Praesent commodo cursus magna, vel scelerisque nisl consectetur et. Donec ullamcorper nulla non metus auctor fringilla. Maecenas faucibus mollis interdum, sed posuere consectetur est at lobortis.",
-      "needsReview": true,
-      "prototypeOnly": true,
-      "doNotPublishWithoutExplicitApproval": false
-    }
-  ],
-  "capabilities": [
-    "Lorem ipsum",
-    "Dolor sit amet",
-    "Consectetur adipiscing",
-    "Eiusmod tempor"
-  ],
   "contactEmail": "hello@lorem.ipsum",
   "location": "Lorem ipsum · Dolor sit amet",
   "socialLinks": [
@@ -69,15 +40,19 @@
     "mobileSource": null,
     "caption": ""
   },
-  "reelPage": {
-    "enabled": true,
-    "introEyebrow": "Lorem ipsum dolor",
-    "introHeadline": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-    "introCue": "Consectetur adipiscing",
-    "fallbackEyebrow": "Lorem ipsum dolor",
+  "aboutPage": {
+    "openingLabel": "Lorem ipsum dolor",
+    "openingHeadline": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+    "openingNote": "Consectetur adipiscing",
+    "windingHeadline": "Consectetur adipiscing elit.",
+    "orbitHeadline": "Sed do eiusmod tempor incididunt.",
+    "indexHeadline": "Ut enim ad minim veniam.",
+    "chaptersHeadline": "Duis aute irure dolor.",
+    "apertureHeadline": "Excepteur sint occaecat cupidatat.",
+    "fallbackLabel": "Lorem ipsum dolor",
     "fallbackHeadline": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
     "fallbackDescription": "Consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-    "closingEyebrow": "Lorem ipsum dolor",
+    "closingLabel": "Lorem ipsum dolor",
     "closingHeadline": "What should we make next?",
     "ctaLabel": "Lorem ipsum",
     "ctaDestination": "contact",
@@ -89,12 +64,6 @@
   },
   "notesEnabled": false,
   "analyticsEnabled": false,
-  "aboutSeo": {
-    "metaTitle": "About — New Work Agency",
-    "metaDescription": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-    "shareImage": null,
-    "noIndex": true
-  },
   "contactSeo": {
     "metaTitle": "Contact — New Work Agency",
     "metaDescription": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",

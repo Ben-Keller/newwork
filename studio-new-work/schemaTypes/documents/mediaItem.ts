@@ -17,6 +17,24 @@ export const mediaItem = defineType({
   fields: [
     defineField({name: 'title', title: 'Asset title', type: 'string', group: 'content', description: 'A searchable editorial name; it is not shown publicly.', validation: (Rule) => Rule.required().max(140)}),
     defineField({
+      name: 'slug',
+      title: 'Asset URL name',
+      type: 'slug',
+      group: 'content',
+      options: {source: 'title', maxLength: 96},
+      hidden: ({value}) => Boolean((value as {current?: string} | undefined)?.current),
+      validation: (Rule) => Rule.required(),
+    }),
+    defineField({
+      name: 'migrationSourceKey',
+      title: 'Migration source key',
+      type: 'string',
+      group: 'internal',
+      hidden: true,
+      readOnly: true,
+      description: 'Stable import key used to update migrated assets without creating duplicates.',
+    }),
+    defineField({
       name: 'kind',
       title: 'Asset type',
       type: 'string',
@@ -77,12 +95,23 @@ export const mediaItem = defineType({
       validation: (Rule) => Rule.unique(),
     }),
     defineField({
-      name: 'works',
-      title: 'Related Work',
-      type: 'array',
+      name: 'project',
+      title: 'Project',
+      type: 'reference',
       group: 'usage',
-      of: [defineArrayMember({type: 'reference', to: [{type: 'work'}]})],
-      validation: (Rule) => Rule.unique(),
+      description: 'The Project is this asset’s collection. Assets remain independent library records.',
+      to: [{type: 'work'}],
+      options: {disableNew: true},
+      validation: (Rule) => Rule.required(),
+    }),
+    defineField({
+      name: 'projectOrder',
+      title: 'Order within project',
+      type: 'number',
+      group: 'usage',
+      description: 'Assets with lower numbers appear first on the Project page.',
+      initialValue: 0,
+      validation: (Rule) => Rule.required().integer().min(0),
     }),
     ...rightsApprovalFields,
   ],
@@ -97,12 +126,12 @@ export const mediaItem = defineType({
     return true
   }),
   preview: {
-    select: {title: 'title', kind: 'kind', image: 'image', poster: 'poster', approval: 'rightsApprovalStatus', works: 'works', alt: 'alt', decorative: 'decorative'},
-    prepare: ({title, kind, image, poster, approval, works, alt, decorative}) => ({
+    select: {title: 'title', kind: 'kind', image: 'image', poster: 'poster', approval: 'rightsApprovalStatus', project: 'project.title', alt: 'alt', decorative: 'decorative'},
+    prepare: ({title, kind, image, poster, approval, project, alt, decorative}) => ({
       title: title || 'Untitled asset',
       subtitle: [
         kind === 'video' ? 'Video' : kind === 'file' ? 'File' : 'Image',
-        Array.isArray(works) && works.length ? `${works.length} Work item${works.length === 1 ? '' : 's'}` : 'Not assigned',
+        project || 'Not assigned to a Project',
         kind !== 'file' && decorative !== true && !alt ? 'Needs description' : undefined,
         approval === 'expired' ? 'Rights expired' : undefined,
       ].filter(Boolean).join(' · '),

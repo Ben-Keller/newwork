@@ -250,7 +250,10 @@ export const animatePersistedRouteMedia = (
     padding: '0',
     overflow: 'hidden',
     isolation: 'isolate',
-    backgroundColor: handoff.backgroundColor,
+    // The transported pixels are the whole visual. A frame color here leaks
+    // around cover/contain geometry and reads as a second, offset card while
+    // the media is moving between differently shaped destinations.
+    backgroundColor: 'transparent',
     borderRadius: handoff.borderRadius,
     clipPath: handoff.clipPath,
     transform: 'translateZ(0)',
@@ -346,12 +349,10 @@ export const animatePersistedRouteMedia = (
   ], presentationOptions);
   const frameAnimation = portal.animate([
     {
-      backgroundColor: handoff.backgroundColor,
       borderRadius: handoff.borderRadius,
       clipPath: handoff.clipPath,
     },
     {
-      backgroundColor: targetFrameStyles.backgroundColor,
       borderRadius: targetFrameStyles.borderRadius,
       clipPath: targetFrameStyles.clipPath,
     },

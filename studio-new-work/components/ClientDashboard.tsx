@@ -193,7 +193,7 @@ const quickLinks = [
     description: 'Arrange the gallery and edit its introduction.',
   },
   {
-    href: '/structure/reelPage',
+    href: '/structure/aboutPage',
     icon: PlayIcon,
     title: 'About page',
     description: 'Edit the motion page, fallback, and sharing copy.',

@@ -49,7 +49,7 @@ const sourceMime = inferVideoMimeType(video?.src, video?.mimeType);
       height={video.height}
       crossorigin={video.captionsFile ? 'anonymous' : undefined}
       aria-label={video.accessibleDescription || title}
-      data-error-managed-note-video
+      data-error-managed-video
     >
       <source src={video.src} type={sourceMime} />
       {video.captionsFile ? <track kind="captions" src={video.captionsFile} srclang={video.captionsLanguage || 'en'} label={video.captionsLabel || 'English'} default /> : null}
@@ -69,18 +69,8 @@ const sourceMime = inferVideoMimeType(video?.src, video?.mimeType);
 ) : null}
 
 <script>
-  const setupNoteVideoErrors = (): void => {
-    document.querySelectorAll<HTMLVideoElement>('video[data-error-managed-note-video]:not([data-ready])').forEach((video) => {
-      video.dataset.ready = 'true';
-      video.addEventListener('error', () => {
-        video.pause();
-        video.controls = false;
-        const error = video.parentElement?.querySelector<HTMLElement>('[data-error-media]');
-        if (error) error.hidden = false;
-      }, { once: true });
-    });
-  };
+  import {setupManagedVideoErrors} from '../lib/media/video-errors';
 
-  setupNoteVideoErrors();
-  document.addEventListener('astro:page-load', setupNoteVideoErrors);
+  setupManagedVideoErrors();
+  document.addEventListener('astro:page-load', setupManagedVideoErrors);
 </script>

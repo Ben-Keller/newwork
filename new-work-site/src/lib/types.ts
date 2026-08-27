@@ -11,7 +11,7 @@ export type HeroTreatment = 'contained' | 'fullViewport' | 'split' | 'masked';
 export type ProjectLayoutVariant = 'cinematic' | 'photoEssay' | 'campaign' | 'experimental';
 export type WorkTemplate = 'photo' | 'video' | 'featured';
 export type MotionIntensity = 'low' | 'medium' | 'high';
-export type NavigationDestination = 'work' | 'reel' | 'about' | 'notes' | 'contact';
+export type NavigationDestination = 'work' | 'about' | 'notes' | 'contact';
 
 export interface FocalPoint {
   x: number;
@@ -197,6 +197,7 @@ export interface ProjectView {
   contributors: Contributor[];
   shortDescription?: string;
   template: WorkTemplate;
+  assets: WorkAssetView[];
   photos: WorkPhotoView[];
   defaultPhotoId?: string;
   cover: CoverView;
@@ -229,9 +230,21 @@ export interface WorkPhotoView {
   image: ImageView;
 }
 
+export interface WorkAssetView {
+  id: string;
+  slug: string;
+  title?: string;
+  kind: 'image' | 'video' | 'file';
+  poster?: ImageView;
+  video?: VideoView;
+  fileUrl?: string;
+}
+
 export interface WorkGalleryPlacementView {
   _key: string;
   workId: string;
+  assetId?: string;
+  /** @deprecated Prototype compatibility only. Sanity gallery placements use assetId. */
   photoId?: string;
   cardSize: HomeCardSize;
   treatment: HomeTreatment;
@@ -240,6 +253,7 @@ export interface WorkGalleryPlacementView {
 export interface WorkGalleryEntryView {
   id: string;
   work: ProjectView;
+  asset?: WorkAssetView;
   photo?: WorkPhotoView;
   image: ImageView;
   href: string;
@@ -281,42 +295,23 @@ export interface ReelView {
   aspectRatio?: string;
 }
 
-export interface ReelPageView {
-  enabled: boolean;
-  introEyebrow: string;
-  introHeadline: string;
-  introCue: string;
-  fallbackEyebrow: string;
+export interface AboutPageView {
+  openingLabel: string;
+  openingHeadline: string;
+  openingNote: string;
+  windingHeadline: string;
+  orbitHeadline: string;
+  indexHeadline: string;
+  chaptersHeadline: string;
+  apertureHeadline: string;
+  fallbackLabel: string;
   fallbackHeadline: string;
   fallbackDescription: string;
-  closingEyebrow: string;
+  closingLabel: string;
   closingHeadline: string;
   ctaLabel: string;
   ctaDestination: 'work' | 'contact';
   seo?: SeoFields;
-}
-
-export interface AboutWorkView {
-  _key: string;
-  title: string;
-  client?: string;
-  href?: string;
-  image: ImageView;
-  needsReview: boolean;
-  prototypeOnly: boolean;
-  doNotPublishWithoutExplicitApproval: boolean;
-}
-
-export interface AboutPersonView {
-  _key: string;
-  name: string;
-  projectOwner: ProjectOwner;
-  roleLabel?: string;
-  bio: RichTextView;
-  selectedWork: AboutWorkView[];
-  needsReview: boolean;
-  prototypeOnly: boolean;
-  doNotPublishWithoutExplicitApproval: boolean;
 }
 
 export interface SiteSettingsView {
@@ -333,22 +328,14 @@ export interface SiteSettingsView {
   compactMark?: BrandAssetView;
   manifesto?: string;
   manifestoNeedsReview?: boolean;
-  about?: RichTextView;
-  aboutHeading: string;
-  aboutPeopleHeading: string;
-  aboutPeopleIntroduction?: string;
-  aboutImage?: ImageView;
-  aboutPeople: AboutPersonView[];
-  aboutSeo?: SeoFields;
+  aboutPage: AboutPageView;
   contactSeo?: SeoFields;
   contactHeading: string;
   contactIntroduction?: RichTextView;
-  capabilities: string[];
   contactEmail?: string;
   location?: string;
   socialLinks: Array<{ _key?: string; label: string; url: string }>;
   reel: ReelView;
-  reelPage: ReelPageView;
   notesEnabled: boolean;
   defaultSeo: SeoFields;
   footer: FooterSettingsView;

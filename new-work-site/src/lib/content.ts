@@ -13,16 +13,36 @@ import {
 } from './groq';
 import {parseCmsPayload} from './cms-contract';
 import {
-  PUBLICATION_BLOCKING_FLAGS,
-  PUBLIC_MEDIA_BLOCK_TYPES,
+  enumValue,
+  inferredLayoutVariant,
+  inferredWorkTemplate,
+  optionalRecord,
+  presentationAccent,
+  presentationColumn,
+  presentationOffset,
+  recordOrEmpty,
+  stringFrom,
+} from './content/normalization';
+import {
+  adjacentProjects,
+  applyWorkGallery,
+  buildPrototypeWorkGallery,
+  buildWorkGallery,
+  preferUnifiedWorkDocuments,
+  sortProjects,
+  workGalleryEntryId,
+} from './content/work-collection';
+import {isApprovedSanityAsset, safeHttpsUrl, sourceUrl} from './content/assets';
+import {
+  hasBlockedContent,
+  hasEligibleEnabledReel,
+  isProductionEligible,
+  isProductionEligibleNote,
+} from './content/publication';
+import {
   VIMEO_ID_PATTERN,
   YOUTUBE_ID_PATTERN,
-  hostMatches,
-  idsAgreeWithWatchUrl,
-  isNonEmptyString,
-  isRecord,
   parseApprovedWatchUrl,
-  parsedHttpsUrl,
   safeApprovedWatchUrl,
   safeEditorialLink,
   safeHostedVideoUrl,
@@ -31,8 +51,7 @@ import {
   type UnknownRecord,
 } from '../../shared/content-policy';
 import type {
-  AboutPersonView,
-  AboutWorkView,
+  AboutPageView,
   AttributionRecord,
   BrandAssetView,
   CaptionBlock,
@@ -43,7 +62,6 @@ import type {
   ImageGridBlock,
   ImagePairBlock,
   ImageView,
-  ProjectLayoutVariant,
   FooterSettingsView,
   NavigationDestination,
   NoteView,
@@ -51,19 +69,16 @@ import type {
   ProjectType,
   ProjectView,
   ReelView,
-  ReelPageView,
   RichTextBlockView,
   RichTextView,
   SeoFields,
   SiteContent,
   SiteSettingsView,
   VideoView,
+  WorkAssetView,
   WorkGalleryPlacementView,
-  WorkGalleryEntryView,
   WorkPhotoView,
-  WorkTemplate,
 } from './types';
-import { withBase } from './base-path';
 import {SANITY_API_VERSION} from './sanity-config';
 
 const attribution = attributionRecords as Record<string, AttributionRecord>;
@@ -73,202 +88,22 @@ const fixtureSiteSettings = fixtureSettings as UnknownRecord;
 const DEFAULT_WIDTH = 1600;
 const DEFAULT_HEIGHT = 900;
 
-function recordOrEmpty(value: unknown): UnknownRecord {
-  return isRecord(value) ? value : {};
-}
-
-function optionalRecord(value: unknown): UnknownRecord | undefined {
-  return isRecord(value) ? value : undefined;
-}
-
-function stringFrom(value: unknown): string | undefined {
-  return isNonEmptyString(value) ? value.trim() : undefined;
-}
-
-function enumValue<const T extends readonly string[]>(value: unknown, values: T): T[number] | undefined {
-  return typeof value === 'string' && values.includes(value) ? value as T[number] : undefined;
-}
-
-function presentationOffset(value: unknown): number {
-  if (typeof value !== 'number' || !Number.isFinite(value)) return 0;
-  return Math.round(Math.min(320, Math.max(-240, value)));
-}
-
-function presentationColumn(value: unknown): 1 | 2 | 3 | 4 | undefined {
-  return value === 1 || value === 2 || value === 3 || value === 4
-    ? value
-    : undefined;
-}
-
-function presentationAccent(value: unknown): string | undefined {
-  if (typeof value !== 'string') return undefined;
-  const normalized = value.trim();
-  return /^#[0-9a-f]{6}$/iu.test(normalized) ? normalized.toUpperCase() : undefined;
-}
-
-function inferredLayoutVariant(types: ProjectType[]): ProjectLayoutVariant {
-  if (types.includes('Campaign')) return 'campaign';
-  if (types.includes('Film')) return 'cinematic';
-  if (types.includes('Photography') && !types.includes('Animation')) return 'photoEssay';
-  return types.includes('Animation') ? 'experimental' : 'cinematic';
-}
-
-function inferredWorkTemplate(types: ProjectType[], legacyLayout?: ProjectLayoutVariant): WorkTemplate {
-  if (legacyLayout === 'campaign' || legacyLayout === 'experimental' || types.includes('Campaign')) {
-    return 'featured';
-  }
-  if (legacyLayout === 'photoEssay' || (types.includes('Photography') && !types.includes('Film'))) {
-    return 'photo';
-  }
-  return 'video';
-}
-
 export function getContentMode(
   value: string | undefined = import.meta.env.PUBLIC_CONTENT_MODE,
 ): ContentMode {
   return value === 'production' || value === 'preview' ? value : 'prototype';
 }
 
-export function sortProjects<T extends { homeOrder: number; title: string }>(projects: T[]): T[] {
-  return [...projects].sort((left, right) =>
-    left.homeOrder - right.homeOrder || left.title.localeCompare(right.title),
-  );
-}
-
-export function aboutProjectsForPerson(
-  projects: ProjectView[],
-  projectOwner: ProjectOwner,
-  limit = 3,
-): ProjectView[] {
-  const safeLimit = Number.isFinite(limit) ? Math.max(0, Math.floor(limit)) : 3;
-  return sortProjects(projects)
-    .filter((project) => project.owner === projectOwner && Boolean(project.cover.poster.src))
-    .slice(0, safeLimit);
-}
-
-function hasBlockedBlock(value: unknown): boolean {
-  if (Array.isArray(value)) return value.some(hasBlockedBlock);
-  if (!value || typeof value !== 'object') return false;
-  const record = value as UnknownRecord;
-  if (PUBLICATION_BLOCKING_FLAGS.some((field) => record[field] === true)) return true;
-  return Object.values(record).some(hasBlockedBlock);
-}
-
-const hasMeaningfulAlt = isNonEmptyString;
+export {
+  adjacentProjects,
+  buildWorkGallery,
+  isProductionEligible,
+  isProductionEligibleNote,
+  sortProjects,
+  workGalleryEntryId,
+};
 
 export {safeApprovedWatchUrl, safeHostedVideoUrl};
-
-function isApprovedSanityAsset(value: unknown, kind: 'image' | 'file'): boolean {
-  const url = parsedHttpsUrl(sourceUrl(value));
-  if (!url || !hostMatches(url.hostname, ['cdn.sanity.io'])) return false;
-  return url.pathname.includes(`/${kind === 'image' ? 'images' : 'files'}/`);
-}
-
-function videoBlockHasApprovedSource(block: UnknownRecord): boolean {
-  const libraryAsset = recordOrEmpty(block.mediaItem);
-  block = {
-    ...libraryAsset,
-    ...block,
-    externalUrl: block.externalUrl || libraryAsset.videoUrl,
-  };
-  const vimeoId = typeof block.vimeoId === 'string' && VIMEO_ID_PATTERN.test(block.vimeoId);
-  const youtubeId = typeof block.youtubeId === 'string' && YOUTUBE_ID_PATTERN.test(block.youtubeId);
-  const uploaded = Boolean(safeHostedVideoUrl(sourceUrl(block.source || block.file)));
-  const remote = Boolean(safeHostedVideoUrl(block.remoteSource));
-  const external = Boolean(safeApprovedWatchUrl(block.externalUrl));
-  return uploaded || remote || external || vimeoId || youtubeId;
-}
-
-function blockHasAccessibleMedia(block: UnknownRecord): boolean {
-  const libraryAsset = recordOrEmpty(block.mediaItem);
-  block = {
-    ...libraryAsset,
-    ...block,
-    image: block.image || libraryAsset.image,
-    poster: block.poster || libraryAsset.poster,
-    alt: block.alt || libraryAsset.alt,
-    decorative: block.decorative ?? libraryAsset.decorative,
-    externalUrl: block.externalUrl || libraryAsset.videoUrl,
-  };
-  if (['heroVideo', 'video', 'shortLoop'].includes(String(block._type))) {
-    if (!isApprovedSanityAsset(block.poster, 'image') || !videoBlockHasApprovedSource(block)) return false;
-    if (block.remoteSource && !safeHostedVideoUrl(block.remoteSource)) return false;
-    if (block.externalUrl && !safeApprovedWatchUrl(block.externalUrl)) return false;
-    if (block.vimeoId && !(typeof block.vimeoId === 'string' && VIMEO_ID_PATTERN.test(block.vimeoId))) return false;
-    if (block.youtubeId && !(typeof block.youtubeId === 'string' && YOUTUBE_ID_PATTERN.test(block.youtubeId))) return false;
-    if (!idsAgreeWithWatchUrl(block.externalUrl, block.vimeoId, block.youtubeId)) return false;
-    if (block.captionsFile && !safeWebVttUrl(sourceUrl(block.captionsFile))) return false;
-    return block._type !== 'shortLoop' || Boolean(block.decorative || hasMeaningfulAlt(block.alt));
-  }
-  if (['heroImage', 'fullBleedImage', 'containedImage'].includes(String(block._type))) {
-    const image = recordOrEmpty(block.image);
-    return isApprovedSanityAsset(block.image, 'image') &&
-      Boolean(block.decorative || image.decorative || hasMeaningfulAlt(block.alt || image.alt));
-  }
-  if (block._type === 'imagePair' || block._type === 'imageGrid') {
-    const images = Array.isArray(block.images) ? block.images : [block.left, block.right].filter(Boolean);
-    return images.length > 0 && images.every((image: unknown, index: number) => {
-      if (image && typeof image === 'object') {
-        const record = image as UnknownRecord;
-        const libraryImage = recordOrEmpty(record.mediaItem);
-        return isApprovedSanityAsset(record.image || libraryImage.image || record, 'image') &&
-          Boolean(record.decorative || libraryImage.decorative || hasMeaningfulAlt(record.alt || libraryImage.alt));
-      }
-      const alt = Array.isArray(block.alt) ? block.alt[index] : undefined;
-      return hasMeaningfulAlt(alt);
-    });
-  }
-  return true;
-}
-
-export function isProductionEligible(project: UnknownRecord, now = new Date()): boolean {
-  const approvedForWebsite = project.editorialStatus === 'approved' ||
-    (project.editorialStatus === undefined && project.visible === true);
-  if (!approvedForWebsite || project.doNotPublishWithoutExplicitApproval) return false;
-  if (project.editorialStatus === undefined && project.needsReview) return false;
-  if (project.rightsApprovalStatus !== 'approved' || !hasMeaningfulAlt(project.rightsApprovalEvidence)) return false;
-  if (typeof project.rightsExpiresAt === 'string' && new Date(project.rightsExpiresAt) <= now) return false;
-  const slugRecord = recordOrEmpty(project.slug);
-  const slug = typeof project.slug === 'string' ? project.slug : slugRecord.current;
-  const isPhotoWork = project.template === 'photo';
-  const photos = Array.isArray(project.photos) ? project.photos : [];
-  const defaultPhoto = recordOrEmpty(project.defaultPhoto);
-  const cover = recordOrEmpty(project.cover);
-  const coverPoster = recordOrEmpty(cover.poster);
-  if (!hasMeaningfulAlt(project.title) || !hasMeaningfulAlt(slug)) return false;
-  if (isPhotoWork) {
-    if (photos.length < 2 || !isApprovedSanityAsset(defaultPhoto.image, 'image')) return false;
-    if (photos.some((photo) => {
-      const item = recordOrEmpty(photo);
-      return hasBlockedBlock(item)
-        || !isApprovedSanityAsset(item.image, 'image')
-        || (!item.decorative && !hasMeaningfulAlt(item.alt));
-    })) return false;
-  } else if (!isApprovedSanityAsset(cover.poster, 'image')) return false;
-  if (!Array.isArray(project.types) || project.types.length === 0) return false;
-  if (project.featuredOnHome && !Number.isFinite(Number(project.homeOrder))) return false;
-  if (!isPhotoWork && hasBlockedBlock(cover)) return false;
-  if (!isPhotoWork && !cover.decorative && !hasMeaningfulAlt(cover.alt || coverPoster.alt)) return false;
-  if (cover.previewIsPlaceholder) return false;
-  if (cover.previewVideo && !safeHostedVideoUrl(sourceUrl(cover.previewVideo))) return false;
-  if (cover.previewVideoUrl && !safeHostedVideoUrl(cover.previewVideoUrl)) return false;
-  if (cover.previewPosterOverride && !isApprovedSanityAsset(cover.previewPosterOverride, 'image')) return false;
-  if (cover.mobilePoster && !isApprovedSanityAsset(cover.mobilePoster, 'image')) return false;
-  if (typeof project.publishAt === 'string' && new Date(project.publishAt) > now) return false;
-  const contentBlocks = Array.isArray(project.contentBlocks) ? project.contentBlocks : [];
-  if (!isPhotoWork && contentBlocks.length === 0) return false;
-  if (!isPhotoWork && !contentBlocks.some((block: UnknownRecord) =>
-    PUBLIC_MEDIA_BLOCK_TYPES.has(String(block._type)),
-  )) return false;
-  return !contentBlocks.some((block: UnknownRecord) => hasBlockedBlock(block) || !blockHasAccessibleMedia(block));
-}
-
-function localPublicPath(source: string): string {
-  const publicPath = source.startsWith('assets/web-ready/')
-    ? source.replace('assets/web-ready/', '/media/')
-    : source;
-  return publicPath.startsWith('/') ? withBase(publicPath) : publicPath;
-}
 
 function clampPercentage(value: unknown): number {
   const numeric = typeof value === 'number' ? value : 0.5;
@@ -287,9 +122,6 @@ function plainText(value: unknown): string | undefined {
   return text || undefined;
 }
 
-function safeHttpsUrl(value: unknown): string | undefined {
-  return parsedHttpsUrl(value)?.href;
-}
 
 function normalizeRichText(value: unknown): RichTextView | undefined {
   if (typeof value === 'string') {
@@ -366,18 +198,6 @@ function normalizeAspectRatio(value: unknown): string | undefined {
   const width = Number(match[1]);
   const height = Number(match[2]);
   return width > 0 && height > 0 ? `${width} / ${height}` : undefined;
-}
-
-function sourceUrl(value: unknown): string | undefined {
-  if (typeof value === 'string') return localPublicPath(value);
-  const record = optionalRecord(value);
-  if (!record) return undefined;
-  const asset = optionalRecord(record.asset);
-  const source = stringFrom(record.url)
-    || stringFrom(asset?.url)
-    || stringFrom(record.assetUrl)
-    || stringFrom(record.file);
-  return source ? localPublicPath(source) : undefined;
 }
 
 function cropFraction(value: unknown): number {
@@ -680,6 +500,32 @@ function normalizeWorkPhoto(value: unknown, index: number): WorkPhotoView | unde
   };
 }
 
+function normalizeWorkAsset(value: unknown, index: number): WorkAssetView | undefined {
+  const raw = optionalRecord(value);
+  if (!raw) return undefined;
+  const id = (stringFrom(raw._id) || stringFrom(raw.id) || stringFrom(raw._key))
+    ?.replace(/^drafts\./u, '');
+  const kind = enumValue(raw.kind, ['image', 'video', 'file'] as const);
+  if (!id || !kind) return undefined;
+  const title = stringFrom(raw.title) || `Asset ${index + 1}`;
+  const slug = stringFrom(raw.slug) || stringFrom(optionalRecord(raw.slug)?.current) || id;
+  if (kind === 'image') {
+    const poster = resolveImage(raw.image, {
+      alt: raw.alt,
+      needsReview: Boolean(raw.needsReview || raw.altNeedsReview),
+      caption: raw.caption,
+      credit: raw.credit,
+    });
+    return poster.src ? {id, slug, title, kind, poster} : undefined;
+  }
+  if (kind === 'video') {
+    const video = normalizeVideo(raw, title);
+    return video.poster ? {id, slug, title, kind, poster: video.poster, video} : undefined;
+  }
+  const fileUrl = sourceUrl(raw.file);
+  return fileUrl ? {id, slug, title, kind, fileUrl} : undefined;
+}
+
 function normalizeSeo(value: unknown): SeoFields | undefined {
   const raw = optionalRecord(value);
   if (!raw) return undefined;
@@ -736,6 +582,9 @@ export function normalizeProject(raw: UnknownRecord): ProjectView {
   );
   const template = enumValue(raw.template, ['photo', 'video', 'featured'] as const)
     || inferredWorkTemplate(types, legacyLayout);
+  const assets = (Array.isArray(raw.assets) ? raw.assets : [])
+    .map(normalizeWorkAsset)
+    .filter((asset): asset is WorkAssetView => Boolean(asset));
   const photos = (Array.isArray(raw.photos) ? raw.photos : [])
     .map(normalizeWorkPhoto)
     .filter((photo): photo is WorkPhotoView => Boolean(photo));
@@ -763,6 +612,7 @@ export function normalizeProject(raw: UnknownRecord): ProjectView {
         ? raw.shortDescription
         : undefined,
     template,
+    assets,
     photos,
     defaultPhotoId: defaultPhoto?.id,
     cover,
@@ -816,85 +666,9 @@ function normalizeReel(value: unknown): ReelView {
   };
 }
 
-function normalizeAboutPeople(value: unknown, mode: ContentMode): AboutPersonView[] {
-  if (!Array.isArray(value)) return [];
-  return value.flatMap((candidate, index): AboutPersonView[] => {
-    const person = optionalRecord(candidate);
-    const name = stringFrom(person?.name);
-    const projectOwner = enumValue(
-      person?.projectOwner,
-      ['oliver', 'michael', 'collective', 'other'] as const,
-    );
-    const bio = normalizeRichText(person?.bio);
-    if (!name || !projectOwner || !bio) return [];
-
-    const needsReview = person?.needsReview === true;
-    const prototypeOnly = person?.prototypeOnly === true;
-    const doNotPublishWithoutExplicitApproval =
-      person?.doNotPublishWithoutExplicitApproval === true;
-    if (
-      mode === 'production' &&
-      (needsReview || prototypeOnly || doNotPublishWithoutExplicitApproval)
-    ) return [];
-
-    return [{
-      _key: stringFrom(person?._key) || `about-person-${index + 1}`,
-      name,
-      projectOwner,
-      roleLabel: stringFrom(person?.roleLabel),
-      bio,
-      selectedWork: normalizeAboutSelectedWork(person?.selectedWork, mode),
-      needsReview,
-      prototypeOnly,
-      doNotPublishWithoutExplicitApproval,
-    }];
-  });
-}
-
-function normalizeAboutSelectedWork(value: unknown, mode: ContentMode): AboutWorkView[] {
-  if (!Array.isArray(value)) return [];
-  return value.flatMap((candidate, index): AboutWorkView[] => {
-    const work = optionalRecord(candidate);
-    const title = stringFrom(work?.title);
-    const imageValue = work?.image;
-    if (!title || !imageValue) return [];
-
-    const needsReview = work?.needsReview === true;
-    const prototypeOnly = work?.prototypeOnly === true;
-    const doNotPublishWithoutExplicitApproval =
-      work?.doNotPublishWithoutExplicitApproval === true;
-    if (
-      mode === 'production' &&
-      (
-        needsReview ||
-        prototypeOnly ||
-        doNotPublishWithoutExplicitApproval ||
-        !isApprovedSanityAsset(imageValue, 'image')
-      )
-    ) return [];
-
-    const image = resolveImage(imageValue, {
-      alt: stringFrom(work?.alt) || '',
-      needsReview,
-    });
-    if (!image.src) return [];
-
-    return [{
-      _key: stringFrom(work?._key) || `about-work-${index + 1}`,
-      title,
-      client: stringFrom(work?.client),
-      href: safeHttpsUrl(work?.url),
-      image,
-      needsReview,
-      prototypeOnly,
-      doNotPublishWithoutExplicitApproval,
-    }];
-  });
-}
-
 const DEFAULT_NAVIGATION: SiteSettingsView['navigation'] = [
   {label: 'Work', destination: 'work', visible: true},
-  {label: 'About', destination: 'reel', visible: true},
+  {label: 'About', destination: 'about', visible: true},
   {label: 'Contact', destination: 'contact', visible: true},
 ];
 
@@ -905,7 +679,7 @@ function normalizeNavigation(value: unknown): SiteSettingsView['navigation'] {
     const label = stringFrom(item?.label);
     const destination = enumValue(
       item?.destination,
-      ['work', 'reel', 'about', 'notes', 'contact'] as const,
+      ['work', 'about', 'notes', 'contact'] as const,
     );
     if (!label || !destination) return [];
     return [{
@@ -918,23 +692,29 @@ function normalizeNavigation(value: unknown): SiteSettingsView['navigation'] {
   return navigation.length ? navigation : DEFAULT_NAVIGATION;
 }
 
-function normalizeReelPage(value: unknown): ReelPageView {
-  const page = recordOrEmpty(value);
+function normalizeAboutPage(value: unknown): AboutPageView {
+  const page = optionalRecord(value);
   return {
-    enabled: page.enabled === true,
-    introEyebrow: stringFrom(page.introEyebrow) || 'Lorem ipsum dolor',
-    introHeadline: stringFrom(page.introHeadline) || 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
-    introCue: stringFrom(page.introCue) || 'Consectetur adipiscing',
-    fallbackEyebrow: stringFrom(page.fallbackEyebrow) || 'Lorem ipsum dolor',
-    fallbackHeadline: stringFrom(page.fallbackHeadline)
+    openingLabel: stringFrom(page?.openingLabel) || 'Lorem ipsum dolor',
+    openingHeadline: stringFrom(page?.openingHeadline)
       || 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
-    fallbackDescription: stringFrom(page.fallbackDescription)
+    openingNote: stringFrom(page?.openingNote) || 'Consectetur adipiscing',
+    windingHeadline: stringFrom(page?.windingHeadline) || 'Consectetur adipiscing elit.',
+    orbitHeadline: stringFrom(page?.orbitHeadline) || 'Sed do eiusmod tempor incididunt.',
+    indexHeadline: stringFrom(page?.indexHeadline) || 'Ut enim ad minim veniam.',
+    chaptersHeadline: stringFrom(page?.chaptersHeadline) || 'Duis aute irure dolor.',
+    apertureHeadline: stringFrom(page?.apertureHeadline)
+      || 'Excepteur sint occaecat cupidatat.',
+    fallbackLabel: stringFrom(page?.fallbackLabel) || 'Lorem ipsum dolor',
+    fallbackHeadline: stringFrom(page?.fallbackHeadline)
+      || 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
+    fallbackDescription: stringFrom(page?.fallbackDescription)
       || 'Consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.',
-    closingEyebrow: stringFrom(page.closingEyebrow) || 'Lorem ipsum dolor',
-    closingHeadline: stringFrom(page.closingHeadline) || 'What should we make next?',
-    ctaLabel: stringFrom(page.ctaLabel) || 'Lorem ipsum',
-    ctaDestination: enumValue(page.ctaDestination, ['work', 'contact'] as const) || 'contact',
-    seo: normalizeSeo(page.seo) || {noIndex: true},
+    closingLabel: stringFrom(page?.closingLabel) || 'Lorem ipsum dolor',
+    closingHeadline: stringFrom(page?.closingHeadline) || 'What should we make next?',
+    ctaLabel: stringFrom(page?.ctaLabel) || 'Lorem ipsum',
+    ctaDestination: enumValue(page?.ctaDestination, ['work', 'contact'] as const) || 'contact',
+    seo: normalizeSeo(page?.seo) || {noIndex: true},
   };
 }
 
@@ -947,6 +727,7 @@ function normalizeWorkGallery(value: unknown): WorkGalleryPlacementView[] | unde
     return [{
       _key: stringFrom(placement?._key) || `gallery-${index + 1}`,
       workId: workId.replace(/^drafts\./u, ''),
+      assetId: stringFrom(placement?.assetId)?.replace(/^drafts\./u, ''),
       photoId: stringFrom(placement?.photoId)?.replace(/^drafts\./u, ''),
       cardSize: enumValue(placement?.cardSize, ['standard', 'tall', 'large', 'wide'] as const) || 'standard',
       treatment: enumValue(placement?.treatment, ['standard', 'masked', 'framed', 'poster'] as const) || 'standard',
@@ -973,7 +754,7 @@ function normalizeFooter(value: unknown): FooterSettingsView {
         const label = stringFrom(link?.label);
         const destination = enumValue(
           link?.destination,
-          ['work', 'reel', 'about', 'notes', 'contact', 'external'] as const,
+          ['work', 'about', 'notes', 'contact', 'external'] as const,
         );
         const url = destination === 'external' ? safeHttpsUrl(link?.url) : undefined;
         if (!label || !destination || (destination === 'external' && !url)) return [];
@@ -993,7 +774,7 @@ function normalizeFooter(value: unknown): FooterSettingsView {
     connectHeading: stringFrom(footer.connectHeading) || 'Connect',
     exploreLinks: exploreLinks.length ? exploreLinks : [
       {label: 'Work', destination: 'work'},
-      {label: 'About', destination: 'reel'},
+      {label: 'About', destination: 'about'},
       {label: 'Contact', destination: 'contact'},
     ],
     contactLabel: stringFrom(footer.contactLabel),
@@ -1012,7 +793,6 @@ export function normalizeSiteSettings(
   const aboutPage = optionalRecord(raw.aboutPage);
   const contactPage = optionalRecord(raw.contactPage);
   const fixtureFallback = mode === 'prototype' ? raw : {};
-  const capabilities = aboutPage?.capabilities ?? fixtureFallback.capabilities;
   const socialLinks = contactPage?.socialLinks ?? fixtureFallback.socialLinks;
   return {
     siteName: typeof raw.siteName === 'string' && raw.siteName ? raw.siteName : 'New Work Agency',
@@ -1023,26 +803,10 @@ export function normalizeSiteSettings(
     compactMark: normalizeBrandAsset(raw.compactMark),
     manifesto: stringFrom(workPage?.manifesto) || stringFrom(fixtureFallback.manifesto),
     manifestoNeedsReview: !workPage && Boolean(fixtureFallback.manifestoNeedsReview),
-    about: normalizeRichText(aboutPage?.about || fixtureFallback.about),
-    aboutHeading: stringFrom(aboutPage?.heading) || 'About',
-    aboutPeopleHeading: stringFrom(aboutPage?.peopleHeading) || 'The Creatives',
-    aboutPeopleIntroduction: stringFrom(aboutPage?.peopleIntroduction),
-    aboutImage: (aboutPage?.image || fixtureFallback.aboutImage)
-      ? resolveImage(aboutPage?.image || fixtureFallback.aboutImage, {
-          alt: (aboutPage?.imageDecorative ?? fixtureFallback.aboutImageDecorative) === true
-            ? ''
-            : aboutPage?.imageAlt || fixtureFallback.aboutImageAlt,
-          needsReview: Boolean(recordOrEmpty(aboutPage?.image || fixtureFallback.aboutImage).altNeedsReview),
-        })
-      : undefined,
-    aboutPeople: normalizeAboutPeople(aboutPage?.people || fixtureFallback.aboutPeople, mode),
-    aboutSeo: normalizeSeo(aboutPage?.seo || fixtureFallback.aboutSeo),
+    aboutPage: normalizeAboutPage(aboutPage || fixtureFallback.aboutPage),
     contactSeo: normalizeSeo(contactPage?.seo || fixtureFallback.contactSeo),
     contactHeading: stringFrom(contactPage?.heading) || 'Contact',
     contactIntroduction: normalizeRichText(contactPage?.introduction),
-    capabilities: Array.isArray(capabilities)
-      ? capabilities.filter((value): value is string => typeof value === 'string' && Boolean(value.trim()))
-      : [],
     contactEmail:
       approvedContactOverride || (isSafeEmail(contactPage?.email) ? contactPage.email : isSafeEmail(fixtureFallback.contactEmail) ? fixtureFallback.contactEmail : undefined),
     location: stringFrom(contactPage?.location) || stringFrom(fixtureFallback.location),
@@ -1054,108 +818,10 @@ export function normalizeSiteSettings(
         })
       : [],
     reel: normalizeReel(workPage?.reel || fixtureFallback.reel),
-    reelPage: normalizeReelPage(raw.reelPage || fixtureFallback.reelPage),
     notesEnabled: Boolean(workPage ? workPage.notesEnabled : fixtureFallback.notesEnabled),
     defaultSeo: normalizeSeo(raw.defaultSeo) || { noIndex: true },
     footer: normalizeFooter(raw.footer),
   };
-}
-
-function applyWorkGallery(
-  projects: ProjectView[],
-  placements: WorkGalleryPlacementView[] | undefined,
-): ProjectView[] {
-  if (!placements) return sortProjects(projects);
-  const placementByProject = new Map(
-    placements.map((placement, index) => [placement.workId, {placement, index}]),
-  );
-  return sortProjects(projects.map((project) => {
-    const curated = placementByProject.get(project.id.replace(/^drafts\./u, ''))
-      || placementByProject.get(project.id);
-    return {
-      ...project,
-      featuredOnHome: Boolean(curated),
-      homeOrder: curated ? curated.index + 1 : Number.MAX_SAFE_INTEGER,
-      homeCardSize: curated?.placement.cardSize || project.homeCardSize,
-      homeTreatment: curated?.placement.treatment || project.homeTreatment,
-      homeColumn: curated ? undefined : project.homeColumn,
-      homeOffset: curated ? 0 : project.homeOffset,
-    };
-  }));
-}
-
-function preferUnifiedWorkDocuments(records: UnknownRecord[]): UnknownRecord[] {
-  const bySlug = new Map<string, UnknownRecord>();
-  records.forEach((record) => {
-    const slug = stringFrom(record.slug) || stringFrom(recordOrEmpty(record.slug).current) || stringFrom(record._id);
-    if (!slug) return;
-    const existing = bySlug.get(slug);
-    if (!existing || (record._type === 'work' && existing._type !== 'work')) bySlug.set(slug, record);
-  });
-  return [...bySlug.values()];
-}
-
-export function workGalleryEntryId(work: ProjectView, photoId?: string): string {
-  return photoId ? `${work.slug}--${photoId}` : work.slug;
-}
-
-export function buildWorkGallery(
-  projects: ProjectView[],
-  placements?: WorkGalleryPlacementView[],
-): WorkGalleryEntryView[] {
-  const byId = new Map<string, ProjectView>();
-  projects.forEach((project) => {
-    byId.set(project.id, project);
-    byId.set(project.id.replace(/^drafts\./u, ''), project);
-  });
-
-  const buildEntry = (
-    work: ProjectView,
-    photoId?: string,
-    cardSize = work.homeCardSize,
-    treatment = work.homeTreatment,
-  ): WorkGalleryEntryView => {
-    const photo = photoId ? work.photos.find((candidate) => candidate.id === photoId) : undefined;
-    const selectedPhoto = photo || (work.template === 'photo'
-      ? work.photos.find((candidate) => candidate.id === work.defaultPhotoId) || work.photos[0]
-      : undefined);
-    const doorwayId = photo?.id;
-    return {
-      id: workGalleryEntryId(work, doorwayId),
-      work,
-      photo,
-      image: selectedPhoto?.image || work.cover.poster,
-      href: doorwayId ? `/work/${work.slug}/${doorwayId}` : `/work/${work.slug}`,
-      cardSize,
-      treatment,
-    };
-  };
-
-  if (placements?.length) {
-    return placements.flatMap((placement) => {
-      const work = byId.get(placement.workId);
-      return work ? [buildEntry(work, placement.photoId, placement.cardSize, placement.treatment)] : [];
-    });
-  }
-  return sortProjects(projects).map((work) => buildEntry(work));
-}
-
-function buildPrototypeWorkGallery(projects: ProjectView[]): WorkGalleryEntryView[] {
-  const photoWork = projects.find((project) => project.id === michaelPhotoWork.id);
-  const standardWorks = projects.filter((project) => project !== photoWork);
-  if (!photoWork) return buildWorkGallery(standardWorks);
-  const workEntries = buildWorkGallery(standardWorks);
-  const photoEntries = photoWork.photos.map((photo) => buildWorkGallery(
-    [photoWork],
-    [{_key: photo.id, workId: photoWork.id, photoId: photo.id, cardSize: 'standard', treatment: 'standard'}],
-  )[0]!).filter(Boolean);
-  const interleaved: WorkGalleryEntryView[] = [];
-  const length = Math.max(workEntries.length, photoEntries.length);
-  for (let index = 0; index < length; index += 1) {
-    if (workEntries[index]) interleaved.push(workEntries[index]!);
-    if (photoEntries[index]) interleaved.push(photoEntries[index]!);
-  }
-  return interleaved;
 }
 
 function normalizeNote(raw: UnknownRecord): NoteView {
@@ -1206,43 +872,6 @@ function normalizeNote(raw: UnknownRecord): NoteView {
   };
 }
 
-export function isProductionEligibleNote(raw: UnknownRecord): boolean {
-  if (raw.rightsApprovalStatus !== 'approved' || !hasMeaningfulAlt(raw.rightsApprovalEvidence)) return false;
-  if (typeof raw.rightsExpiresAt === 'string' && new Date(raw.rightsExpiresAt) <= new Date()) return false;
-  const slug = typeof raw.slug === 'string' ? raw.slug : recordOrEmpty(raw.slug).current;
-  if (!hasMeaningfulAlt(raw.title) || !hasMeaningfulAlt(slug) || !hasMeaningfulAlt(raw.date)) return false;
-  if (!hasMeaningfulAlt(raw.summary) || String(raw.summary).length > 220) return false;
-  const media = raw.media && typeof raw.media === 'object' ? raw.media as UnknownRecord : undefined;
-  if (!media) return false;
-  if (media.kind === 'image' || media.image) {
-    return isApprovedSanityAsset(media.image, 'image') &&
-      Boolean(media.decorative || hasMeaningfulAlt(media.alt));
-  }
-  if (!isApprovedSanityAsset(media.poster, 'image')) return false;
-  if (media.remoteUrl && !safeApprovedWatchUrl(media.remoteUrl)) return false;
-  if (media.file && !safeHostedVideoUrl(sourceUrl(media.file))) return false;
-  if (media.captionsFile) {
-    if (!safeWebVttUrl(sourceUrl(media.captionsFile))) return false;
-  }
-  const hasHostedFile = Boolean(safeHostedVideoUrl(sourceUrl(media.file)));
-  const remoteUrl = safeApprovedWatchUrl(media.remoteUrl);
-  if (!hasHostedFile && !remoteUrl) return false;
-  if (media.remotePlayerId) {
-    if (!remoteUrl || typeof media.remotePlayerId !== 'string') return false;
-    const parsed = parseApprovedWatchUrl(remoteUrl);
-    if (!parsed || parsed.providerId !== media.remotePlayerId) return false;
-  }
-  return true;
-}
-
-function hasEligibleEnabledReel(reel: ReelView): boolean {
-  if (!reel.enabled) return true;
-  if (!reel.poster?.src || !isApprovedSanityAsset({asset: {url: reel.poster.src}}, 'image')) return false;
-  if (!safeHostedVideoUrl(reel.desktopSource)) return false;
-  if (reel.mobileSource && !safeHostedVideoUrl(reel.mobileSource)) return false;
-  return true;
-}
-
 export function getFixtureProjects(): ProjectView[] {
   return sortProjects(fixtureProjectRecords.map(normalizeProject));
 }
@@ -1253,7 +882,7 @@ function prototypeContent(): SiteContent {
     mode: 'prototype',
     settings: normalizeSiteSettings(fixtureSiteSettings, 'prototype'),
     projects,
-    galleryEntries: buildPrototypeWorkGallery(projects),
+    galleryEntries: buildPrototypeWorkGallery(projects, michaelPhotoWork.id),
     notes: [],
   };
 }
@@ -1293,14 +922,11 @@ async function sanityContent(mode: 'preview' | 'production'): Promise<SiteConten
           defaultSeo: rawSettings.defaultSeo,
         },
         workSeo: workPage.seo,
-        reelPage: recordOrEmpty(rawSettings.reelPage).enabled === true
-          ? rawSettings.reelPage
-          : undefined,
         activeReel: reel.enabled === true ? reel : undefined,
         aboutPage: rawSettings.aboutPage,
         contactPage: rawSettings.contactPage,
       };
-      if (hasBlockedBlock(publicSingletonContent)) {
+      if (hasBlockedContent(publicSingletonContent)) {
         throw new Error('A public page singleton still contains a blocking review or approval flag.');
       }
     }
@@ -1348,13 +974,4 @@ export function getSiteContent(): Promise<SiteContent> {
       : sanityContent(mode);
   }
   return contentPromise;
-}
-
-export function adjacentProjects(projects: ProjectView[], slug: string) {
-  const index = projects.findIndex((project) => project.slug === slug);
-  if (index < 0) return { previous: undefined, next: undefined };
-  return {
-    previous: index > 0 ? projects[index - 1] : undefined,
-    next: index < projects.length - 1 ? projects[index + 1] : undefined,
-  };
 }

@@ -40,7 +40,7 @@ test('film detail visual baseline', async ({page}) => {
 
 test('About visual baseline', async ({page}) => {
   await page.goto('/about');
-  await page.locator('[data-reel-experience]').waitFor();
+  await page.locator('[data-about-experience]').waitFor();
   await expect(page.locator('.reel-fallback-card')).toHaveCount(6);
   await settleVisualPage(page);
   await expect(page).toHaveScreenshot('about.png', {

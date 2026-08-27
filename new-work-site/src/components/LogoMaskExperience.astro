@@ -51,6 +51,7 @@ const experienceStyle = `--logo-mask:url("${maskUrl}")`;
   data-logo-mask-experience
   data-logo-reveal="1"
   data-logo-reveal-ready="false"
+  data-logo-reveal-phase="background"
   aria-label="New Work logo media study"
 >
   <div class="logo-mask-experience__canvas">
@@ -85,6 +86,8 @@ const experienceStyle = `--logo-mask:url("${maskUrl}")`;
 </section>
 
 <script>
+  import {readStorageValue, removeStorageValue} from '../lib/browser-storage';
+
   declare global {
     interface Window {
       __newWorkLogoMaskCleanup?: () => void;
@@ -93,38 +96,19 @@ const experienceStyle = `--logo-mask:url("${maskUrl}")`;
 
   const initializeLogoMask = (): void => {
     const root = document.querySelector<HTMLElement>('[data-logo-mask-experience]');
-    if (!root || root.dataset.logoMaskReady === 'true') return;
+    if (
+      !root
+      || root.closest('[data-gallery-layer-state="background"]')
+      || root.dataset.logoMaskReady === 'true'
+    ) return;
     root.dataset.logoMaskReady = 'true';
 
     const revealModes = ['1', '2', '3', '4', '5'] as const;
+    const initialBackgroundHold = 240;
     const randomRevealMode = (): string => revealModes[Math.floor(Math.random() * revealModes.length)] ?? '1';
     let revealFrame = 0;
     let revealSettleFrame = 0;
-    const playReveal = (mode = randomRevealMode()): void => {
-      if (revealFrame) window.cancelAnimationFrame(revealFrame);
-      if (revealSettleFrame) window.cancelAnimationFrame(revealSettleFrame);
-      root.dataset.logoRevealReady = 'false';
-      root.dataset.logoReveal = mode;
-      revealFrame = window.requestAnimationFrame(() => {
-        revealFrame = 0;
-        revealSettleFrame = window.requestAnimationFrame(() => {
-          revealSettleFrame = 0;
-          root.dataset.logoRevealReady = 'true';
-        });
-      });
-    };
-
-    let revealMode = randomRevealMode();
-    try {
-      const storedReveal = window.sessionStorage.getItem('new-work-logo-reveal');
-      if (storedReveal && revealModes.includes(storedReveal as (typeof revealModes)[number])) revealMode = storedReveal;
-      window.sessionStorage.removeItem('new-work-logo-reveal');
-    } catch {
-      // Storage can be unavailable in privacy-restricted contexts.
-    }
-    playReveal(revealMode);
-    const handleRevealRequest = (): void => playReveal();
-    window.addEventListener('new-work:logo-reveal', handleRevealRequest);
+    let revealTimer = 0;
 
     const singleLayers = [...root.querySelectorAll<HTMLElement>('[data-single-layer]')];
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -141,6 +125,11 @@ const experienceStyle = `--logo-mask:url("${maskUrl}")`;
       if (source?.dataset.src && !source.src) {
         source.src = source.dataset.src;
         video.load();
+      }
+      try {
+        video.currentTime = 0;
+      } catch {
+        // A source that has not exposed metadata yet already begins at zero.
       }
       void video.play().catch(() => undefined);
     };
@@ -159,19 +148,64 @@ const experienceStyle = `--logo-mask:url("${maskUrl}")`;
       playVideo(layer);
     };
 
-    activate(0);
+    const playReveal = (mode = randomRevealMode(), backgroundHold = 0): void => {
+      if (revealFrame) window.cancelAnimationFrame(revealFrame);
+      if (revealSettleFrame) window.cancelAnimationFrame(revealSettleFrame);
+      if (revealTimer) window.clearTimeout(revealTimer);
+      root.dataset.logoRevealReady = 'false';
+      root.dataset.logoReveal = mode;
+      root.dataset.logoRevealPhase = backgroundHold > 0 ? 'background' : 'content';
+      // Start the media request immediately behind the hidden stage so the
+      // color owns first paint without making the reveal wait on networking.
+      activate(0);
+
+      const revealContent = (): void => {
+        revealTimer = 0;
+        root.dataset.logoRevealPhase = 'content';
+        revealFrame = window.requestAnimationFrame(() => {
+          revealFrame = 0;
+          revealSettleFrame = window.requestAnimationFrame(() => {
+            revealSettleFrame = 0;
+            root.dataset.logoRevealReady = 'true';
+          });
+        });
+      };
+
+      if (backgroundHold > 0) {
+        revealFrame = window.requestAnimationFrame(() => {
+          revealFrame = 0;
+          revealTimer = window.setTimeout(revealContent, backgroundHold);
+        });
+      } else {
+        revealContent();
+      }
+    };
+
+    let revealMode = randomRevealMode();
+    const storedReveal = readStorageValue('session', 'new-work-logo-reveal');
+    if (storedReveal && revealModes.includes(storedReveal as (typeof revealModes)[number])) {
+      revealMode = storedReveal;
+    }
+    removeStorageValue('session', 'new-work-logo-reveal');
+    playReveal(revealMode, reducedMotion ? 0 : initialBackgroundHold);
+    const handleRevealRequest = (): void => playReveal();
+    window.addEventListener('new-work:logo-reveal', handleRevealRequest);
+
     window.__newWorkLogoMaskCleanup?.();
     window.__newWorkLogoMaskCleanup = () => {
       if (revealFrame) window.cancelAnimationFrame(revealFrame);
       if (revealSettleFrame) window.cancelAnimationFrame(revealSettleFrame);
+      if (revealTimer) window.clearTimeout(revealTimer);
       window.removeEventListener('new-work:logo-reveal', handleRevealRequest);
       pauseVideos();
+      delete root.dataset.logoMaskReady;
       delete window.__newWorkLogoMaskCleanup;
     };
   };
 
   initializeLogoMask();
   document.addEventListener('astro:page-load', initializeLogoMask);
+  document.addEventListener('new-work:gallery-layer-released', initializeLogoMask);
   document.addEventListener('astro:before-swap', () => window.__newWorkLogoMaskCleanup?.());
 </script>
 
@@ -190,7 +224,8 @@ const experienceStyle = `--logo-mask:url("${maskUrl}")`;
   .logo-mask-experience__canvas {
     align-self: stretch;
     display: grid;
-    align-items: safe center;
+    align-content: center;
+    align-items: center;
     justify-items: center;
     width: 100%;
     min-height: 0;
@@ -213,7 +248,11 @@ const experienceStyle = `--logo-mask:url("${maskUrl}")`;
     left: -1.681%;
     width: 103.295%;
     height: 120.612%;
-    transform: scaleY(.95);
+    /* The source mask's visible alpha is slightly top-heavy. This optical
+       correction centers the actual letters, not the transparent bitmap box.
+       Do not crop at the mask's first opaque row: a fractional intersection
+       there rasterizes as a detached one-pixel rule at some viewport widths. */
+    transform: translateY(1.75%) scaleY(.95);
     transform-origin: 50% 50%;
   }
 
@@ -356,7 +395,7 @@ const experienceStyle = `--logo-mask:url("${maskUrl}")`;
 
     .logo-mask-stage__solid,
     .logo-mask-stage__single {
-      transform: scaleY(.94);
+      transform: translateY(1.75%) scaleY(.94);
     }
   }
 </style>

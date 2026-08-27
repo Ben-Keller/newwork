@@ -246,6 +246,41 @@ export const selectWorkPhoto = (project: ProjectView, requestedPhotoId?: string)
   };
 };
 
+/**
+ * Every Sanity Asset is a flat record linked to one Project. A gallery doorway
+ * can select any visual Asset without changing the Project's identity.
+ */
+export const selectWorkAsset = (project: ProjectView, requestedAssetId?: string): ProjectView => {
+  if (project.assets.length === 0) return selectWorkPhoto(project, requestedAssetId);
+  const selected = project.assets.find((asset) => asset.id === requestedAssetId)
+    || project.assets.find((asset) => asset.slug === requestedAssetId)
+    || project.assets[0];
+  if (!selected?.poster) return project;
+
+  const selectedPoster = selected.poster.src;
+  const selectedVideo = selected.video?.src;
+  const authoredBlocks = project.contentBlocks.filter((block) => {
+    if (isSingleImageBlock(block)) return block.image.src !== selectedPoster;
+    if (block._type !== 'heroVideo' && block._type !== 'video' && block._type !== 'shortLoop') {
+      return true;
+    }
+    return block.video.src !== selectedVideo && block.video.poster?.src !== selectedPoster;
+  });
+
+  return {
+    ...project,
+    cover: {
+      ...project.cover,
+      poster: selected.poster,
+      mediaType: selected.kind === 'video' && selected.video?.src ? 'motion' : 'still',
+      previewVideo: selected.kind === 'video' ? selected.video?.src : undefined,
+      previewPosterOverride: undefined,
+      mobilePoster: undefined,
+    },
+    contentBlocks: authoredBlocks,
+  };
+};
+
 const defaultTitleTreatment = (variant: ProjectLayoutVariant): TitleTreatment => {
   if (variant === 'experimental') return 'split';
   if (variant === 'cinematic') return 'oversized';

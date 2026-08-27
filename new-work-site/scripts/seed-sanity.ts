@@ -354,24 +354,6 @@ function portableTextFromString(value: string, identity: string): JsonRecord[] {
   ]
 }
 
-export function aboutPeopleSeedItems(value: unknown): unknown {
-  if (!Array.isArray(value)) return value
-  return value.map((raw, index) => {
-    const person: JsonRecord = isRecord(raw) ? {...raw} : {}
-    const identity = `siteSettings:aboutPerson:${String(person.projectOwner ?? index)}`
-    return withoutUndefined({
-      ...person,
-      _type: 'aboutPerson',
-      _key: typeof person._key === 'string'
-        ? person._key
-        : deterministicKey('about-person', identity, person.name),
-      bio: typeof person.bio === 'string' && person.bio.trim()
-        ? portableTextFromString(person.bio, identity)
-        : person.bio,
-    })
-  })
-}
-
 function createMapper(
   manifestByPath: Map<string, ManifestRow>,
   uploadedAssetIds: Map<string, string>,
@@ -661,13 +643,23 @@ function createMapper(
       navigation: keyedObjects(
         value.navigation ?? [
           {label: 'Work', destination: 'work', visible: true},
-          {label: 'About', destination: 'reel', visible: true},
+          {label: 'About', destination: 'about', visible: true},
           {label: 'Contact', destination: 'contact', visible: true},
         ],
         'navigationItem',
         'siteSettings',
       ),
       defaultSeo: seo(value.defaultSeo ?? {noIndex: true}),
+    })
+  }
+
+  function aboutPage(value: unknown): JsonRecord {
+    const page = isRecord(value) ? value : {}
+    return withoutUndefined({
+      ...page,
+      _id: 'aboutPage',
+      _type: 'aboutPage',
+      seo: seo(page.seo ?? {noIndex: true}),
     })
   }
 
@@ -739,7 +731,7 @@ function createMapper(
     })
   }
 
-  return {settings, project, note}
+  return {settings, aboutPage, project, note}
 }
 
 function slugFromDocument(document: JsonRecord): string | undefined {
@@ -1094,6 +1086,7 @@ export async function runSanitySeed(): Promise<void> {
   const mapper = createMapper(manifestByPath, uploadedAssetIds)
   const seedDocuments = [
     mapper.settings(settingsFixture),
+    mapper.aboutPage(settingsFixture.aboutPage),
     ...projectFixtures.map(mapper.project),
     ...noteFixtures.map(mapper.note),
   ]
@@ -1172,7 +1165,7 @@ export async function runSanitySeed(): Promise<void> {
   await transaction.commit({autoGenerateArrayKeys: false})
 
   console.log(
-    `Seed complete: 1 site settings document, ${projectFixtures.length} Work items, ${noteFixtures.length} notes, ${referencedPaths.length} deduplicated assets.`,
+    `Seed complete: site settings and About page, ${projectFixtures.length} Work items, ${noteFixtures.length} notes, ${referencedPaths.length} deduplicated assets.`,
   )
   console.log(
     updateMode === 'force'

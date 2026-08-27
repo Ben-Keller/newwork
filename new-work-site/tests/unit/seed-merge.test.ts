@@ -1,42 +1,10 @@
 import {describe, expect, it} from 'vitest'
 import {
-  aboutPeopleSeedItems,
   mergeSeedWithExisting,
   resolveSeedUpdateMode,
   seedDocumentLookupKeys,
   seedIsDryRun,
 } from '../../scripts/seed-sanity'
-
-describe('About people seed mapping', () => {
-  it('preserves profile blockers and stable keys while converting fixture bios to Portable Text', () => {
-    const fixture = [{
-      _key: 'about-person-oliver',
-      name: 'Oliver',
-      projectOwner: 'oliver',
-      bio: 'Lorem ipsum dolor sit amet.',
-      needsReview: true,
-      prototypeOnly: true,
-    }]
-
-    const mapped = aboutPeopleSeedItems(fixture) as Array<Record<string, unknown>>
-    expect(mapped).toHaveLength(1)
-    expect(mapped[0]).toMatchObject({
-      _key: 'about-person-oliver',
-      _type: 'aboutPerson',
-      name: 'Oliver',
-      projectOwner: 'oliver',
-      needsReview: true,
-      prototypeOnly: true,
-    })
-    expect(mapped[0]?.bio).toEqual([
-      expect.objectContaining({
-        _type: 'block',
-        children: [expect.objectContaining({text: 'Lorem ipsum dolor sit amet.'})],
-      }),
-    ])
-    expect(aboutPeopleSeedItems(fixture)).toEqual(mapped)
-  })
-})
 
 describe('seed preservation policy', () => {
   it('keeps an editor presentation choice while adding newly modeled defaults', () => {

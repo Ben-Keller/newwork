@@ -28,6 +28,7 @@
     "media:responsive": "node scripts/generate-responsive-images.mjs",
     "media:video": "node scripts/optimize-local-videos.mjs",
     "verify:media": "node scripts/verify-media-budgets.mjs",
+    "sanity:audit": "tsx scripts/audit-sanity.ts",
     "sanity:seed": "tsx scripts/seed-sanity.ts",
     "sanity:seed:dry-run": "tsx scripts/seed-sanity.ts --dry-run",
     "sanity:typegen": "npm --prefix ../studio-new-work run typegen"
@@ -37,11 +38,11 @@
     "@sanity/astro": "^3.5.1",
     "@sanity/client": "^7.26.2",
     "@sanity/image-url": "^2.1.1",
-    "astro": "^7.2.1",
+    "astro": "^7.2.7",
     "astro-portabletext": "^1.0.0",
-    "groq": "^6.10.1",
+    "groq": "^6.11.0",
     "gsap": "^3.15.0",
-    "three": "0.185.0"
+    "three": "0.185.1"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.4",
@@ -49,14 +50,14 @@
     "@playwright/test": "^1.56.1",
     "@types/node": "^24.10.0",
     "@types/three": "^0.185.0",
-    "@vitest/coverage-v8": "^4.0.4",
+    "@vitest/coverage-v8": "^4.1.11",
     "eslint": "^9.39.1",
     "eslint-plugin-astro": "^1.5.0",
     "groq-js": "^2.0.0",
-    "sharp": "^0.35.3",
+    "sharp": "^0.35.4",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.46.3",
-    "vitest": "^4.0.4"
+    "typescript-eslint": "^8.68.0",
+    "vitest": "^4.1.11"
   }
 }

@@ -1,14 +1,17 @@
 ---
 import { reducedMotionFeaturedStills } from '../lib/reel/reel-assets';
+import type { AboutPageView } from '../lib/types';
 
 interface Props {
   assetBase: string;
+  copy: AboutPageView;
   ctaHref: string;
 }
 
-const { assetBase, ctaHref } = Astro.props;
+const { assetBase, copy, ctaHref } = Astro.props;
 const normalizedAssetBase = assetBase.endsWith('/') ? assetBase : `${assetBase}/`;
 const assetUrl = (path: string) => `${normalizedAssetBase}${path.replace(/^\/+/, '')}`;
+const openingPlaceholderFrames = Array.from({length: 12});
 
 const stages = [
   {
@@ -16,9 +19,9 @@ const stages = [
     marker: '01 — Lorem',
     start: 0,
     end: 0.17,
-    eyebrow: 'Lorem ipsum dolor',
-    title: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
-    note: 'Consectetur adipiscing',
+    eyebrow: copy.openingLabel,
+    title: copy.openingHeadline,
+    note: copy.openingNote,
   },
   {
     id: 'winding',
@@ -26,7 +29,7 @@ const stages = [
     start: 0.14,
     end: 0.38,
     eyebrow: 'Lorem ipsum dolor',
-    title: 'Consectetur adipiscing elit.',
+    title: copy.windingHeadline,
     note: 'Sed do eiusmod tempor',
   },
   {
@@ -35,7 +38,7 @@ const stages = [
     start: 0.38,
     end: 0.61,
     eyebrow: 'Lorem ipsum dolor',
-    title: 'Sed do eiusmod tempor incididunt.',
+    title: copy.orbitHeadline,
     note: 'Ut labore et dolore',
   },
   {
@@ -44,7 +47,7 @@ const stages = [
     start: 0.59,
     end: 0.79,
     eyebrow: 'Lorem ipsum dolor',
-    title: 'Ut enim ad minim veniam.',
+    title: copy.indexHeadline,
     note: 'Quis nostrud exercitation',
   },
   {
@@ -53,7 +56,7 @@ const stages = [
     start: 0.77,
     end: 0.91,
     eyebrow: 'Lorem ipsum dolor',
-    title: 'Duis aute irure dolor.',
+    title: copy.chaptersHeadline,
     note: 'Reprehenderit in voluptate',
   },
   {
@@ -62,7 +65,7 @@ const stages = [
     start: 0.86,
     end: 0.981,
     eyebrow: 'Lorem ipsum dolor',
-    title: 'Excepteur sint occaecat cupidatat.',
+    title: copy.apertureHeadline,
     note: 'Sunt in culpa qui officia',
   },
 ] as const;
@@ -70,15 +73,26 @@ const stages = [
 
 <section
   class="reel-experience"
-  data-reel-experience
+  data-about-experience
   data-asset-base={normalizedAssetBase}
   data-mode="loading"
   aria-busy="true"
 >
-  <a class="reel-skip-link" href="#reel-archive" aria-label="Skip the motion experience">Lorem ipsum</a>
+  <a class="reel-skip-link" href="#about-archive" aria-label="Skip the motion experience">Lorem ipsum</a>
 
   <div class="reel-motion-stage">
     <div class="reel-canvas-mount" data-reel-canvas></div>
+    <div class="reel-opening-placeholder" data-reel-opening-placeholder aria-hidden="true">
+      <div class="reel-opening-placeholder__track reel-opening-placeholder__track--upper">
+        {openingPlaceholderFrames.map(() => <i></i>)}
+      </div>
+      <div class="reel-opening-placeholder__track reel-opening-placeholder__track--feed">
+        {openingPlaceholderFrames.slice(0, 5).map(() => <i></i>)}
+      </div>
+      <div class="reel-opening-placeholder__track reel-opening-placeholder__track--lower">
+        {openingPlaceholderFrames.slice(0, 7).map(() => <i></i>)}
+      </div>
+    </div>
     <div class="reel-paper-wash" aria-hidden="true"></div>
     <div class="reel-grain" aria-hidden="true"></div>
 
@@ -112,10 +126,10 @@ const stages = [
         data-start="0.964"
         data-end="1.1"
       >
-        <p>Lorem ipsum dolor</p>
-        <h1>What should we make next?</h1>
+        <p>{copy.closingLabel}</p>
+        <h1>{copy.closingHeadline}</h1>
         <a href={ctaHref} tabindex="-1" aria-label="Start a project">
-          Lorem ipsum <span aria-hidden="true">↗</span>
+          {copy.ctaLabel} <span aria-hidden="true">↗</span>
         </a>
       </article>
     </div>
@@ -126,11 +140,11 @@ const stages = [
     </div>
   </div>
 
-  <section id="reel-archive" class="reel-static-fallback">
+  <section id="about-archive" class="reel-static-fallback">
     <div class="reel-fallback-intro">
-      <p>Lorem ipsum dolor</p>
-      <h1>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</h1>
-      <span>Consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</span>
+      <p>{copy.fallbackLabel}</p>
+      <h1>{copy.fallbackHeadline}</h1>
+      <span>{copy.fallbackDescription}</span>
     </div>
     <div class="reel-fallback-grid">
       {reducedMotionFeaturedStills.map((asset, index) => (
@@ -146,9 +160,9 @@ const stages = [
       ))}
     </div>
     <div class="reel-fallback-cta">
-      <p>Lorem ipsum dolor</p>
-      <h2>What should we make next?</h2>
-      <a href={ctaHref} aria-label="Start a project">Lorem ipsum <span aria-hidden="true">↗</span></a>
+      <p>{copy.closingLabel}</p>
+      <h2>{copy.closingHeadline}</h2>
+      <a href={ctaHref} aria-label="Start a project">{copy.ctaLabel} <span aria-hidden="true">↗</span></a>
     </div>
   </section>
 
@@ -163,12 +177,12 @@ const stages = [
 </section>
 
 <script>
-  type ReelController = { destroy: () => void };
+  type AboutController = { destroy: () => void };
 
   declare global {
     interface Window {
-      __newWorkReelCleanup?: () => void;
-      __newWorkReelLifecycleInstalled?: boolean;
+      __newWorkAboutCleanup?: () => void;
+      __newWorkAboutLifecycleInstalled?: boolean;
     }
   }
 
@@ -189,14 +203,36 @@ const stages = [
     }
   };
 
-  const initializeReelExperience = (): void => {
-    window.__newWorkReelCleanup?.();
-    const root = document.querySelector<HTMLElement>('[data-reel-experience]');
+  const initializeAboutExperience = (): void => {
+    const root = document.querySelector<HTMLElement>('[data-about-experience]');
     const mount = root?.querySelector<HTMLElement>('[data-reel-canvas]');
-    if (!root || !mount) return;
+    if (!root || !mount) {
+      window.__newWorkAboutCleanup?.();
+      return;
+    }
+    // This component script and Astro's first page-load event run back to
+    // back. Preserve the first engine instead of compiling and loading the
+    // full WebGL experience twice.
+    if (root.dataset.reelLifecycleReady === 'true') return;
+    window.__newWorkAboutCleanup?.();
+    root.dataset.reelLifecycleReady = 'true';
 
     let cancelled = false;
-    let controller: ReelController | undefined;
+    let controller: AboutController | undefined;
+    const syncPlaceholderGeometry = (): void => {
+      const cameraZ = 7.5;
+      const viewHeight = 2 * cameraZ * Math.tan(19 * Math.PI / 180);
+      const viewAspect = window.innerWidth / Math.max(1, window.innerHeight);
+      const minView = viewHeight * Math.min(1, viewAspect);
+      const openingDepthScale = (cameraZ - 0.27 * minView) / cameraZ;
+      const frameWidth = 0.1696460033
+        * Math.min(window.innerWidth, window.innerHeight)
+        / openingDepthScale;
+      root.style.setProperty('--opening-feed-frame-width', `${frameWidth}px`);
+      root.style.setProperty('--opening-feed-frame-height', `${frameWidth / (16 / 9)}px`);
+    };
+    syncPlaceholderGeometry();
+    window.addEventListener('resize', syncPlaceholderGeometry, {passive: true});
     root.dataset.mode = 'loading';
     root.setAttribute('aria-busy', 'true');
 
@@ -210,11 +246,33 @@ const stages = [
 
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || !supportsWebGL2()) {
       settleFallback();
-      window.__newWorkReelCleanup = () => {
+      window.__newWorkAboutCleanup = () => {
         cancelled = true;
+        window.removeEventListener('resize', syncPlaceholderGeometry);
+        delete root.dataset.reelLifecycleReady;
       };
       return;
     }
+
+    const assetBase = root.dataset.assetBase || '/';
+    const preloadImage = (key: string, path: string): void => {
+      if (document.head.querySelector(`link[data-reel-preload="${key}"]`)) return;
+      const link = document.createElement('link');
+      link.rel = 'preload';
+      link.as = 'image';
+      link.type = 'image/webp';
+      link.href = `${assetBase}${path}`;
+      link.dataset.reelPreload = key;
+      link.setAttribute('fetchpriority', 'high');
+      document.head.appendChild(link);
+    };
+    // Start critical imagery alongside the engine chunk rather than waiting
+    // for Three.js to download and evaluate before beginning these requests.
+    preloadImage('atlas', 'media/atlas-grid.webp');
+    preloadImage(
+      'feature',
+      'media/images/oliver/olympics-toyota-alex-massailas/featured-frame-6.webp',
+    );
 
     const stageElements = Array.from(
       root.querySelectorAll<HTMLElement>('[data-reel-stage-copy]'),
@@ -262,36 +320,44 @@ const stages = [
     };
 
     void import('../lib/reel/engine')
-      .then((module) => module.createExperience({
-        mount,
-        scrollRoot: root,
-        assetBase: root.dataset.assetBase || '/',
-        onReady: () => {
-          if (cancelled) return;
-          root.dataset.mode = 'enhanced';
-          root.setAttribute('aria-busy', 'false');
-        },
-        onFailure: settleFallback,
-        onProgress: updateInterface,
-      }))
+      .then((module) => {
+        // A fast route change can finish before the engine chunk arrives.
+        // Avoid constructing an off-screen renderer in that case.
+        if (cancelled) return undefined;
+        return module.createExperience({
+          mount,
+          scrollRoot: root,
+          assetBase,
+          onReady: () => {
+            if (cancelled) return;
+            root.dataset.mode = 'enhanced';
+            root.setAttribute('aria-busy', 'false');
+          },
+          onFailure: settleFallback,
+          onProgress: updateInterface,
+        });
+      })
       .then((createdController) => {
+        if (!createdController) return;
         if (cancelled) createdController.destroy();
         else controller = createdController;
       })
       .catch(settleFallback);
 
-    window.__newWorkReelCleanup = () => {
+    window.__newWorkAboutCleanup = () => {
       cancelled = true;
       controller?.destroy();
       controller = undefined;
+      window.removeEventListener('resize', syncPlaceholderGeometry);
       root.style.removeProperty('--reel-progress');
+      delete root.dataset.reelLifecycleReady;
     };
   };
 
-  if (!window.__newWorkReelLifecycleInstalled) {
-    window.__newWorkReelLifecycleInstalled = true;
-    document.addEventListener('astro:page-load', initializeReelExperience);
-    document.addEventListener('astro:before-swap', () => window.__newWorkReelCleanup?.());
+  if (!window.__newWorkAboutLifecycleInstalled) {
+    window.__newWorkAboutLifecycleInstalled = true;
+    document.addEventListener('astro:page-load', initializeAboutExperience);
+    document.addEventListener('astro:before-swap', () => window.__newWorkAboutCleanup?.());
   }
-  initializeReelExperience();
+  initializeAboutExperience();
 </script>

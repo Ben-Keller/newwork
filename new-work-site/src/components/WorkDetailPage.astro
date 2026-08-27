@@ -3,22 +3,23 @@ import ProjectOverlay from './project/ProjectOverlay.astro';
 import ProjectTemplateRouter from './project/ProjectTemplateRouter.astro';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { adjacentProjects, workGalleryEntryId } from '../lib/content';
-import { resolveProjectPresentation, selectWorkPhoto } from '../lib/project-layout';
+import { resolveProjectPresentation, selectWorkAsset } from '../lib/project-layout';
 import { PROJECT_HERO_IMAGE_SIZES } from '../lib/responsive-images';
 import type { ProjectView, SiteContent } from '../lib/types';
 
 interface Props {
   work: ProjectView;
   content: SiteContent;
-  selectedPhotoId?: string;
+  selectedAssetId?: string;
 }
 
-const { work, content, selectedPhotoId } = Astro.props;
-const project = selectWorkPhoto(work, selectedPhotoId);
+const { work, content, selectedAssetId } = Astro.props;
+const project = selectWorkAsset(work, selectedAssetId);
 const { previous, next } = adjacentProjects(content.projects, work.slug);
 const presentation = resolveProjectPresentation(project);
 const description = project.seo?.metaDescription || project.shortDescription;
-const routeTransitionId = workGalleryEntryId(work, selectedPhotoId);
+const selectedAsset = work.assets.find((asset) => asset.id === selectedAssetId);
+const routeTransitionId = workGalleryEntryId(work, selectedAsset?.slug || selectedAssetId);
 const schema = content.mode === 'production'
   ? {
       '@type': 'CreativeWork',

@@ -14,8 +14,7 @@ export const GET: APIRoute = async ({ site }) => {
   const hasIndexablePage =
     !defaultNoIndex ||
     (
-      content.settings.reelPage.enabled &&
-      !(content.settings.reelPage.seo?.noIndex ?? defaultNoIndex)
+      !(content.settings.aboutPage.seo?.noIndex ?? defaultNoIndex)
     ) ||
     content.projects.some((project) => !(project.seo?.noIndex ?? defaultNoIndex)) ||
     (

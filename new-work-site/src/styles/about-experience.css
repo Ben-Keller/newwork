@@ -6,7 +6,7 @@
   color: var(--reel-ink);
 }
 
-body.reel-page .site-header {
+body.about-page .site-header {
   position: fixed;
   inset-block-start: 0;
   inset-inline: 0;
@@ -53,6 +53,89 @@ body.reel-page .site-header {
 
 .reel-media-canvas {
   pointer-events: none;
+}
+
+/* A CSS version of the opening reel occupies the same projected tracks as
+   the p=0 WebGL geometry. It paints immediately, before Three.js or the atlas
+   has loaded, and the first rendered canvas frame replaces it in place. */
+.reel-opening-placeholder {
+  --opening-frame-width: calc(7.847vw + 3.745svh);
+  --opening-frame-height: calc(4.414vw + 2.106svh);
+  --opening-feed-frame-width: 20.84vmin;
+  --opening-feed-frame-height: 11.7225vmin;
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  overflow: hidden;
+  opacity: 1;
+  pointer-events: none;
+  transition: opacity 180ms linear, visibility 180ms linear;
+}
+
+.reel-opening-placeholder__track {
+  position: absolute;
+  display: flex;
+  width: max-content;
+  height: var(--opening-frame-height);
+}
+
+.reel-opening-placeholder__track--upper {
+  top: 25.167%;
+  left: .334%;
+  transform: translateY(-50%);
+}
+
+.reel-opening-placeholder__track--feed {
+  top: 50%;
+  left: 70%;
+  height: var(--opening-feed-frame-height);
+  transform: translateY(-50%);
+}
+
+.reel-opening-placeholder__track--lower {
+  top: 72.847%;
+  left: 51.987%;
+  transform: translateY(-50%);
+}
+
+.reel-opening-placeholder__track i {
+  position: relative;
+  display: block;
+  flex: 0 0 var(--opening-frame-width);
+  height: 100%;
+  overflow: hidden;
+  border: clamp(2px, .22vw, 4px) solid color-mix(in srgb, var(--reel-ink) 74%, transparent);
+  background: color-mix(in srgb, var(--reel-ink) 13%, var(--reel-paper));
+}
+
+.reel-opening-placeholder__track i::before {
+  position: absolute;
+  inset: 10% 5%;
+  border: 1px solid color-mix(in srgb, var(--reel-ink) 18%, transparent);
+  background: linear-gradient(
+    110deg,
+    color-mix(in srgb, var(--reel-paper) 70%, transparent) 25%,
+    color-mix(in srgb, var(--reel-ink) 9%, var(--reel-paper)) 45%,
+    color-mix(in srgb, var(--reel-paper) 70%, transparent) 65%
+  );
+  background-size: 220% 100%;
+  content: "";
+  animation: reel-placeholder-light 1.8s ease-in-out infinite;
+}
+
+.reel-opening-placeholder__track--feed i {
+  flex-basis: var(--opening-feed-frame-width);
+}
+
+@keyframes reel-placeholder-light {
+  0%, 35% { background-position: 100% 0; }
+  75%, 100% { background-position: -100% 0; }
+}
+
+.reel-experience[data-mode="enhanced"] .reel-opening-placeholder,
+.reel-experience[data-mode="fallback"] .reel-opening-placeholder {
+  visibility: hidden;
+  opacity: 0;
 }
 
 .reel-paper-wash {

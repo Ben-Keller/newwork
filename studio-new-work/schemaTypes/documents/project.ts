@@ -32,6 +32,39 @@ async function duplicateHomeOrderWarning(value: number | undefined, context: Val
   return duplicateCount === 0 ? true : 'Another Work item uses this home order.'
 }
 
+async function approvedProjectAssetsError(
+  value: unknown,
+  context: ValidationContext,
+): Promise<true | string> {
+  if (!isRecord(value) || value.editorialStatus !== 'approved') return true
+  const workId = String(value._id || context.document?._id || '').replace(/^drafts\./u, '')
+  const assets = await context.getClient({apiVersion: SANITY_API_VERSION}).fetch<Array<{
+    _id: string
+    accessible: boolean
+    hasMedia: boolean
+    rightsApproved: boolean
+  }>>(
+    `*[_type == "mediaItem" && project._ref == $workId]{
+      _id,
+      "hasMedia": select(
+        kind == "image" => defined(image.asset),
+        kind == "video" => defined(poster.asset) && (defined(videoFile.asset) || defined(videoUrl)),
+        kind == "file" => defined(file.asset),
+        false
+      ),
+      "accessible": kind == "file" || decorative == true || length(coalesce(alt, "")) > 0,
+      "rightsApproved": rightsApprovalStatus == "approved" &&
+        length(coalesce(rightsApprovalEvidence, "")) > 0 &&
+        (!defined(rightsExpiresAt) || rightsExpiresAt > now())
+    }`,
+    {workId},
+  )
+  if (!assets.length) return 'Link at least one flat Asset to this Project before approving it.'
+  const blocked = assets.filter((asset) => !asset.hasMedia || !asset.accessible || !asset.rightsApproved)
+  return blocked.length === 0 ? true
+    : `${blocked.length} linked Project assets cannot be published. Each needs valid media, accessibility text, and current recorded rights approval.`
+}
+
 export const work = defineType({
   name: 'work',
   title: 'Work',
@@ -121,7 +154,7 @@ export const work = defineType({
       title: 'Page template',
       type: 'string',
       group: 'overview',
-      description: 'Photo reorders a photoshoot around the clicked image. Video leads with film. Featured is the longer editorial layout.',
+      description: 'Presentation style only. Every image, video, or file remains a flat Asset linked to this Project.',
       options: {list: [
         {title: 'Photo', value: 'photo'},
         {title: 'Video', value: 'video'},
@@ -163,73 +196,13 @@ export const work = defineType({
       type: 'coverMedia',
       group: 'card',
       validation: (Rule) => Rule.custom((value, context) => {
-        const document = context.document as {editorialStatus?: string; visible?: boolean; featuredOnHome?: boolean; template?: string; defaultPhoto?: {_ref?: string}}
+        const document = context.document as {editorialStatus?: string; visible?: boolean; featuredOnHome?: boolean}
         const publicProject = document?.editorialStatus === 'approved' ||
           (document?.editorialStatus === undefined && (document?.visible === true || document?.featuredOnHome === true))
         if (!publicProject) return true
-        if (document?.template === 'photo' && document.defaultPhoto?._ref) return true
         return isRecord(value) && hasAssetReference(value.poster)
           ? true
-          : 'A visible or featured Work requires a cover poster (or a default photo for the Photo template).'
-      }),
-    }),
-    defineField({
-      name: 'photos',
-      title: 'Photoshoot images',
-      type: 'array',
-      group: 'page',
-      description: 'Add every image in this photoshoot. Any of these can be used as a Work-page doorway.',
-      hidden: ({document}) => document?.template !== 'photo',
-      of: [defineArrayMember({
-        type: 'reference',
-        to: [{type: 'mediaItem'}],
-        options: {disableNew: false, filter: 'kind == "image"'},
-      })],
-      validation: (Rule) => [
-        Rule.unique(),
-        Rule.custom((value, context) => {
-          const document = context.document as {template?: string; editorialStatus?: string}
-          if (document?.template !== 'photo' || document.editorialStatus !== 'approved') return true
-          return Array.isArray(value) && value.length >= 2
-            ? true
-            : 'An approved Photo Work needs at least two photos.'
-        }),
-      ],
-    }),
-    defineField({
-      name: 'defaultPhoto',
-      title: 'Default featured photo',
-      type: 'reference',
-      group: 'page',
-      description: 'Used when someone opens this Work directly. A clicked gallery photo overrides it for that visit.',
-      to: [{type: 'mediaItem'}],
-      options: {
-        disableNew: true,
-        filter: ({document}) => {
-          const photoIds = ((document?.photos || []) as Array<{_ref?: string}>)
-            .flatMap((photo) => typeof photo?._ref === 'string'
-              ? [photo._ref.replace(/^drafts\./u, '')]
-              : [])
-          return {
-            filter: 'kind == "image" && (_id in $photoIds || _id in $draftPhotoIds)',
-            params: {
-              photoIds,
-              draftPhotoIds: photoIds.map((id) => `drafts.${id}`),
-            },
-          }
-        },
-      },
-      hidden: ({document}) => document?.template !== 'photo',
-      validation: (Rule) => Rule.custom((value, context) => {
-        const document = context.document as {template?: string; editorialStatus?: string; photos?: Array<{_ref?: string}>}
-        if (document?.template !== 'photo') return true
-        const ref = isRecord(value) && typeof value._ref === 'string' ? value._ref : undefined
-        if (!ref) return document.editorialStatus === 'approved'
-          ? 'Choose the default featured photo before approving this Work.'
-          : true
-        return document.photos?.some((photo) => photo?._ref === ref)
-          ? true
-          : 'The default featured photo must also be in Photoshoot images.'
+          : 'A visible or featured Work requires a cover poster.'
       }),
     }),
     defineField({
@@ -252,11 +225,10 @@ export const work = defineType({
       ],
       validation: (Rule) => Rule.custom((value, context) => {
         const blocks = Array.isArray(value) ? value : []
-        const document = context.document as {editorialStatus?: string; visible?: boolean; template?: string; photos?: unknown[]}
+        const document = context.document as {editorialStatus?: string; visible?: boolean}
         const publicProject = document?.editorialStatus === 'approved' ||
           (document?.editorialStatus === undefined && document?.visible === true)
         if (!publicProject) return true
-        if (document?.template === 'photo' && Array.isArray(document.photos) && document.photos.length >= 2) return true
         return blocks.some((block) => isRecord(block) && PUBLIC_MEDIA_BLOCK_TYPES.has(String(block._type)))
           ? true
           : 'A public Work requires at least one media block.'
@@ -522,7 +494,10 @@ export const work = defineType({
     doNotPublishWithoutExplicitApproval: false,
     rightsApprovalStatus: 'pending',
   },
-  validation: (Rule) => Rule.custom(workPublicationError),
+  validation: (Rule) => [
+    Rule.custom(workPublicationError),
+    Rule.custom(approvedProjectAssetsError),
+  ],
   orderings: [
     {title: 'Title', name: 'titleAsc', by: [{field: 'title', direction: 'asc'}]},
     {title: 'Year, newest', name: 'yearDesc', by: [{field: 'year', direction: 'desc'}]},

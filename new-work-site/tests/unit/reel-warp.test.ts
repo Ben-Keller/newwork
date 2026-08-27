@@ -194,6 +194,15 @@ const drapedPoint = (
 };
 
 describe("reel winding contact geometry", () => {
+  it("extends the opening reel through one lower run, U-turn, and upper return", () => {
+    expect(mediaVertexShader).toContain("introPathPosition");
+    expect(mediaVertexShader).toContain("pathDistance < lowerRunLength");
+    expect(mediaVertexShader).toContain("pathDistance < lowerRunLength + turnLength");
+    expect(mediaVertexShader).toContain("const float INTRO_PATH_SPEED = 1.28");
+    expect(mediaVertexShader).toContain("float introAdvance = INTRO_PATH_SPEED");
+    expect(mediaVertexShader).toContain("introPathDistance");
+  });
+
   it("uses one continuous drape field instead of tile-local warp hinges", () => {
     expect(mediaVertexShader).toContain("CONTACT_DRAPE_FRAMES");
     expect(mediaVertexShader).toContain("quinticHermite");

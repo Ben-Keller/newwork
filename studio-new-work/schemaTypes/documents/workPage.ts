@@ -3,19 +3,16 @@ import {defineArrayMember, defineField, defineType} from 'sanity'
 import {collectBlockingSafetyFlags, isRecord, wordCount} from '../validation'
 import {hiddenAllFieldsGroup} from '../clientGroups'
 
-function uniqueWorkDoorways(value: unknown): true | string {
+function uniqueGalleryAssets(value: unknown): true | string {
   if (!Array.isArray(value)) return true
-  const doorwayIds = value.flatMap((placement) => {
-    if (!isRecord(placement) || !isRecord(placement.work)) return []
-    const workId = typeof placement.work._ref === 'string' ? placement.work._ref : undefined
-    const photoId = isRecord(placement.doorwayPhoto) && typeof placement.doorwayPhoto._ref === 'string'
-      ? placement.doorwayPhoto._ref
-      : 'default'
-    return workId ? [`${workId}:${photoId}`] : []
-  })
-  return new Set(doorwayIds).size === doorwayIds.length
+  const assetIds = value.flatMap((placement) => (
+    isRecord(placement) && isRecord(placement.asset) && typeof placement.asset._ref === 'string'
+      ? [placement.asset._ref]
+      : []
+  ))
+  return new Set(assetIds).size === assetIds.length
     ? true
-    : 'The same Work/photo doorway can appear only once.'
+    : 'The same Asset can appear in the front gallery only once.'
 }
 
 export const workPage = defineType({
@@ -61,9 +58,9 @@ export const workPage = defineType({
       title: 'Work gallery',
       type: 'array',
       group: 'gallery',
-      description: 'Drag Work placements into order. A Photo Work can appear more than once by choosing a different doorway photo.',
+      description: 'Drag flat Assets into order. Every Asset links to its Project and becomes an individual doorway into that Project.',
       of: [defineArrayMember({type: 'workPlacement'})],
-      validation: (Rule) => Rule.required().min(1).custom(uniqueWorkDoorways),
+      validation: (Rule) => Rule.required().min(1).custom(uniqueGalleryAssets),
     }),
     defineField({
       name: 'reel',

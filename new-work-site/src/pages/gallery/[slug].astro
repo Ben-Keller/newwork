@@ -1,8 +1,10 @@
 ---
 import { michaelPhotoWork } from '../../content/local/michael-gallery';
 import { withBase } from '../../lib/base-path';
+import { getContentMode } from '../../lib/content';
 
 export function getStaticPaths() {
+  if (getContentMode() !== 'prototype') return [];
   return michaelPhotoWork.photos.map((photo) => ({
     params: {slug: photo.id},
     props: {photoId: photo.id},

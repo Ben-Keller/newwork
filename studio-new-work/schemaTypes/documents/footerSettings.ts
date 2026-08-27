@@ -65,7 +65,7 @@ export const footerSettings = defineType({
     connectHeading: 'Connect',
     exploreLinks: [
       {_type: 'footerLink', _key: 'work', label: 'Work', destination: 'work'},
-      {_type: 'footerLink', _key: 'about', label: 'About', destination: 'reel'},
+      {_type: 'footerLink', _key: 'about', label: 'About', destination: 'about'},
       {_type: 'footerLink', _key: 'contact', label: 'Contact', destination: 'contact'},
     ],
     copyrightLine: 'All rights reserved.',

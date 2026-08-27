@@ -320,6 +320,7 @@ const titleWordmarkMarkup = titleKit.wordmark
 </section>
 
 <script>
+  import {readStorageValue} from '../lib/browser-storage';
   import { prefersReducedData } from '../lib/motion/reduced-data';
 
   let logoIntroRouteController = new AbortController();
@@ -478,15 +479,10 @@ const titleWordmarkMarkup = titleKit.wordmark
         return;
       }
 
-      let skipIntro = false;
-      try {
-        // A dedicated sentinel keeps automated visual checks fast without
-        // allowing a stale value from an earlier prototype to suppress the
-        // title mask or its post-intro letter interactions for real visitors.
-        skipIntro = window.sessionStorage.getItem(sessionKey) === 'test-skip';
-      } catch {
-        // Storage can be unavailable in privacy modes; the animation remains safe.
-      }
+      // A dedicated sentinel keeps automated visual checks fast without
+      // allowing a stale value from an earlier prototype to suppress the
+      // title mask or its post-intro letter interactions for real visitors.
+      const skipIntro = readStorageValue('session', sessionKey) === 'test-skip';
       const shouldPlayEntrance = playEntrance && !skipIntro;
 
       if (reducedMotion || saveData) {

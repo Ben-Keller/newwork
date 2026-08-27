@@ -2314,7 +2314,7 @@
               },
               {
                 "type": "string",
-                "value": "reel"
+                "value": "about"
               },
               {
                 "type": "string",
@@ -2399,7 +2399,7 @@
               },
               {
                 "type": "string",
-                "value": "reel"
+                "value": "about"
               },
               {
                 "type": "string",
@@ -3093,185 +3093,6 @@
           "value": {
             "type": "inline",
             "name": "editorialFile"
-          },
-          "optional": true
-        }
-      }
-    }
-  },
-  {
-    "name": "aboutWork",
-    "type": "type",
-    "value": {
-      "type": "object",
-      "attributes": {
-        "_type": {
-          "type": "objectAttribute",
-          "value": {
-            "type": "string",
-            "value": "aboutWork"
-          }
-        },
-        "title": {
-          "type": "objectAttribute",
-          "value": {
-            "type": "string"
-          },
-          "optional": false
-        },
-        "client": {
-          "type": "objectAttribute",
-          "value": {
-            "type": "string"
-          },
-          "optional": true
-        },
-        "url": {
-          "type": "objectAttribute",
-          "value": {
-            "type": "string"
-          },
-          "optional": true
-        },
-        "image": {
-          "type": "objectAttribute",
-          "value": {
-            "type": "inline",
-            "name": "editorialImage"
-          },
-          "optional": false
-        },
-        "alt": {
-          "type": "objectAttribute",
-          "value": {
-            "type": "string"
-          },
-          "optional": true
-        },
-        "needsReview": {
-          "type": "objectAttribute",
-          "value": {
-            "type": "boolean"
-          },
-          "optional": true
-        },
-        "prototypeOnly": {
-          "type": "objectAttribute",
-          "value": {
-            "type": "boolean"
-          },
-          "optional": true
-        },
-        "doNotPublishWithoutExplicitApproval": {
-          "type": "objectAttribute",
-          "value": {
-            "type": "boolean"
-          },
-          "optional": true
-        }
-      }
-    }
-  },
-  {
-    "name": "aboutPerson",
-    "type": "type",
-    "value": {
-      "type": "object",
-      "attributes": {
-        "_type": {
-          "type": "objectAttribute",
-          "value": {
-            "type": "string",
-            "value": "aboutPerson"
-          }
-        },
-        "name": {
-          "type": "objectAttribute",
-          "value": {
-            "type": "string"
-          },
-          "optional": false
-        },
-        "projectOwner": {
-          "type": "objectAttribute",
-          "value": {
-            "type": "union",
-            "of": [
-              {
-                "type": "string",
-                "value": "oliver"
-              },
-              {
-                "type": "string",
-                "value": "michael"
-              },
-              {
-                "type": "string",
-                "value": "collective"
-              },
-              {
-                "type": "string",
-                "value": "other"
-              }
-            ]
-          },
-          "optional": false
-        },
-        "roleLabel": {
-          "type": "objectAttribute",
-          "value": {
-            "type": "string"
-          },
-          "optional": true
-        },
-        "bio": {
-          "type": "objectAttribute",
-          "value": {
-            "type": "inline",
-            "name": "portableText"
-          },
-          "optional": false
-        },
-        "selectedWork": {
-          "type": "objectAttribute",
-          "value": {
-            "type": "array",
-            "of": {
-              "type": "object",
-              "attributes": {
-                "_key": {
-                  "type": "objectAttribute",
-                  "value": {
-                    "type": "string"
-                  }
-                }
-              },
-              "rest": {
-                "type": "inline",
-                "name": "aboutWork"
-              }
-            }
-          },
-          "optional": true
-        },
-        "needsReview": {
-          "type": "objectAttribute",
-          "value": {
-            "type": "boolean"
-          },
-          "optional": true
-        },
-        "prototypeOnly": {
-          "type": "objectAttribute",
-          "value": {
-            "type": "boolean"
-          },
-          "optional": true
-        },
-        "doNotPublishWithoutExplicitApproval": {
-          "type": "objectAttribute",
-          "value": {
-            "type": "boolean"
           },
           "optional": true
         }
@@ -5060,163 +4881,63 @@
           "type": "string"
         }
       },
-      "heading": {
+      "openingLabel": {
         "type": "objectAttribute",
         "value": {
           "type": "string"
         },
         "optional": false
       },
-      "about": {
-        "type": "objectAttribute",
-        "value": {
-          "type": "inline",
-          "name": "portableText"
-        },
-        "optional": true
-      },
-      "capabilities": {
-        "type": "objectAttribute",
-        "value": {
-          "type": "array",
-          "of": {
-            "type": "string"
-          }
-        },
-        "optional": true
-      },
-      "peopleHeading": {
+      "openingHeadline": {
         "type": "objectAttribute",
         "value": {
           "type": "string"
         },
         "optional": false
       },
-      "peopleIntroduction": {
-        "type": "objectAttribute",
-        "value": {
-          "type": "string"
-        },
-        "optional": true
-      },
-      "people": {
-        "type": "objectAttribute",
-        "value": {
-          "type": "array",
-          "of": {
-            "type": "object",
-            "attributes": {
-              "_key": {
-                "type": "objectAttribute",
-                "value": {
-                  "type": "string"
-                }
-              }
-            },
-            "rest": {
-              "type": "inline",
-              "name": "aboutPerson"
-            }
-          }
-        },
-        "optional": true
-      },
-      "image": {
-        "type": "objectAttribute",
-        "value": {
-          "type": "inline",
-          "name": "editorialImage"
-        },
-        "optional": true
-      },
-      "imageAlt": {
-        "type": "objectAttribute",
-        "value": {
-          "type": "string"
-        },
-        "optional": true
-      },
-      "imageDecorative": {
-        "type": "objectAttribute",
-        "value": {
-          "type": "boolean"
-        },
-        "optional": true
-      },
-      "seo": {
-        "type": "objectAttribute",
-        "value": {
-          "type": "inline",
-          "name": "seoFields"
-        },
-        "optional": true
-      }
-    }
-  },
-  {
-    "name": "reelPage",
-    "type": "document",
-    "attributes": {
-      "_id": {
-        "type": "objectAttribute",
-        "value": {
-          "type": "string"
-        }
-      },
-      "_type": {
-        "type": "objectAttribute",
-        "value": {
-          "type": "string",
-          "value": "reelPage"
-        }
-      },
-      "_createdAt": {
-        "type": "objectAttribute",
-        "value": {
-          "type": "string"
-        }
-      },
-      "_updatedAt": {
-        "type": "objectAttribute",
-        "value": {
-          "type": "string"
-        }
-      },
-      "_rev": {
-        "type": "objectAttribute",
-        "value": {
-          "type": "string"
-        }
-      },
-      "enabled": {
-        "type": "objectAttribute",
-        "value": {
-          "type": "boolean"
-        },
-        "optional": true
-      },
-      "introEyebrow": {
+      "openingNote": {
         "type": "objectAttribute",
         "value": {
           "type": "string"
         },
         "optional": false
       },
-      "introHeadline": {
+      "windingHeadline": {
         "type": "objectAttribute",
         "value": {
           "type": "string"
         },
         "optional": false
       },
-      "introCue": {
+      "orbitHeadline": {
         "type": "objectAttribute",
         "value": {
           "type": "string"
         },
         "optional": false
       },
-      "fallbackEyebrow": {
+      "indexHeadline": {
+        "type": "objectAttribute",
+        "value": {
+          "type": "string"
+        },
+        "optional": false
+      },
+      "chaptersHeadline": {
+        "type": "objectAttribute",
+        "value": {
+          "type": "string"
+        },
+        "optional": false
+      },
+      "apertureHeadline": {
+        "type": "objectAttribute",
+        "value": {
+          "type": "string"
+        },
+        "optional": false
+      },
+      "fallbackLabel": {
         "type": "objectAttribute",
         "value": {
           "type": "string"
@@ -5237,7 +4958,7 @@
         },
         "optional": false
       },
-      "closingEyebrow": {
+      "closingLabel": {
         "type": "objectAttribute",
         "value": {
           "type": "string"

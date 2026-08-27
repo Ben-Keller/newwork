@@ -102,7 +102,7 @@ In Sanity Manage, open project **New Work → API → Webhooks** and create a do
 Filter:
 
 ```groq
-_type in ["siteSettings", "workPage", "reelPage", "aboutPage", "contactPage", "footerSettings", "project", "mediaItem", "note"]
+_type in ["siteSettings", "workPage", "aboutPage", "contactPage", "footerSettings", "work", "project", "mediaItem", "note"]
 ```
 
 Projection/body:
@@ -128,6 +128,62 @@ Do not share or screenshot the webhook configuration while the authorization hea
 3. Confirm the event is shown as a manual/workflow dispatch, the production build passes, and Pages deploys.
 4. Open the deployed page and confirm the content change.
 5. Restore the text if it was only a test; that publish should trigger a second rebuild.
+
+## Complete end-to-end acceptance test
+
+Run this after changing the schema, public GROQ, deployment workflow, or webhook. It proves the code path and the editorial path separately, then proves they converge on the same deployed site.
+
+### A. Local and production-content preflight
+
+From `studio-new-work`:
+
+```bash
+npm run schema:validate
+npm run typegen
+npm run typecheck
+npm run lint
+npm run content:validate:ci
+```
+
+From `new-work-site`:
+
+```bash
+pnpm sanity:audit
+pnpm typecheck
+pnpm lint
+pnpm test
+PUBLIC_CONTENT_MODE=production PUBLIC_SANITY_PROJECT_ID=7un4plyu PUBLIC_SANITY_DATASET=production PUBLIC_SITE_URL=https://ben-keller.github.io PUBLIC_BASE_PATH=/ pnpm build
+PUBLIC_CONTENT_MODE=production pnpm verify:dist
+PLAYWRIGHT_CONTENT_MODE=production PLAYWRIGHT_PREVIEW_SERVER=1 pnpm exec playwright test tests/e2e/cms-production.spec.ts --project=desktop-chromium --project=mobile-chromium --workers=1
+PUBLIC_CONTENT_MODE=production PUBLIC_SANITY_PROJECT_ID=7un4plyu PUBLIC_SANITY_DATASET=production PUBLIC_SITE_URL=https://ben-keller.github.io PUBLIC_BASE_PATH=/newwork pnpm exec astro build
+PUBLIC_CONTENT_MODE=production pnpm verify:dist
+```
+
+Passing means the schema is valid, every production document has zero schema errors, the published graph uses current document/reference types, every approved Work survives the public safety filter, the static output contains no internal fields or secrets, and the browser can open every generated Work route plus the About and Contact singletons.
+
+### B. Sanity publish → GitHub Pages
+
+1. In **About page**, copy the exact current **Opening note** to a private scratchpad.
+2. Append a unique harmless marker such as `E2E 2026-08-27 13:45`, then publish.
+3. In **Sanity Manage → API → Webhooks**, open the delivery log for `Rebuild GitHub Pages on publish`. Confirm the delivery succeeded. GitHub's workflow-dispatch endpoint normally returns HTTP `204`.
+4. In GitHub **Actions → Deploy production site**, confirm a `workflow_dispatch` run started after that delivery.
+5. Require every step to pass, especially **Audit the published Sanity release graph**, **Build published Sanity content for verification**, **Verify the published CMS graph**, and **Publish GitHub Pages**.
+6. Hard-refresh `https://ben-keller.github.io/newwork/about` and confirm the unique marker is visible. An ordinary refresh can otherwise show a cached page.
+7. Restore the exact original Opening note and publish again. Confirm the second webhook delivery, Action, deployment, and restored live text.
+
+Do not use a rights field, slug, navigation destination, project order, or media reference as a canary. Those can change routes or public eligibility and are inappropriate for a routine transport test.
+
+### C. Git code → GitHub Pages and Studio
+
+1. Run section A and review `git diff` before committing.
+2. Push the reviewed commit to `main`.
+3. Match the commit SHA shown in GitHub Actions to `git rev-parse HEAD`; never accept a green run for a different commit as evidence.
+4. A frontend-only change should start **Deploy production site**. A Studio UI-only change should start **Deploy Sanity Studio**. A schema/shared-content-contract change intentionally starts both because both consumers must be verified.
+5. Confirm the Studio job passes schema validation, TypeGen drift, typecheck, lint, production-document validation, build, schema upload, and deploy.
+6. Confirm the site job passes the release audit, code gates, production build, output audit, CMS browser smoke test, repository-path rebuild, and Pages deploy.
+7. Open the deployed Studio and the affected public routes in a private window. Confirm the Studio exposes the expected fields and the live site is serving the new commit/content combination.
+
+If any check fails, do not retry by weakening a validation rule or bypassing the safety filter. Fix the schema, content, query, or deployment input that the failed step identifies, then run the same path again.
 
 ## Local daily workflow
 

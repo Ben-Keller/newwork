@@ -7,7 +7,7 @@ export const presentationResolve: PresentationPluginOptions['resolve'] = {
       message: 'Open the Work page preview',
       tone: 'positive',
     }),
-    reelPage: defineLocations({
+    aboutPage: defineLocations({
       locations: [{title: 'About page', href: '/about'}],
       message: 'Open the About page preview',
       tone: 'positive',

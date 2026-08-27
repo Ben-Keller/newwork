@@ -45,6 +45,9 @@ const tabletColumnResponse = tabletColumn
   ? COMPACT_COLUMN_SCROLL_RESPONSES[tabletColumn - 1]
   : undefined;
 const usesWideCard = project.cover.cardRatio === 'wideFeature' && index >= 8;
+const doorwayVideo = entry.asset?.kind === 'video' ? entry.asset.video : undefined;
+const previewSource = doorwayVideo?.src
+  || (!entry.asset && !entry.photo ? project.cover.previewVideo : undefined);
 const galleryImageSizes = buildGalleryImageSizes(entry.image, {
   cardAspect: usesWideCard ? 3 / 2 : 4 / 5,
   mobileSource: project.cover.mobilePoster,
@@ -77,6 +80,7 @@ const galleryImageSizes = buildGalleryImageSizes(entry.image, {
     href={withBase(entry.href)}
     data-project-link
     data-project-slug={entry.id}
+    data-gallery-asset-link={entry.asset ? true : undefined}
     data-gallery-photo-link={entry.photo ? true : undefined}
   >
     <span class="sr-only">{project.title}</span>
@@ -84,17 +88,17 @@ const galleryImageSizes = buildGalleryImageSizes(entry.image, {
       <div class="project-card__media-inner" data-card-media>
         <ResponsiveImage
           image={entry.image}
-          mobileImage={entry.photo ? undefined : project.cover.mobilePoster}
+          mobileImage={entry.asset || entry.photo ? undefined : project.cover.mobilePoster}
           sizes={galleryImageSizes}
           eager={eager}
           priority={index === 0}
           galleryPreload
         />
-        {!entry.photo && project.cover.previewVideo ? (
+        {previewSource ? (
           <PreviewVideo
-            source={project.cover.previewVideo}
-            poster={project.cover.previewPosterOverride?.src || project.cover.poster.src}
-            mobilePoster={project.cover.mobilePoster?.src}
+            source={previewSource}
+            poster={doorwayVideo?.poster?.src || project.cover.previewPosterOverride?.src || entry.image.src}
+            mobilePoster={entry.asset ? undefined : project.cover.mobilePoster?.src}
             title={project.title}
             placeholder={project.cover.previewIsPlaceholder}
           />

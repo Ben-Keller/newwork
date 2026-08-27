@@ -1,5 +1,6 @@
 import {ProjectsIcon} from '@sanity/icons/Projects'
 import {defineField, defineType} from 'sanity'
+import {SANITY_API_VERSION} from '../../sanity.constants'
 
 export const workPlacement = defineType({
   name: 'workPlacement',
@@ -8,34 +9,33 @@ export const workPlacement = defineType({
   icon: ProjectsIcon,
   fields: [
     defineField({
-      name: 'work',
-      title: 'Work',
-      type: 'reference',
-      to: [{type: 'work'}],
-      options: {
-        disableNew: true,
-        filter: 'editorialStatus in ["ready", "approved"]',
-      },
-      validation: (Rule) => Rule.required(),
-    }),
-    defineField({
-      name: 'doorwayPhoto',
-      title: 'Photo doorway',
+      name: 'asset',
+      title: 'Gallery asset',
       type: 'reference',
       to: [{type: 'mediaItem'}],
-      description: 'Optional. For Photo work, choose which image appears here and becomes the page hero when clicked.',
-      options: {disableNew: true, filter: 'kind == "image"'},
-      validation: (Rule) => Rule.custom(async (value, context) => {
+      description: 'Choose any approved image or video Asset. Its linked Project controls the destination page.',
+      options: {
+        disableNew: true,
+        filter: 'kind in ["image", "video"] && defined(project)',
+      },
+      validation: (Rule) => Rule.required().custom(async (value, context) => {
         if (!value || typeof value !== 'object' || !('_ref' in value)) return true
-        const parent = context.parent as {work?: {_ref?: string}} | undefined
-        const workId = parent?.work?._ref
-        const photoId = (value as {_ref?: string})._ref
-        if (!workId || !photoId) return true
-        const included = await context.getClient({apiVersion: '2025-02-19'}).fetch<boolean>(
-          `count(*[_id == $workId && $photoId in photos[]._ref]) > 0`,
-          {workId, photoId},
+        const assetId = String((value as {_ref?: string})._ref || '').replace(/^drafts\./u, '')
+        const eligible = await context.getClient({apiVersion: SANITY_API_VERSION}).fetch<boolean>(
+          `count(*[
+            _type == "mediaItem" &&
+            _id == $assetId &&
+            defined(project) &&
+            kind in ["image", "video"] &&
+            select(kind == "image" => defined(image.asset), defined(poster.asset)) &&
+            rightsApprovalStatus == "approved" &&
+            length(coalesce(rightsApprovalEvidence, "")) > 0 &&
+            (!defined(rightsExpiresAt) || rightsExpiresAt > now()) &&
+            (decorative == true || length(coalesce(alt, "")) > 0)
+          ]) > 0`,
+          {assetId},
         )
-        return included ? true : 'Choose a photo that belongs to this Work\'s Photoshoot images.'
+        return eligible ? true : 'Choose a published visual Asset with a linked Project, accessibility text, and current rights approval.'
       }),
     }),
     defineField({
@@ -74,16 +74,16 @@ export const workPlacement = defineType({
   ],
   preview: {
     select: {
-      title: 'work.title',
-      media: 'doorwayPhoto.image',
-      fallbackMedia: 'work.cover.poster',
-      photo: 'doorwayPhoto.title',
+      title: 'asset.project.title',
+      media: 'asset.image',
+      fallbackMedia: 'asset.poster',
+      asset: 'asset.title',
       size: 'cardSize',
       treatment: 'treatment',
     },
-    prepare: ({title, media, fallbackMedia, photo, size, treatment}) => ({
-      title: title || 'Choose a Work item',
-      subtitle: [photo, size || 'standard', treatment !== 'standard' ? treatment : undefined]
+    prepare: ({title, media, fallbackMedia, asset, size, treatment}) => ({
+      title: title || 'Choose a gallery Asset',
+      subtitle: [asset, size || 'standard', treatment !== 'standard' ? treatment : undefined]
         .filter(Boolean)
         .join(' · '),
       media: media || fallbackMedia,

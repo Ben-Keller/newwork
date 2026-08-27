@@ -6,10 +6,10 @@ test('the About experience remains complete and navigable without JavaScript', a
   const response = await page.goto('/about');
   expect(response?.status()).toBe(200);
 
-  const reel = page.locator('[data-reel-experience]');
-  await expect(reel.locator('.reel-motion-stage')).toBeHidden();
-  await expect(reel.locator('.reel-static-fallback')).toBeVisible();
-  await expect(reel.locator('.reel-fallback-card')).toHaveCount(6);
+  const about = page.locator('[data-about-experience]');
+  await expect(about.locator('.reel-motion-stage')).toBeHidden();
+  await expect(about.locator('.reel-static-fallback')).toBeVisible();
+  await expect(about.locator('.reel-fallback-card')).toHaveCount(6);
   await expect(page.getByRole('heading', {
     level: 1,
     name: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',

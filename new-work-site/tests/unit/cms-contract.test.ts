@@ -13,7 +13,23 @@ const settings = {
   siteName: 'New Work',
   defaultSeo: {},
   workPage: {reel: {}},
-  aboutPage: {},
+  aboutPage: {
+    openingLabel: 'Opening',
+    openingHeadline: 'Opening headline',
+    openingNote: 'Opening note',
+    windingHeadline: 'Winding headline',
+    orbitHeadline: 'Orbit headline',
+    indexHeadline: 'Index headline',
+    chaptersHeadline: 'Chapters headline',
+    apertureHeadline: 'Aperture headline',
+    fallbackLabel: 'Accessible version',
+    fallbackHeadline: 'Accessible headline',
+    fallbackDescription: 'Accessible description',
+    closingLabel: 'Closing',
+    closingHeadline: 'What should we make next?',
+    ctaLabel: 'Contact',
+    ctaDestination: 'contact',
+  },
   contactPage: {},
   footer: {},
 };
@@ -50,30 +66,11 @@ describe('CMS payload boundary', () => {
     [{...settings, workPage: undefined}, 'workPage singleton'],
     [{...settings, workPage: {}}, 'workPage.reel'],
     [{...settings, aboutPage: undefined}, 'aboutPage singleton'],
+    [{...settings, aboutPage: {...settings.aboutPage, openingHeadline: ''}}, 'openingHeadline'],
     [{...settings, contactPage: undefined}, 'contactPage singleton'],
     [{...settings, footer: undefined}, 'footerSettings singleton'],
   ])('rejects malformed settings', (candidate, message) => {
     expect(() => parseCmsPayload({settings: candidate, projects: [], notes: []})).toThrow(message);
-  });
-
-  it('validates the optional people collection shape without rejecting draft entries', () => {
-    expect(() => parseCmsPayload({
-      settings: {...settings, aboutPeople: 'wrong'},
-      projects: [],
-      notes: [],
-    })).not.toThrow();
-
-    expect(() => parseCmsPayload({
-      settings: {...settings, aboutPage: {people: 'wrong'}},
-      projects: [],
-      notes: [],
-    })).toThrow('aboutPage.people must be an array');
-
-    expect(parseCmsPayload({
-      settings: {...settings, aboutPage: {people: [{}]}},
-      projects: [],
-      notes: [],
-    }).settings.aboutPage).toEqual({people: [{}]});
   });
 
   it('rejects non-record lists and reports the exact entry', () => {

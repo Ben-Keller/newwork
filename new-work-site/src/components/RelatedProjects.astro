@@ -36,10 +36,14 @@ const { previous, next } = Astro.props;
 </nav>
 
 <script>
+  import {writeStorageValue} from '../lib/browser-storage';
+
   const setupRestoreLinks = () => {
     document.querySelectorAll<HTMLAnchorElement>('[data-restore-work-scroll]:not([data-ready])').forEach((link) => {
       link.dataset.ready = 'true';
-      link.addEventListener('click', () => sessionStorage.setItem('new-work-restore-requested', 'true'));
+      link.addEventListener('click', () => {
+        writeStorageValue('session', 'new-work-restore-requested', 'true');
+      });
     });
   };
 

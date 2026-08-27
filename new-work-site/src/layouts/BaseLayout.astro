@@ -1,5 +1,5 @@
 ---
-import { ClientRouter, fade } from 'astro:transitions';
+import { ClientRouter } from 'astro:transitions';
 import Analytics from '../components/Analytics.astro';
 import MotionRuntime from '../components/MotionRuntime.astro';
 import OverlayScrollbar from '../components/OverlayScrollbar.astro';
@@ -59,26 +59,21 @@ const brandTone = pageTheme === 'dark' ? 'light' : 'dark';
 const showNotes = settings.notesEnabled && notes.length > 0;
 const destinationHref = {
   work: withBase('/'),
-  reel: withBase('/about'),
   about: withBase('/about'),
   notes: withBase('/notes'),
   contact: withBase('/contact'),
 };
-const reelAvailable = settings.reelPage.enabled || mode === 'prototype';
-const configuredNavigation = reelAvailable
-  && !settings.navigation.some((item) => item.destination === 'reel')
+const configuredNavigation = !settings.navigation.some((item) => item.destination === 'about')
   ? settings.navigation.flatMap((item) => item.destination === 'work'
-    ? [item, {label: 'About', destination: 'reel' as const, visible: true}]
+    ? [item, {label: 'About', destination: 'about' as const, visible: true}]
     : [item])
   : settings.navigation;
 const navigationItems = configuredNavigation
   .filter((item) => item.visible
-    && (item.destination !== 'notes' || showNotes)
-    && item.destination !== 'about'
-    && (item.destination !== 'reel' || reelAvailable))
+    && (item.destination !== 'notes' || showNotes))
   .map((item) => ({
     href: destinationHref[item.destination],
-    label: item.destination === 'reel' ? 'About' : item.label,
+    label: item.label,
     match: 'section' as const,
   }));
 const galleryOrderToolsEnabled = false;
@@ -86,16 +81,11 @@ const routePath = withoutBase(Astro.url.pathname).replace(/\/+$/u, '') || '/';
 const showFooterContact = routePath !== '/contact';
 const footerExploreCandidates = settings.footer.exploreLinks.flatMap((link) => {
   if (link.destination === 'notes' && !showNotes) return [];
-  if ((link.destination === 'reel' || link.destination === 'about') && !reelAvailable) return [];
   const href = link.destination === 'external' ? link.url : destinationHref[link.destination];
-  const label = link.destination === 'reel' || link.destination === 'about'
-    ? 'About'
-    : link.label;
-  return href ? [{href, label}] : [];
+  return href ? [{href, label: link.label}] : [];
 });
 const footerExploreLinks = footerExploreCandidates.filter((link, index, links) =>
   links.findIndex((candidate) => candidate.href === link.href) === index);
-const routeTransition = fade({ duration: 160 });
 const safePageAccent = pageAccent && /^#[\da-f]{6}$/iu.test(pageAccent) ? pageAccent : undefined;
 const pageStyle = safePageAccent ? `--project-page-accent:${safePageAccent}` : undefined;
 const themeColor = pageClass.includes('project-page')
@@ -114,7 +104,7 @@ const isWorkIndex = pageClass.includes('home-page');
 const isWorkProject = pageClass.includes('project-page');
 ---
 <!doctype html>
-<html lang="en" transition:animate={routeTransition}>
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
@@ -167,7 +157,7 @@ const isWorkProject = pageClass.includes('project-page');
         />
       </>
     ) : null}
-    <ClientRouter fallback="animate" />
+    <ClientRouter fallback="swap" />
     <SeoHead
       siteName={headerSiteName}
       title={title}

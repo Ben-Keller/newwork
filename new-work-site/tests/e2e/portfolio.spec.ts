@@ -1205,7 +1205,7 @@ test('the manifesto reveals letters in direct proportion to reversible page scro
 test('prototype filler copy completes the editorial review surfaces', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/about');
-  await expect(page.locator('[data-reel-experience]')).toHaveAttribute('data-mode', 'fallback');
+  await expect(page.locator('[data-about-experience]')).toHaveAttribute('data-mode', 'fallback');
   await expect(page.getByRole('heading', { level: 1, name: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.' }))
     .toBeVisible();
   await expect(page.getByRole('heading', { level: 2, name: 'What should we make next?' }))
@@ -1553,7 +1553,14 @@ test('every fixture project has one gallery-derived hero and populated lower con
       '[data-project-header] [data-project-hero-media][data-first-media="true"]',
     );
     await expect(hero, `${route} should have one composed hero`).toHaveCount(1);
-    await expect(hero.locator('img'), `${route} should retain its gallery poster`).toHaveCount(1);
+    const heroType = await hero.getAttribute('data-project-block');
+    if (heroType === 'shortLoop') {
+      await expect(hero.locator('img'), `${route} should not layer a poster under its opening video`)
+        .toHaveCount(0);
+      await expect(hero.locator('video[data-short-loop]')).toHaveCount(1);
+    } else {
+      await expect(hero.locator('img'), `${route} should retain its still gallery hero`).toHaveCount(1);
+    }
     await expect(page.locator('.media-stream [data-first-media="true"]')).toHaveCount(0);
     await expect(page.locator('[data-project-placeholder-content]')).toBeAttached();
     expect(await page.locator('.media-stream [data-project-block], [data-project-placeholder-content]').count())
@@ -1577,6 +1584,137 @@ test('the Olympics project keeps connector punctuation with its neighboring titl
   ]);
   await expect(page.locator('[data-project-hero-media][data-project-block="shortLoop"] video'))
     .toBeAttached();
+});
+
+test('project navigation keeps the gallery in flow until the incoming page replaces it', async ({ page }) => {
+  await page.setViewportSize({ width: 1_440, height: 1_000 });
+  await page.goto('/');
+
+  const projectLink = page.locator('[data-project-link]').first();
+  await projectLink.scrollIntoViewIfNeeded();
+  const before = await page.evaluate(() => {
+    const footer = document.querySelector<HTMLElement>('[data-site-footer]');
+    if (!footer) throw new Error('The site footer is missing.');
+    return {
+      footerTop: footer.getBoundingClientRect().top,
+      pageHeight: document.documentElement.scrollHeight,
+      scrollY: window.scrollY,
+    };
+  });
+
+  let releaseProjectRequest = (): void => undefined;
+  const projectRequestGate = new Promise<void>((resolve) => {
+    releaseProjectRequest = resolve;
+  });
+  await page.route('**/work/**', async (route) => {
+    await projectRequestGate;
+    await route.continue();
+  }, { times: 1 });
+
+  await projectLink.evaluate((element) => (element as HTMLAnchorElement).click());
+  const flowHold = page.locator('[data-route-gallery-flow-hold]');
+  await expect(flowHold).toBeAttached();
+  const during = await page.evaluate(() => {
+    const footer = document.querySelector<HTMLElement>('[data-site-footer]');
+    if (!footer) throw new Error('The site footer is missing.');
+    return {
+      footerTop: footer.getBoundingClientRect().top,
+      pageHeight: document.documentElement.scrollHeight,
+      scrollY: window.scrollY,
+    };
+  });
+
+  expect(Math.abs(during.footerTop - before.footerTop)).toBeLessThan(1);
+  expect(Math.abs(during.pageHeight - before.pageHeight)).toBeLessThanOrEqual(1);
+  expect(Math.abs(during.scrollY - before.scrollY)).toBeLessThan(1);
+
+  releaseProjectRequest();
+  await page.waitForURL(/\/work\//u);
+  await expect(flowHold).toHaveCount(0);
+});
+
+test('project return keeps site chrome stable and the footer outside the transition', async ({ page }) => {
+  await page.goto('/');
+
+  const projectLink = page.locator('[data-project-slug="arc"]');
+  await projectLink.scrollIntoViewIfNeeded();
+  await projectLink.evaluate((element) => (element as HTMLAnchorElement).click());
+  await page.waitForURL('**/work/arc');
+  await page.waitForFunction(() => (
+    !document.documentElement.hasAttribute('data-work-project-transition')
+  ));
+  await page.locator(
+    '[data-project-hero-media][data-first-media="true"] .responsive-image',
+  ).evaluate((element) => { element.dataset.continuityProbe = 'return-veil-origin'; });
+
+  type ReturnChromeState = {
+    flowHeldFrames: number;
+    transitionFrames: number;
+    visibleFooterFrames: number;
+    veilOpacities: number[];
+  };
+  await page.evaluate(() => {
+    const routeWindow = window as Window & {
+      __returnChromeState?: Promise<ReturnChromeState>;
+    };
+    routeWindow.__returnChromeState = new Promise<ReturnChromeState>((resolve) => {
+      let flowHeldFrames = 0;
+      let transitionFrames = 0;
+      let visibleFooterFrames = 0;
+      const veilOpacities: number[] = [];
+      let started = false;
+      const startedAt = performance.now();
+      const sample = () => {
+        const routeActive = document.documentElement.dataset.workProjectTransition === 'to-gallery';
+        if (routeActive) {
+          started = true;
+          transitionFrames += 1;
+          if (document.querySelector('[data-route-gallery-flow-hold]')) flowHeldFrames += 1;
+          const veil = document.querySelector<HTMLElement>('[data-route-project-veil]');
+          if (veil) veilOpacities.push(Number.parseFloat(getComputedStyle(veil).opacity));
+          const footer = document.querySelector<HTMLElement>('[data-site-footer]');
+          if (footer) {
+            const rect = footer.getBoundingClientRect();
+            const styles = getComputedStyle(footer);
+            if (
+              styles.visibility !== 'hidden'
+              && Number.parseFloat(styles.opacity) > 0
+              && rect.top < window.innerHeight
+              && rect.bottom > 0
+            ) visibleFooterFrames += 1;
+          }
+        }
+        if (
+          (started && !routeActive && window.location.pathname === '/')
+          || performance.now() - startedAt > 4_000
+        ) {
+          resolve({flowHeldFrames, transitionFrames, visibleFooterFrames, veilOpacities});
+          return;
+        }
+        requestAnimationFrame(sample);
+      };
+      requestAnimationFrame(sample);
+    });
+  });
+
+  await page.locator('[data-project-overlay-return]').evaluate((element) => (
+    (element as HTMLAnchorElement).click()
+  ));
+  await page.waitForURL((url) => url.pathname === '/');
+  const returnState = await page.evaluate(() => (
+    (window as Window & { __returnChromeState?: Promise<ReturnChromeState> })
+      .__returnChromeState
+  ));
+
+  expect(returnState?.transitionFrames).toBeGreaterThan(2);
+  expect(returnState?.flowHeldFrames).toBeGreaterThan(2);
+  expect(returnState?.visibleFooterFrames).toBe(0);
+  expect(returnState?.veilOpacities.length).toBeGreaterThan(2);
+  expect((returnState?.veilOpacities.at(0) ?? 0)).toBeGreaterThan(
+    returnState?.veilOpacities.at(-1) ?? 1,
+  );
+  await expect(page.locator('[data-continuity-probe="return-veil-origin"]')).toHaveCount(1);
+  await expect(page.locator('[data-route-gallery-flow-hold]')).toHaveCount(0);
 });
 
 test('route media keeps the original node continuous through the centralized route transaction', async ({ page }, testInfo) => {
@@ -1666,7 +1804,10 @@ test('route media keeps the original node continuous through the centralized rou
     type VideoPortalState = {
       destinationEmpty: boolean;
       destinationVideoCount: number;
+      destinationBackground: string | null;
+      panelOpacity: string | null;
       paused: boolean;
+      portalBackground: string;
       posterVisibility: string | null;
     };
     await page.evaluate(() => {
@@ -1680,10 +1821,17 @@ test('route media keeps the original node continuous through the centralized rou
           const destination = document.querySelector<HTMLElement>('[data-project-hero-media]');
           if (!portal || !(video instanceof HTMLVideoElement) || !destination) return false;
           const poster = destination.querySelector<HTMLElement>('.hosted-video > .responsive-image');
+          const destinationFrame = destination.querySelector<HTMLElement>('.hosted-video');
+          const panel = document.querySelector<HTMLElement>('[data-project-overlay-panel]');
           resolve({
             destinationEmpty: destination.hasAttribute('data-route-media-destination-empty'),
             destinationVideoCount: destination.querySelectorAll('video').length,
+            destinationBackground: destinationFrame
+              ? getComputedStyle(destinationFrame).backgroundColor
+              : null,
+            panelOpacity: panel ? getComputedStyle(panel).opacity : null,
             paused: video.paused,
+            portalBackground: getComputedStyle(portal).backgroundColor,
             posterVisibility: poster ? getComputedStyle(poster).visibility : null,
           });
           return true;
@@ -1708,8 +1856,11 @@ test('route media keeps the original node continuous through the centralized rou
     expect(videoPortalState).toEqual({
       destinationEmpty: true,
       destinationVideoCount: 0,
+      destinationBackground: 'rgba(0, 0, 0, 0)',
+      panelOpacity: '1',
       paused: false,
-      posterVisibility: 'hidden',
+      portalBackground: 'rgba(0, 0, 0, 0)',
+      posterVisibility: null,
     });
     const outboundVideoHandoff = page.locator('[data-continuity-probe="same-video-node"]');
     await expect(outboundVideoHandoff).toBeAttached();
@@ -1729,6 +1880,8 @@ test('route media keeps the original node continuous through the centralized rou
     );
     await expect(projectLoop).toHaveAttribute('data-continuity-probe', 'same-video-node');
     await expect(projectLoop).toHaveAttribute('data-route-video-persisted', 'true');
+    await expect(projectLoop).toHaveCSS('object-fit', 'contain');
+    await expect(projectLoop).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
     await expect.poll(() => projectLoop.evaluate((video) => (
       (video as HTMLVideoElement).currentTime
     ))).toBeGreaterThan(1.25);
@@ -1738,8 +1891,79 @@ test('route media keeps the original node continuous through the centralized rou
       await video.play();
     });
 
+    type ReturnGalleryMotionState = {
+      cardTops: number[];
+      layerStates: Array<string | null>;
+      flowHoldCounts: number[];
+      visibleFooterFrames: number;
+    };
+    await page.evaluate((targetSlug) => {
+      const routeWindow = window as Window & {
+        __returnGalleryMotion?: Promise<ReturnGalleryMotionState>;
+      };
+      routeWindow.__returnGalleryMotion = new Promise<ReturnGalleryMotionState>((resolve) => {
+        const cardTops: number[] = [];
+        const layerStates: Array<string | null> = [];
+        const flowHoldCounts: number[] = [];
+        let visibleFooterFrames = 0;
+        const startedAt = performance.now();
+        let portalSeen = false;
+        const sample = () => {
+          const portal = document.querySelector('[data-route-media-portal]');
+          const card = document.querySelector<HTMLElement>(
+            `[data-gallery-item-id="${CSS.escape(targetSlug)}"] .project-card__media`,
+          );
+          const layer = document.querySelector<HTMLElement>('[data-route-gallery-layer]');
+          if (portal) {
+            portalSeen = true;
+            if (card) cardTops.push(card.getBoundingClientRect().top);
+            layerStates.push(layer?.dataset.galleryLayerState ?? null);
+            flowHoldCounts.push(document.querySelectorAll('[data-route-gallery-flow-hold]').length);
+            const footer = document.querySelector<HTMLElement>('[data-site-footer]');
+            if (footer) {
+              const footerRect = footer.getBoundingClientRect();
+              const footerStyles = getComputedStyle(footer);
+              if (
+                footerStyles.visibility !== 'hidden'
+                && Number.parseFloat(footerStyles.opacity) > 0
+                && footerRect.top < window.innerHeight
+                && footerRect.bottom > 0
+              ) visibleFooterFrames += 1;
+            }
+          }
+          if ((portalSeen && !portal) || performance.now() - startedAt > 3_000) {
+            resolve({cardTops, layerStates, flowHoldCounts, visibleFooterFrames});
+            return;
+          }
+          requestAnimationFrame(sample);
+        };
+        requestAnimationFrame(sample);
+      });
+    }, motionSlug);
+
     await page.locator('[data-project-overlay-return]').click({ noWaitAfter: true });
+    const returnPortal = page.locator('[data-route-media-portal]');
+    await expect(returnPortal).toBeAttached();
+    await expect(returnPortal).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+    const emptyReturnTarget = page.locator(
+      `[data-gallery-item-id="${motionSlug}"] .project-card__media[data-route-media-destination-empty]`,
+    );
+    await expect(emptyReturnTarget).toBeAttached();
+    await expect(emptyReturnTarget).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
     await page.waitForURL((url) => url.pathname === '/');
+    const returnGalleryMotion = await page.evaluate(() => (
+      (window as Window & {
+        __returnGalleryMotion?: Promise<ReturnGalleryMotionState>;
+      }).__returnGalleryMotion
+    ));
+    expect(returnGalleryMotion?.cardTops.length).toBeGreaterThan(2);
+    expect(returnGalleryMotion?.layerStates.every((state) => state === 'background')).toBe(true);
+    expect(returnGalleryMotion?.flowHoldCounts.every((count) => count === 1)).toBe(true);
+    expect(returnGalleryMotion?.visibleFooterFrames).toBe(0);
+    expect(
+      Math.max(...(returnGalleryMotion?.cardTops ?? [0]))
+      - Math.min(...(returnGalleryMotion?.cardTops ?? [0])),
+    ).toBeLessThan(1);
     const returnVideoHandoff = page.locator('[data-continuity-probe="same-video-node"]');
     await expect(returnVideoHandoff).toBeAttached();
     await expect(returnVideoHandoff).toHaveAttribute('data-route-media-handoff', 'settled');
@@ -1754,9 +1978,10 @@ test('route media keeps the original node continuous through the centralized rou
     );
     await expect(returnedPreview).toHaveAttribute('data-continuity-probe', 'same-video-node');
     await expect(returnedPreview).toHaveAttribute('data-route-video-persisted', 'true');
-  await expect.poll(() => returnedPreview.evaluate((video) => (
-    (video as HTMLVideoElement).currentTime
-  ))).toBeGreaterThan(.5);
+    await expect.poll(() => returnedPreview.evaluate((video) => (
+      (video as HTMLVideoElement).currentTime
+    ))).toBeGreaterThan(.5);
+    await expect(page.locator('[data-route-gallery-flow-hold]')).toHaveCount(0);
     return;
   }
 

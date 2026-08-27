@@ -72,6 +72,33 @@ if (!process.env.PUBLIC_CLOUDFLARE_ANALYTICS_TOKEN && headers.includes('static.c
 }
 
 const mode = process.env.PUBLIC_CONTENT_MODE || 'prototype';
+if (mode === 'production') {
+  const legacyGalleryPages = htmlFiles.filter((file) =>
+    path.relative(root, file).split(path.sep)[0] === 'gallery',
+  );
+  if (legacyGalleryPages.length) {
+    failures.push(`Production output contains ${legacyGalleryPages.length} prototype-only gallery redirects.`);
+  }
+
+  const homeHtml = await readFile(path.join(root, 'index.html'), 'utf8');
+  const workHrefs = [...homeHtml.matchAll(/href="([^"?#]*\/work\/[^"?#]+)"/giu)]
+    .map((match) => match[1]);
+  if (!workHrefs.length) failures.push('Production home output has no Work links.');
+  for (const href of new Set(workHrefs)) {
+    const workIndex = href.indexOf('/work/');
+    const route = workIndex >= 0 ? href.slice(workIndex + 1).replace(/\/$/u, '') : '';
+    const target = path.resolve(root, route, 'index.html');
+    if (!route || !target.startsWith(`${root}${path.sep}`)) {
+      failures.push(`Production home output contains an unsafe Work link ${href}.`);
+      continue;
+    }
+    try {
+      await stat(target);
+    } catch {
+      failures.push(`Production home output links to missing route ${href}.`);
+    }
+  }
+}
 if (mode !== 'production') {
   for (const file of htmlFiles) {
     const html = await readFile(file, 'utf8');

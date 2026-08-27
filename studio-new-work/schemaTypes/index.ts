@@ -14,12 +14,9 @@ import {contactPage} from './documents/contactPage'
 import {footerSettings} from './documents/footerSettings'
 import {mediaItem} from './documents/mediaItem'
 import {work} from './documents/project'
-import {reelPage} from './documents/reelPage'
 import {siteSettings} from './documents/siteSettings'
 import {workPage} from './documents/workPage'
 import {brandAsset} from './objects/brandAsset'
-import {aboutPerson} from './objects/aboutPerson'
-import {aboutWork} from './objects/aboutWork'
 import {contributor} from './objects/contributor'
 import {coverMedia} from './objects/coverMedia'
 import {credit} from './objects/credit'
@@ -40,7 +37,6 @@ import {workPlacement} from './objects/projectPlacement'
 export const schemaTypes = [
   siteSettings,
   workPage,
-  reelPage,
   aboutPage,
   contactPage,
   footerSettings,
@@ -48,8 +44,6 @@ export const schemaTypes = [
   mediaItem,
   note,
   portableText,
-  aboutPerson,
-  aboutWork,
   brandAsset,
   editorialImage,
   editorialFile,

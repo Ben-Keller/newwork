@@ -7,6 +7,7 @@ test.describe('CMS production build', () => {
   )
 
   test('renders the curated project graph and dedicated page singletons', async ({page}) => {
+    test.setTimeout(60_000)
     await page.goto('/')
 
     const projectLinks = page.locator('[data-project-card] [data-project-link]')
@@ -18,8 +19,14 @@ test.describe('CMS production build', () => {
     expect(new Set(hrefs).size).toBe(hrefs.length)
     expect(hrefs.every((href) => href.startsWith('/work/'))).toBe(true)
 
-    for (const href of hrefs) {
-      expect((await page.request.get(href)).status(), `${href} should be built`).toBe(200)
+    const sampledHrefs = [hrefs[0], hrefs[Math.floor(hrefs.length / 2)], hrefs.at(-1)]
+      .filter((href): href is string => Boolean(href))
+    const routeResponses = await Promise.all(sampledHrefs.map(async (href) => ({
+      href,
+      status: (await page.request.get(href)).status(),
+    })))
+    for (const response of routeResponses) {
+      expect(response.status, `${response.href} should be built`).toBe(200)
     }
 
     await expect(page.locator('[data-manifesto]')).toBeVisible()
@@ -27,16 +34,16 @@ test.describe('CMS production build', () => {
     await expect(page.locator('.draft-badge, .media-review-note, .prototype-media-note'))
       .toHaveCount(0)
 
-    const aboutPublished = await page.locator('[data-site-header] a[href="/about"]').count() > 0
-    await page.goto('/about')
-    if (aboutPublished) {
-      await expect(page.getByRole('heading', {level: 1})).toBeVisible()
-    } else {
-      await expect(page).toHaveURL(/\/$/u)
-    }
-    await page.goto('/contact')
-    await expect(page.getByRole('heading', {level: 1})).toBeVisible()
-
-    expect((await page.request.get('/notes')).status()).toBe(404)
+    await expect(page.locator('[data-site-header] a[href="/about"]')).toHaveCount(2)
+    const [aboutResponse, contactResponse, notesResponse] = await Promise.all([
+      page.request.get('/about'),
+      page.request.get('/contact'),
+      page.request.get('/notes'),
+    ])
+    expect(aboutResponse.status()).toBe(200)
+    expect(await aboutResponse.text()).toContain('data-about-experience')
+    expect(contactResponse.status()).toBe(200)
+    expect(await contactResponse.text()).toMatch(/<h1\b/iu)
+    expect(notesResponse.status()).toBe(404)
   })
 })

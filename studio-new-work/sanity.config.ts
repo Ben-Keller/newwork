@@ -8,7 +8,7 @@ import {presentationResolve} from './presentation'
 import {structure} from './structure'
 import {SANITY_DATASET, SANITY_PROJECT_ID} from './sanity.constants'
 
-const SINGLETONS = ['siteSettings', 'workPage', 'reelPage', 'aboutPage', 'contactPage', 'footerSettings']
+const SINGLETONS = ['siteSettings', 'workPage', 'aboutPage', 'contactPage', 'footerSettings']
 const CLIENT_HIDDEN_TYPES = ['note']
 const CONFIGURED_PREVIEW_ORIGIN = process.env.SANITY_STUDIO_PREVIEW_ORIGIN
 const PREVIEW_ORIGIN = CONFIGURED_PREVIEW_ORIGIN || (process.env.NODE_ENV === 'development' ? 'http://localhost:4321' : undefined)

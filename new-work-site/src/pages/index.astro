@@ -52,7 +52,12 @@ const preloadImageSizes = preloadEntry
   preloadImageSizes={preloadImageSizes}
 >
   <div class="logo-work-page" data-logo-work-page data-handoff="false" data-logo-page-ready="false">
-    <div class="logo-work-page__hero" data-logo-work-hero data-faded="false">
+    <div
+      class="logo-work-page__hero"
+      style="--logo-hero-background:#470000"
+      data-logo-work-hero
+      data-faded="false"
+    >
       <LogoMaskExperience projects={homeProjects} />
     </div>
 
@@ -87,7 +92,7 @@ const preloadImageSizes = preloadEntry
     position: fixed;
     z-index: 2;
     inset: 0;
-    background: var(--logo-hero-background, #787878);
+    background: var(--logo-hero-background, #470000);
     opacity: 1;
     pointer-events: none;
     transition: opacity 1200ms cubic-bezier(.22, 1, .36, 1);
@@ -156,6 +161,8 @@ const preloadImageSizes = preloadEntry
 </style>
 
 <script>
+  import {readStorageValue, writeStorageValue} from '../lib/browser-storage';
+
   declare global {
     interface Window {
       __newWorkLogoPageCleanup?: () => void;
@@ -163,10 +170,17 @@ const preloadImageSizes = preloadEntry
   }
 
   const initializeLogoWorkPage = () => {
+    const page = document.querySelector<HTMLElement>('[data-logo-work-page]');
+    if (!page || page.closest('[data-gallery-layer-state="background"]')) {
+      window.__newWorkLogoPageCleanup?.();
+      return;
+    }
+    // The component script and Astro's first page-load event can run back to
+    // back. Keep the first color cycle instead of tearing it down and choosing
+    // another one during the same paint sequence.
+    if (page.dataset.logoPageReady === 'true') return;
     window.__newWorkLogoPageCleanup?.();
 
-    const page = document.querySelector<HTMLElement>('[data-logo-work-page]');
-    if (page?.closest('[data-gallery-layer-state="background"]')) return;
     const hero = page?.querySelector<HTMLElement>('[data-logo-work-hero]');
     const content = page?.querySelector<HTMLElement>('[data-logo-work-content]');
     const header = document.querySelector<HTMLElement>('[data-site-header]');
@@ -185,8 +199,9 @@ const preloadImageSizes = preloadEntry
     let galleryScrollFrame = 0;
     const backgroundCycleDuration = 60_000;
     const backgroundCycleStartedAt = performance.now();
-    const backgroundStartingPhase = Math.random();
-    const backgroundStartHue = 60 * 35 / 71;
+    // Hue zero resolves to the server-painted #470000 first frame. The cycle
+    // therefore begins from the color already on screen and moves gradually.
+    const backgroundStartHue = 0;
     const backgroundEndHue = -240;
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const wheelQuietDelay = 180;
@@ -198,11 +213,7 @@ const preloadImageSizes = preloadEntry
     const restoreWorkOnLoad = (() => {
       if (openAtGallery) return true;
       if (document.querySelector('[data-work-gallery][data-gallery-restore="true"]')) return true;
-      try {
-        return window.sessionStorage.getItem('new-work-restore-requested') === 'true';
-      } catch {
-        return false;
-      }
+      return readStorageValue('session', 'new-work-restore-requested') === 'true';
     })();
 
     const setHandoff = (active: boolean) => {
@@ -275,8 +286,7 @@ const preloadImageSizes = preloadEntry
 
     const animateBackground = (time: number) => {
       backgroundFrame = 0;
-      const phase = (backgroundStartingPhase
-        + (time - backgroundCycleStartedAt) / backgroundCycleDuration) % 1;
+      const phase = ((time - backgroundCycleStartedAt) / backgroundCycleDuration) % 1;
       const bounceProgress = 1 - Math.abs(phase * 2 - 1);
       const hue = backgroundStartHue + (backgroundEndHue - backgroundStartHue) * bounceProgress;
       const color = automaticColor(hue);
@@ -371,11 +381,7 @@ const preloadImageSizes = preloadEntry
 
       if (revealNumber && !isEditable && !event.repeat && !event.metaKey && !event.ctrlKey && !event.altKey) {
         event.preventDefault();
-        try {
-          window.sessionStorage.setItem('new-work-logo-reveal', revealNumber);
-        } catch {
-          // Reloading still falls back to reveal 1 if session storage is unavailable.
-        }
+        writeStorageValue('session', 'new-work-logo-reveal', revealNumber);
         window.location.reload();
         return;
       }

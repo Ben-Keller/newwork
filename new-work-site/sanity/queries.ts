@@ -6,6 +6,22 @@
 
 import {defineQuery} from 'groq';
 
+export const PUBLIC_ASSET_FILTER = `
+  !(_id in path("drafts.**")) &&
+  defined(project) &&
+  defined(slug.current) && length(slug.current) > 0 &&
+  rightsApprovalStatus == "approved" &&
+  length(coalesce(rightsApprovalEvidence, "")) > 0 &&
+  (!defined(rightsExpiresAt) || rightsExpiresAt > now()) &&
+  (kind == "file" || decorative == true || length(coalesce(alt, "")) > 0) &&
+  select(
+    kind == "image" => defined(image.asset),
+    kind == "video" => defined(poster.asset) && (defined(videoFile.asset) || defined(videoUrl)),
+    kind == "file" => defined(file.asset),
+    false
+  )
+`;
+
 export const PUBLIC_PROJECT_FILTER = `
   !(_id in path("drafts.**")) &&
   (editorialStatus == "approved" || (!defined(editorialStatus) && visible == true)) &&
@@ -15,8 +31,11 @@ export const PUBLIC_PROJECT_FILTER = `
   (defined(editorialStatus) || needsReview != true) &&
   doNotPublishWithoutExplicitApproval != true &&
   (!defined(publishAt) || publishAt <= now()) &&
-  ((template == "photo" && defined(defaultPhoto->image.asset)) || (template != "photo" && defined(cover.poster.asset))) &&
-  (template == "photo" || length(coalesce(cover.alt, "")) > 0 || cover.decorative == true) &&
+  defined(cover.poster.asset) &&
+  (length(coalesce(cover.alt, "")) > 0 || cover.decorative == true) &&
+  count(*[_type == "mediaItem" && project._ref == ^._id]) > 0 &&
+  count(*[_type == "mediaItem" && project._ref == ^._id]) ==
+    count(*[_type == "mediaItem" && project._ref == ^._id && ${PUBLIC_ASSET_FILTER}]) &&
   cover.needsReview != true &&
   cover.previewIsPlaceholder != true &&
   cover.prototypeOnly != true &&
@@ -56,7 +75,7 @@ export const PUBLIC_PROJECT_FILTER = `
   seo.shareImage.needsApprovedMaster != true &&
   seo.shareImage.previewIsPlaceholder != true &&
   seo.shareImage.doNotPublishWithoutExplicitApproval != true &&
-  ((template == "photo" && count(photos) >= 2) || count(contentBlocks[_type in ["heroImage", "heroVideo", "fullBleedImage", "containedImage", "imagePair", "imageGrid", "video", "shortLoop"]]) > 0) &&
+  count(contentBlocks[_type in ["heroImage", "heroVideo", "fullBleedImage", "containedImage", "imagePair", "imageGrid", "video", "shortLoop"]]) > 0 &&
   count(contentBlocks[
     needsReview == true ||
     prototypeOnly == true ||
@@ -186,62 +205,6 @@ const SEO_PROJECTION = `{
   noIndex
 }`
 
-const ABOUT_WORK_PROJECTION = `{
-  _key,
-  title,
-  client,
-  url,
-  image${IMAGE_PROJECTION},
-  alt,
-  needsReview,
-  prototypeOnly,
-  doNotPublishWithoutExplicitApproval
-}`
-
-const ABOUT_PERSON_PROJECTION = `{
-  _key,
-  name,
-  projectOwner,
-  roleLabel,
-  bio,
-  selectedWork[]${ABOUT_WORK_PROJECTION},
-  needsReview,
-  prototypeOnly,
-  doNotPublishWithoutExplicitApproval
-}`
-
-const PUBLIC_ABOUT_PEOPLE_PROJECTION = `"people": people[
-  needsReview != true &&
-  prototypeOnly != true &&
-  doNotPublishWithoutExplicitApproval != true &&
-  length(coalesce(name, "")) > 0 &&
-  projectOwner in ["oliver", "michael", "collective", "other"] &&
-  count(bio) > 0
-] {
-  _key,
-  name,
-  projectOwner,
-  roleLabel,
-  bio,
-  "selectedWork": selectedWork[
-    needsReview != true &&
-    prototypeOnly != true &&
-    doNotPublishWithoutExplicitApproval != true &&
-    defined(image.asset) &&
-    image.needsReview != true &&
-    image.prototypeOnly != true &&
-    image.altNeedsReview != true &&
-    image.needsApprovedMaster != true &&
-    image.doNotPublishWithoutExplicitApproval != true &&
-    length(coalesce(title, "")) > 0
-  ]${ABOUT_WORK_PROJECTION},
-  needsReview,
-  prototypeOnly,
-  doNotPublishWithoutExplicitApproval
-}`
-
-const PREVIEW_ABOUT_PEOPLE_PROJECTION = `people[]${ABOUT_PERSON_PROJECTION}`
-
 const PUBLIC_BLOCK_PROJECTION = `{
   _key,
   _type,
@@ -258,16 +221,29 @@ const PUBLIC_BLOCK_PROJECTION = `{
   _type == "caption" => {text, credit, association}
 }`
 
-const WORK_PHOTO_PROJECTION = `{
+const WORK_ASSET_PROJECTION = `{
   _id,
   title,
+  "slug": slug.current,
+  kind,
   image${IMAGE_PROJECTION},
+  poster${IMAGE_PROJECTION},
+  "source": videoFile${FILE_PROJECTION},
+  videoUrl,
+  file${FILE_PROJECTION},
   alt,
   decorative,
   caption,
   credit,
+  projectOrder,
   ${INTERNAL_SAFETY_PROJECTION}
 }`
+
+const PROJECT_ASSETS_PROJECTION = `"assets": *[
+  _type == "mediaItem" &&
+  project._ref == ^._id &&
+  ${PUBLIC_ASSET_FILTER}
+] | order(projectOrder asc, _createdAt asc) ${WORK_ASSET_PROJECTION}`
 
 const PROJECT_CARD_PROJECTION = `{
   _id,
@@ -278,8 +254,7 @@ const PROJECT_CARD_PROJECTION = `{
   client,
   types,
   "template": coalesce(template, select(layoutVariant == "photoEssay" => "photo", layoutVariant in ["campaign", "experimental"] => "featured", "video")),
-  "photos": photos[]->${WORK_PHOTO_PROJECTION},
-  "defaultPhoto": defaultPhoto->${WORK_PHOTO_PROJECTION},
+  ${PROJECT_ASSETS_PROJECTION},
   cover${COVER_PROJECTION},
   homeOrder,
   homeCardSize,
@@ -312,50 +287,28 @@ const REEL_PROJECTION = `{
 const WORK_PAGE_PROJECTION = `{
   introName,
   manifesto,
-  gallery[]{_key, "workId": coalesce(work->_id, project->_id), "photoId": doorwayPhoto->_id, cardSize, treatment},
+  gallery[]{_key, "workId": asset->project->_id, "assetId": asset->_id, cardSize, treatment},
   reel${REEL_PROJECTION},
   notesEnabled,
   seo${SEO_PROJECTION}
 }`
 
-const REEL_PAGE_PROJECTION = `{
-  enabled,
-  introEyebrow,
-  introHeadline,
-  introCue,
-  fallbackEyebrow,
+const ABOUT_PAGE_PROJECTION = `{
+  openingLabel,
+  openingHeadline,
+  openingNote,
+  windingHeadline,
+  orbitHeadline,
+  indexHeadline,
+  chaptersHeadline,
+  apertureHeadline,
+  fallbackLabel,
   fallbackHeadline,
   fallbackDescription,
-  closingEyebrow,
+  closingLabel,
   closingHeadline,
   ctaLabel,
   ctaDestination,
-  seo${SEO_PROJECTION}
-}`
-
-const PUBLIC_ABOUT_PAGE_PROJECTION = `{
-  heading,
-  about,
-  capabilities,
-  peopleHeading,
-  peopleIntroduction,
-  ${PUBLIC_ABOUT_PEOPLE_PROJECTION},
-  image${IMAGE_PROJECTION},
-  imageAlt,
-  imageDecorative,
-  seo${SEO_PROJECTION}
-}`
-
-const PREVIEW_ABOUT_PAGE_PROJECTION = `{
-  heading,
-  about,
-  capabilities,
-  peopleHeading,
-  peopleIntroduction,
-  ${PREVIEW_ABOUT_PEOPLE_PROJECTION},
-  image${IMAGE_PROJECTION},
-  imageAlt,
-  imageDecorative,
   seo${SEO_PROJECTION}
 }`
 
@@ -379,6 +332,70 @@ const FOOTER_PROJECTION = `{
   showYear
 }`
 
+/**
+ * This query is intentionally small and operational. It lets CI verify that
+ * the published dataset matches the current Studio model before Astro starts
+ * an expensive production build. It returns no private rights evidence or
+ * provenance fields.
+ */
+export const SANITY_RELEASE_AUDIT_QUERY = defineQuery(/* groq */ `{
+  "singletonCounts": {
+    "siteSettings": count(*[_id == "siteSettings"]),
+    "workPage": count(*[_id == "workPage"]),
+    "aboutPage": count(*[_id == "aboutPage"]),
+    "contactPage": count(*[_id == "contactPage"]),
+    "footerSettings": count(*[_id == "footerSettings"])
+  },
+  "aboutPage": *[_id == "aboutPage"][0]${ABOUT_PAGE_PROJECTION},
+  "workPage": *[_id == "workPage"][0]{
+    notesEnabled,
+    gallery[]{
+      _key,
+      "assetId": asset->_id,
+      "assetType": asset->_type,
+      "assetKind": asset->kind,
+      "workId": asset->project->_id,
+      "workType": asset->project->_type
+    }
+  },
+  "workDocuments": *[_type == "work" && !(_id in path("drafts.**"))]{
+    _id,
+    title,
+    legacyId,
+    "slug": slug.current,
+    template,
+    "assets": *[_type == "mediaItem" && project._ref == ^._id]{
+      _id,
+      title,
+      "slug": slug.current,
+      kind,
+      rightsApprovalStatus,
+      rightsExpiresAt,
+      "hasRightsEvidence": length(coalesce(rightsApprovalEvidence, "")) > 0,
+      "hasMedia": select(
+        kind == "image" => defined(image.asset),
+        kind == "video" => defined(poster.asset) && (defined(videoFile.asset) || defined(videoUrl)),
+        kind == "file" => defined(file.asset),
+        false
+      ),
+      "hasAccessibilityText": kind == "file" || decorative == true || length(coalesce(alt, "")) > 0
+    },
+    editorialStatus,
+    publishAt
+  },
+  "publicWorkIds": *[_type == "work" && ${PUBLIC_PROJECT_FILTER}]._id,
+  "legacyProjectCount": count(*[_type == "project" && !(_id in path("drafts.**"))]),
+  "notes": *[_type == "note" && !(_id in path("drafts.**"))]{
+    _id,
+    title,
+    "slug": slug.current,
+    date,
+    visible,
+    publishAt
+  },
+  "publicNoteIds": *[_type == "note" && ${PUBLIC_NOTE_FILTER}]._id
+}`)
+
 const SITE_SETTINGS_PROJECTION = `{
   siteName,
   navigation[]{_key, label, destination, visible},
@@ -386,8 +403,7 @@ const SITE_SETTINGS_PROJECTION = `{
   compactMark{format, image${IMAGE_PROJECTION}, file${FILE_PROJECTION}},
   defaultSeo${SEO_PROJECTION},
   "workPage": *[_id == "workPage"][0]${WORK_PAGE_PROJECTION},
-  "reelPage": *[_id == "reelPage"][0]${REEL_PAGE_PROJECTION},
-  "aboutPage": *[_id == "aboutPage"][0]${PUBLIC_ABOUT_PAGE_PROJECTION},
+  "aboutPage": *[_id == "aboutPage"][0]${ABOUT_PAGE_PROJECTION},
   "contactPage": *[_id == "contactPage"][0]${CONTACT_PAGE_PROJECTION},
   "footer": *[_id == "footerSettings"][0]${FOOTER_PROJECTION}
 }`
@@ -399,8 +415,7 @@ const PREVIEW_SITE_SETTINGS_PROJECTION = `{
   compactMark{format, image${IMAGE_PROJECTION}, file${FILE_PROJECTION}},
   defaultSeo${SEO_PROJECTION},
   "workPage": *[_id == "workPage"][0]${WORK_PAGE_PROJECTION},
-  "reelPage": *[_id == "reelPage"][0]${REEL_PAGE_PROJECTION},
-  "aboutPage": *[_id == "aboutPage"][0]${PREVIEW_ABOUT_PAGE_PROJECTION},
+  "aboutPage": *[_id == "aboutPage"][0]${ABOUT_PAGE_PROJECTION},
   "contactPage": *[_id == "contactPage"][0]${CONTACT_PAGE_PROJECTION},
   "footer": *[_id == "footerSettings"][0]${FOOTER_PROJECTION}
 }`
@@ -419,13 +434,13 @@ export const SITE_SETTINGS_QUERY = defineQuery(/* groq */ `*[_id == "siteSetting
 
 export const PREVIEW_SITE_SETTINGS_QUERY = defineQuery(/* groq */ `*[_id == "siteSettings"][0]${PREVIEW_SITE_SETTINGS_PROJECTION}`)
 
-export const HOME_PROJECTS_QUERY = defineQuery(/* groq */ `*[_type in ["work", "project"] && featuredOnHome == true && ${PUBLIC_PROJECT_FILTER}]
+export const HOME_PROJECTS_QUERY = defineQuery(/* groq */ `*[_type == "work" && featuredOnHome == true && ${PUBLIC_PROJECT_FILTER}]
   | order(homeOrder asc) ${PROJECT_CARD_PROJECTION}`)
 
-export const ALL_PUBLIC_PROJECTS_QUERY = defineQuery(/* groq */ `*[_type in ["work", "project"] && ${PUBLIC_PROJECT_FILTER}]
+export const ALL_PUBLIC_PROJECTS_QUERY = defineQuery(/* groq */ `*[_type == "work" && ${PUBLIC_PROJECT_FILTER}]
   | order(homeOrder asc) ${PROJECT_CARD_PROJECTION}`)
 
-export const PUBLIC_PROJECT_SLUGS_QUERY = defineQuery(/* groq */ `*[_type in ["work", "project"] && ${PUBLIC_PROJECT_FILTER}]
+export const PUBLIC_PROJECT_SLUGS_QUERY = defineQuery(/* groq */ `*[_type == "work" && ${PUBLIC_PROJECT_FILTER}]
   | order(homeOrder asc)[]{"slug": slug.current}`)
 
 const PROJECT_DETAIL_FIELDS = `
@@ -438,8 +453,7 @@ const PROJECT_DETAIL_FIELDS = `
   year,
   types,
   "template": coalesce(template, select(layoutVariant == "photoEssay" => "photo", layoutVariant in ["campaign", "experimental"] => "featured", "video")),
-  "photos": photos[]->${WORK_PHOTO_PROJECTION},
-  "defaultPhoto": defaultPhoto->${WORK_PHOTO_PROJECTION},
+  ${PROJECT_ASSETS_PROJECTION},
   role,
   contributors[]{_key, name, role},
   shortDescription,
@@ -473,7 +487,7 @@ const PROJECT_DETAIL_PROJECTION = `{
   "doNotPublishWithoutExplicitApproval": false
 }`
 
-export const ALL_PUBLIC_PROJECT_DETAILS_QUERY = defineQuery(/* groq */ `*[_type in ["work", "project"] && ${PUBLIC_PROJECT_FILTER}]
+export const ALL_PUBLIC_PROJECT_DETAILS_QUERY = defineQuery(/* groq */ `*[_type == "work" && ${PUBLIC_PROJECT_FILTER}]
   | order(homeOrder asc) ${PROJECT_DETAIL_PROJECTION}`)
 
 const PREVIEW_PROJECT_PROJECTION = `{
@@ -487,16 +501,16 @@ const PREVIEW_PROJECT_PROJECTION = `{
   doNotPublishWithoutExplicitApproval
 }`
 
-export const PREVIEW_PROJECT_DETAILS_QUERY = defineQuery(/* groq */ `*[_type in ["work", "project"]]
+export const PREVIEW_PROJECT_DETAILS_QUERY = defineQuery(/* groq */ `*[_type == "work"]
   | order(homeOrder asc) ${PREVIEW_PROJECT_PROJECTION}`)
 
-export const PROJECT_BY_SLUG_QUERY = defineQuery(/* groq */ `*[_type in ["work", "project"] && slug.current == $slug && ${PUBLIC_PROJECT_FILTER}][0]
+export const PROJECT_BY_SLUG_QUERY = defineQuery(/* groq */ `*[_type == "work" && slug.current == $slug && ${PUBLIC_PROJECT_FILTER}][0]
   ${PROJECT_DETAIL_PROJECTION}`)
 
 export const PROJECT_NEIGHBORS_QUERY = defineQuery(/* groq */ `{
-  "previous": *[_type in ["work", "project"] && ${PUBLIC_PROJECT_FILTER} && homeOrder < $homeOrder]
+  "previous": *[_type == "work" && ${PUBLIC_PROJECT_FILTER} && homeOrder < $homeOrder]
     | order(homeOrder desc)[0] ${PROJECT_CARD_PROJECTION},
-  "next": *[_type in ["work", "project"] && ${PUBLIC_PROJECT_FILTER} && homeOrder > $homeOrder]
+  "next": *[_type == "work" && ${PUBLIC_PROJECT_FILTER} && homeOrder > $homeOrder]
     | order(homeOrder asc)[0] ${PROJECT_CARD_PROJECTION}
 }`)
 
@@ -556,7 +570,7 @@ export const NOTE_BY_SLUG_QUERY = defineQuery(/* groq */ `*[_type == "note" && s
 }`)
 
 export const SITEMAP_QUERY = defineQuery(/* groq */ `{
-  "projects": *[_type in ["work", "project"] && ${PUBLIC_PROJECT_FILTER}][]{"slug": slug.current},
+  "projects": *[_type == "work" && ${PUBLIC_PROJECT_FILTER}][]{"slug": slug.current},
   "notes": *[_type == "note" && ${PUBLIC_NOTE_FILTER} &&
     *[_id == "workPage"][0].notesEnabled == true][]{"slug": slug.current}
 }`)
