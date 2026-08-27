@@ -283,6 +283,7 @@ body[data-page-theme="dark"] :is(.site-header, .site-footer) .wordmark__image {
   z-index: 40;
   color: var(--color-ink);
   background: var(--page-background, var(--color-canvas));
+  view-transition-name: site-header;
 }
 
 .site-header--sticky {

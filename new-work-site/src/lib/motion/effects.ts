@@ -15,6 +15,12 @@ import {
 } from './tokens';
 import { ScrollTrigger, SplitText, gsap } from './vendor';
 
+declare global {
+  interface Window {
+    __newWorkEntryStaticRevealsUntil?: number;
+  }
+}
+
 const SCROLL_LETTER_START_VIEWPORT = 0.92;
 const SCROLL_LETTER_END_VIEWPORT = 0.38;
 const SCROLL_LETTER_DISTANCE_SCALE = 0.8;
@@ -31,12 +37,28 @@ const revealVars = (treatment: string): gsap.TweenVars => {
   return { autoAlpha: 0, y: '0.35em' };
 };
 
+const isWorkRouteEntry = (element: HTMLElement): boolean =>
+  document.documentElement.dataset.workNavigationTransition === 'true'
+  || element.closest<HTMLElement>('[data-logo-work-page]')?.dataset.workEntryAtTop === 'true'
+  || element.closest<HTMLElement>('[data-work-gallery]')?.dataset.galleryEntryReveals === 'static'
+  || (
+    typeof window.__newWorkEntryStaticRevealsUntil === 'number'
+    && performance.now() < window.__newWorkEntryStaticRevealsUntil
+  );
+
+const keepGalleryRevealStatic = (element: HTMLElement, clearProps: string): void => {
+  element.dataset.motionRevealReady = 'static';
+  element.dataset.motionReady = 'static';
+  gsap.set(element, { clearProps });
+};
+
 const initializeReveals = (environment: MotionEnvironment): MotionCleanup => {
   const elements = selectAll<HTMLElement>(environment.root, '[data-motion-reveal]');
   const cleanups: MotionCleanup[] = [];
   const pendingGalleryReveals = new Map<HTMLElement, gsap.core.Tween>();
   if (environment.reducedMotion) {
     elements.forEach((element) => {
+      element.dataset.motionRevealReady = 'static';
       element.dataset.motionReady = 'static';
     });
     return () => undefined;
@@ -52,6 +74,15 @@ const initializeReveals = (environment: MotionEnvironment): MotionCleanup => {
       : treatment === 'fade'
         ? 'opacity,visibility'
         : 'opacity,visibility,transform,clipPath';
+    if (element.dataset.motionRevealSkip === 'work-entry') {
+      keepGalleryRevealStatic(element, clearProps);
+      return;
+    }
+    if (isGalleryReveal && isWorkRouteEntry(element)) {
+      keepGalleryRevealStatic(element, clearProps);
+      return;
+    }
+    element.dataset.motionRevealReady = 'animated';
     element.dataset.motionReady = 'animated';
     const animation = {
       ...revealVars(treatment),
@@ -140,7 +171,10 @@ const initializeReveals = (environment: MotionEnvironment): MotionCleanup => {
 
   return () => {
     cleanups.reverse().forEach((cleanup) => cleanup());
-    elements.forEach((element) => delete element.dataset.motionReady);
+    elements.forEach((element) => {
+      delete element.dataset.motionRevealReady;
+      delete element.dataset.motionReady;
+    });
   };
 };
 

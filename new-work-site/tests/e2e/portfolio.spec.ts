@@ -91,11 +91,12 @@ test('the Work tab enters the stable Work view from About while leaving the spla
       childList: true,
       subtree: true,
     });
-    const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
-    window.scrollTo({top: Math.max(0, maxScroll), behavior: 'auto'});
+    const scroller = document.scrollingElement ?? document.documentElement;
+    const maxScroll = scroller.scrollHeight - window.innerHeight;
+    scroller.scrollTo({top: Math.max(0, maxScroll), behavior: 'auto'});
   });
   const aboutMaxScroll = await page.evaluate(() => (
-    document.documentElement.scrollHeight - window.innerHeight
+    (document.scrollingElement ?? document.documentElement).scrollHeight - window.innerHeight
   ));
   if (aboutMaxScroll > 0) {
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
@@ -177,6 +178,159 @@ test('the Work tab enters the stable Work view from About while leaving the spla
   await expect(page).toHaveURL(/\/$/u);
   await expect(page.locator('[data-logo-work-page]')).toHaveAttribute('data-handoff', 'true');
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+});
+
+test('the site header remains on a non-fading transition layer across main tabs', async ({ page }) => {
+  await page.setViewportSize({ width: 1_440, height: 900 });
+  await page.goto('/#work-gallery');
+
+  const header = page.locator('[data-site-header]');
+  await expect(header).toHaveCSS('view-transition-name', 'site-header');
+  await expect(header).toHaveCSS('opacity', '1');
+
+  for (const {name, pathname} of [
+    {name: 'About', pathname: '/about'},
+    {name: 'Contact', pathname: '/contact'},
+  ]) {
+    const transitionState = page.evaluate(() => new Promise<{
+      headerOpacity: string;
+      headerTransitionName: string;
+      siteHeaderPseudoAnimations: string[];
+    }>((resolve) => {
+      document.addEventListener('astro:after-swap', () => {
+        requestAnimationFrame(() => {
+          const headerElement = document.querySelector<HTMLElement>('[data-site-header]');
+          resolve({
+            headerOpacity: headerElement ? getComputedStyle(headerElement).opacity : '',
+            headerTransitionName: headerElement
+              ? getComputedStyle(headerElement).viewTransitionName
+              : '',
+            siteHeaderPseudoAnimations: document.getAnimations()
+              .map((animation) => animation.effect)
+              .filter((effect): effect is KeyframeEffect => effect instanceof KeyframeEffect)
+              .map((effect) => effect.pseudoElement || '')
+              .filter((pseudoElement) => pseudoElement.includes('site-header')),
+          });
+        });
+      }, {once: true});
+    }));
+
+    await page.locator('[data-desktop-nav]').getByRole('link', { name }).click();
+    await page.waitForURL((url) => url.pathname === pathname);
+    const state = await transitionState;
+    expect(state.headerOpacity).toBe('1');
+    expect(state.headerTransitionName).toBe('site-header');
+    expect(state.siteHeaderPseudoAnimations).toEqual([]);
+    await expect(header).toHaveCSS('opacity', '1');
+  }
+});
+
+test('About to Work entry reveals warmed gallery images only after decoded pixels exist', async ({ page }) => {
+  await page.setViewportSize({ width: 1_440, height: 900 });
+  await page.addInitScript(() => {
+    const selector = 'a[href="/work/michael-selected-photography/michael-wow-rainbow-pavement"] img[data-gallery-image]';
+    sessionStorage.setItem('new-work:test-work-entry-image-frames', '[]');
+    sessionStorage.removeItem('new-work:test-detached-image-ready');
+
+    document.addEventListener('astro:before-swap', (rawEvent) => {
+      const event = rawEvent as Event & {newDocument?: Document};
+      const image = event.newDocument?.querySelector<HTMLImageElement>(selector);
+      sessionStorage.setItem(
+        'new-work:test-detached-image-ready',
+        String(
+          image?.dataset.galleryImageReady === 'true'
+          && image.naturalWidth <= 0,
+        ),
+      );
+    }, {once: true});
+
+    document.addEventListener('astro:after-swap', () => {
+      let frame = 0;
+      const sample = () => {
+        const image = document.querySelector<HTMLImageElement>(selector);
+        const card = image?.closest<HTMLElement>('[data-project-card]');
+        const rect = image?.getBoundingClientRect();
+        const visible = Boolean(
+          rect
+          && rect.bottom > 0
+          && rect.top < window.innerHeight
+          && rect.right > 0
+          && rect.left < window.innerWidth,
+        );
+        const frames = JSON.parse(
+          sessionStorage.getItem('new-work:test-work-entry-image-frames') || '[]',
+        ) as Array<Record<string, unknown>>;
+        frames.push(image ? {
+          frame,
+          visible,
+          gridReady: document.querySelector('[data-project-grid]')
+            ?.getAttribute('data-masonry-ready') === 'true',
+          layerVisibility: getComputedStyle(
+            document.querySelector('.route-gallery-layer') ?? document.documentElement,
+          ).visibility,
+          cardClipPath: card ? getComputedStyle(card).clipPath : undefined,
+          cardRevealReady: card?.dataset.motionRevealReady,
+          cardRevealSkip: card?.dataset.motionRevealSkip,
+          cardOpacity: card ? Number.parseFloat(getComputedStyle(card).opacity || '0') : undefined,
+          cardVisibility: card ? getComputedStyle(card).visibility : undefined,
+          opacity: Number.parseFloat(getComputedStyle(image).opacity || '0'),
+          ready: image.dataset.galleryImageReady === 'true',
+          warmed: image.dataset.galleryWorkEntryWarmed === 'true',
+          naturalWidth: image.naturalWidth,
+          currentSrc: image.currentSrc,
+        } : {frame, missing: true});
+        sessionStorage.setItem('new-work:test-work-entry-image-frames', JSON.stringify(frames));
+        frame += 1;
+        if (frame < 12) window.requestAnimationFrame(sample);
+      };
+      window.requestAnimationFrame(sample);
+    }, {once: true});
+  });
+  await page.goto('/about');
+
+  await page.locator('[data-desktop-nav]').getByRole('link', { name: 'Work' }).click();
+  await page.waitForURL(/\/$/u);
+  await page.waitForTimeout(500);
+
+  expect(await page.evaluate(() =>
+    sessionStorage.getItem('new-work:test-detached-image-ready'))).toBe('false');
+  const frames = await page.evaluate(() => (
+    JSON.parse(sessionStorage.getItem('new-work:test-work-entry-image-frames') || '[]') as Array<{
+      cardClipPath?: string;
+      cardOpacity?: number;
+      cardRevealReady?: string;
+      cardRevealSkip?: string;
+      cardVisibility?: string;
+      currentSrc?: string;
+      gridReady?: boolean;
+      layerVisibility?: string;
+      naturalWidth?: number;
+      opacity?: number;
+      ready?: boolean;
+      visible?: boolean;
+      warmed?: boolean;
+    }>
+  ));
+  const visibleFrames = frames.filter((frame) => frame.visible);
+  const revealReadyFrames = visibleFrames.filter((frame) => frame.cardRevealReady);
+  expect(visibleFrames.length).toBeGreaterThan(0);
+  expect(visibleFrames.every((frame) =>
+    frame.gridReady
+    && frame.layerVisibility === 'visible'
+    && frame.cardVisibility === 'visible'
+    && (frame.cardOpacity ?? 0) >= .99
+    && (!frame.cardClipPath || frame.cardClipPath === 'none')
+    && frame.warmed
+    && frame.ready
+    && (frame.naturalWidth ?? 0) > 0
+    && (frame.opacity ?? 0) >= .99
+    && /michael-wow-rainbow-pavement/u.test(frame.currentSrc || ''),
+  )).toBe(true);
+  expect(revealReadyFrames.length).toBeGreaterThan(0);
+  expect(revealReadyFrames.every((frame) =>
+    frame.cardRevealReady === 'static'
+    && frame.cardRevealSkip === 'work-entry',
+  )).toBe(true);
 });
 
 test('refreshing a scrolled route returns it to the top', async ({ page }) => {
@@ -3276,6 +3430,9 @@ test('ClientRouter navigation persists project media and restores the originatin
     }
   });
   await page.goto('/');
+  await expect(page.locator('[data-project-grid]')).toBeVisible();
+  await page.evaluate(() => window.scrollTo({top: 1_000, left: 0, behavior: 'auto'}));
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(400);
 
   const projectLink = page.locator('[data-project-link]').nth(10);
   const projectSlug = await projectLink.getAttribute('data-project-slug');
@@ -3339,6 +3496,8 @@ test('ClientRouter navigation persists project media and restores the originatin
   await page.waitForURL(/\/$/u);
   await expect(page.locator('[data-project-grid]')).toBeVisible();
   await expect(page.locator('[data-work-gallery]')).toHaveAttribute('data-gallery-restore', 'true');
+  await expect(page.locator('[data-route-gallery-layer]')).not.toHaveAttribute('data-gallery-layer-state');
+  await expect(page.locator('[data-work-gallery]')).toHaveAttribute('data-gallery-pointer', 'true');
   await expect(page.locator('[data-gallery-entrance]'))
     .toHaveAttribute('data-gallery-entrance-state', 'settled');
   await expect.poll(() => page.locator('[data-gallery-entrance]').evaluate((element) => {
@@ -3353,6 +3512,22 @@ test('ClientRouter navigation persists project media and restores the originatin
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(storedScrollY - 40);
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBeLessThan(storedScrollY + 40);
   await expect(projectLink).toBeInViewport();
+  const returnedGalleryBox = await page.locator('[data-work-gallery]').boundingBox();
+  if (!returnedGalleryBox) throw new Error('The returned gallery is missing pointer bounds.');
+  const returnedPointerY = Math.max(
+    24,
+    Math.min(returnedGalleryBox.y + 240, page.viewportSize()!.height - 24),
+  );
+  await page.mouse.move(12, returnedPointerY);
+  await page.waitForTimeout(200);
+  const returnedLeftPointerX = await page.locator('[data-work-gallery]').evaluate((element) =>
+    Number.parseFloat(getComputedStyle(element).getPropertyValue('--gallery-pointer-x')) || 0);
+  await page.mouse.move(page.viewportSize()!.width - 12, returnedPointerY);
+  await page.waitForTimeout(300);
+  const returnedRightPointerX = await page.locator('[data-work-gallery]').evaluate((element) =>
+    Number.parseFloat(getComputedStyle(element).getPropertyValue('--gallery-pointer-x')) || 0);
+  expect(returnedLeftPointerX).toBeLessThan(-1);
+  expect(returnedRightPointerX).toBeGreaterThan(1);
 
   await expect(page.locator('[data-card-cursor-label]')).toHaveCount(0);
 

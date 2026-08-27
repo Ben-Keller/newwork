@@ -273,9 +273,13 @@ export const installMotionLifecycle = (): MotionCleanup => {
   const onPageShow = (event: PageTransitionEvent): void => {
     if (event.persisted) initializeRoute(true);
   };
+  const onGalleryLayerReleased = (): void => {
+    if (activeRouteNeedsPointerMotion()) restartRoute();
+  };
 
   document.addEventListener('astro:page-load', onPageLoad);
   document.addEventListener('astro:before-swap', onBeforeSwap);
+  document.addEventListener('new-work:gallery-layer-released', onGalleryLayerReleased);
   document.addEventListener('visibilitychange', onVisibilityChange);
   window.addEventListener('pageshow', onPageShow);
 
@@ -314,6 +318,7 @@ export const installMotionLifecycle = (): MotionCleanup => {
   return () => {
     document.removeEventListener('astro:page-load', onPageLoad);
     document.removeEventListener('astro:before-swap', onBeforeSwap);
+    document.removeEventListener('new-work:gallery-layer-released', onGalleryLayerReleased);
     document.removeEventListener('visibilitychange', onVisibilityChange);
     window.removeEventListener('pageshow', onPageShow);
     window.removeEventListener('load', onPageLoad);

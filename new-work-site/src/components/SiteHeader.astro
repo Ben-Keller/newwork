@@ -133,6 +133,7 @@ const showGalleryTools = galleryEditing && currentPath === '/';
   declare global {
     interface Window {
       __newWorkGalleryToolsFeedbackCleanup?: () => void;
+      __newWorkEntryStaticRevealsUntil?: number;
     }
   }
 
@@ -162,6 +163,7 @@ const showGalleryTools = galleryEditing && currentPath === '/';
     if (destination.pathname !== window.location.pathname) {
       writeStorageValue('session', WORK_NAVIGATION_ENTRY_KEY, 'true');
       history.scrollRestoration = 'manual';
+      window.__newWorkEntryStaticRevealsUntil = performance.now() + 5000;
       return;
     }
 
@@ -223,6 +225,12 @@ const showGalleryTools = galleryEditing && currentPath === '/';
     image.closest<HTMLElement>('[data-media-frame]')?.setAttribute('data-media-ready', 'true');
   };
 
+  const warmWorkEntryGalleryImage = (image: HTMLImageElement): void => {
+    image.loading = 'eager';
+    image.fetchPriority = 'high';
+    image.dataset.galleryWorkEntryWarmed = 'true';
+  };
+
   const firstMatchingSource = (image: HTMLImageElement): HTMLSourceElement | undefined => {
     const sources = Array.from(
       image.closest('picture')?.querySelectorAll<HTMLSourceElement>('source') ?? [],
@@ -240,6 +248,7 @@ const showGalleryTools = galleryEditing && currentPath === '/';
     signal: AbortSignal | undefined,
   ): Promise<void> => {
     if (signal?.aborted) return;
+    warmWorkEntryGalleryImage(sourceImage);
     const preferredSource = firstMatchingSource(sourceImage);
     const preload = new Image();
     preload.alt = '';
@@ -259,7 +268,13 @@ const showGalleryTools = galleryEditing && currentPath === '/';
         signal?.addEventListener('abort', settle, {once: true});
       });
     }
-    if (!signal?.aborted && preload.naturalWidth > 0) markGalleryImageReady(sourceImage);
+    if (
+      !signal?.aborted
+      && preload.naturalWidth > 0
+      && sourceImage.ownerDocument === document
+    ) {
+      markGalleryImageReady(sourceImage);
+    }
   };
 
   const decodeWorkEntryGalleryImages = async (
@@ -269,8 +284,9 @@ const showGalleryTools = galleryEditing && currentPath === '/';
     if (!targetDocument || signal?.aborted) return;
     const images = Array.from(
       targetDocument.querySelectorAll<HTMLImageElement>('img[data-gallery-image]'),
-    ).slice(0, 8);
+    ).slice(0, 16);
     if (!images.length) return;
+    images.forEach(warmWorkEntryGalleryImage);
     await Promise.race([
       Promise.allSettled(images.map((image) => decodeGalleryImage(image, signal))),
       new Promise((resolve) => window.setTimeout(resolve, 1_200)),
@@ -296,7 +312,12 @@ const showGalleryTools = galleryEditing && currentPath === '/';
     }
     targetDocument.querySelector<HTMLElement>('[data-logo-work-hero]')?.setAttribute('data-faded', 'true');
     targetDocument.querySelector<HTMLElement>('[data-logo-work-content]')?.setAttribute('aria-hidden', 'false');
-    if (incomingGallery) incomingGallery.dataset.galleryEntrancePlayed = 'true';
+    if (incomingGallery) {
+      incomingGallery.dataset.galleryEntrancePlayed = 'true';
+      incomingGallery.dataset.galleryEntryReveals = 'static';
+      incomingGallery.querySelectorAll<HTMLElement>('[data-motion-reveal]')
+        .forEach((element) => { element.dataset.motionRevealSkip = 'work-entry'; });
+    }
     if (incomingEntrance) {
       incomingEntrance.dataset.galleryEntranceState = 'settled';
       incomingEntrance.style.removeProperty('transform');
@@ -344,6 +365,7 @@ const showGalleryTools = galleryEditing && currentPath === '/';
     if (!workEntryIsActive()) return;
     history.scrollRestoration = 'manual';
     document.documentElement.dataset.workNavigationTransition = 'true';
+    window.__newWorkEntryStaticRevealsUntil = performance.now() + 5000;
     document.body.dataset.logoHeaderVisible = 'true';
     prepareWorkDocumentForDirectEntry(document);
     resetWorkScroll();

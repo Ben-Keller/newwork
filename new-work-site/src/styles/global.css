@@ -11,6 +11,17 @@
 ::view-transition-old(root) { animation: new-work-fade-out 120ms ease-in both; }
 ::view-transition-new(root) { animation: new-work-fade-in 180ms ease-out both; }
 
+::view-transition-group(site-header),
+::view-transition-old(site-header),
+::view-transition-new(site-header) {
+  animation: none !important;
+  mix-blend-mode: normal;
+}
+
+::view-transition-old(site-header) {
+  opacity: 0;
+}
+
 html[data-work-navigation-transition="true"]::view-transition-group(root),
 html[data-work-navigation-transition="true"]::view-transition-old(root),
 html[data-work-navigation-transition="true"]::view-transition-new(root) {
@@ -256,6 +267,9 @@ html[data-work-project-transition="to-project"] .project-overlay__panel {
   .project-card img[data-gallery-image] {
     opacity: 0;
     transition: opacity 360ms cubic-bezier(.22, 1, .36, 1);
+  }
+  .project-card img[data-gallery-image][data-gallery-work-entry-warmed="true"] {
+    transition: none;
   }
   .project-card img[data-gallery-image][data-gallery-image-ready="true"] { opacity: 1; }
   .project-card a:focus-visible { --card-scale: 1.018; }

@@ -56,6 +56,7 @@ const preloadImageSizes = preloadEntry
       try {
         if (sessionStorage.getItem('new-work:work-navigation-entry') === 'true') {
           document.documentElement.dataset.workNavigationTransition = 'true';
+          window.__newWorkEntryStaticRevealsUntil = performance.now() + 5000;
           history.scrollRestoration = 'manual';
           window.scrollTo({top: 0, left: 0, behavior: 'auto'});
         }
@@ -179,6 +180,10 @@ const preloadImageSizes = preloadEntry
     opacity: 0;
   }
 
+  :global(html[data-work-navigation-transition='true'] .route-gallery-layer:has(.project-grid:not([data-masonry-ready='true']))) {
+    visibility: hidden;
+  }
+
   :global(body.home-page .site-header) {
     opacity: 0;
     pointer-events: none;
@@ -233,7 +238,12 @@ const preloadImageSizes = preloadEntry
     page.dataset.workEntryAtTop = 'true';
     const gallery = page.querySelector<HTMLElement>('[data-work-gallery]');
     const entrance = gallery?.querySelector<HTMLElement>('[data-gallery-entrance]');
-    if (gallery) gallery.dataset.galleryEntrancePlayed = 'true';
+    if (gallery) {
+      gallery.dataset.galleryEntrancePlayed = 'true';
+      gallery.dataset.galleryEntryReveals = 'static';
+      gallery.querySelectorAll<HTMLElement>('[data-motion-reveal]')
+        .forEach((element) => { element.dataset.motionRevealSkip = 'work-entry'; });
+    }
     if (entrance) {
       entrance.dataset.galleryEntranceState = 'settled';
       entrance.style.removeProperty('transform');
