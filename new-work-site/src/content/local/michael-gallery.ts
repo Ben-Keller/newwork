@@ -88,7 +88,7 @@ export const michaelPhotoWork: ProjectView = {
   heroTreatment: 'contained',
   layoutVariant: 'photoEssay',
   motionIntensity: 'medium',
-  editorialStatus: 'review',
+  editorialStatus: 'draft',
   visible: false,
   needsReview: true,
   doNotPublishWithoutExplicitApproval: false,

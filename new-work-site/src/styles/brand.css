@@ -200,9 +200,8 @@
   filter: brightness(0) invert(1);
 }
 
-/* The header wordmark persists across client-side route changes, so its
-   original tone class can outlive the page it was rendered on. Tie the final
-   artwork color to the active dark canvas as well. */
+/* The header and footer can render against dark project canvases. Tie artwork
+   color to the active page theme instead of relying only on component props. */
 body[data-page-theme="dark"] :is(.site-header, .site-footer) .wordmark__image {
   filter: brightness(0) invert(1);
 }

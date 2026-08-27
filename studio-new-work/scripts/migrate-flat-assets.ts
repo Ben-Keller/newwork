@@ -12,7 +12,6 @@ const apply = process.argv.slice(2).filter((argument) => argument !== '--').incl
 const client = getCliClient({apiVersion: SANITY_API_VERSION}).withConfig({perspective: 'published'})
 const workspaceRoot = resolve(process.cwd(), '..')
 const michaelWorkLegacyId = 'work.michael-selected-photography'
-const approvalEvidence = 'Portfolio publication authorized by the site owner in the 2026-08-27 Sanity workflow update; imported from the repository Michael portfolio source set.'
 
 const michaelAssets = [
   ['michael-poolside-product', 'Poolside product', 'assets/web-ready/images/michael/portfolio-expansion/michael-poolside-product.webp', 'A hand holding a drink beside a swimming pool and a striped snack box.'],
@@ -127,7 +126,6 @@ async function main() {
     return
   }
 
-  const now = new Date().toISOString()
   let michaelWork = existingMichaelWork
   if (!michaelWork) {
     michaelWork = await client.create({
@@ -152,9 +150,6 @@ async function main() {
       motionIntensity: 'medium',
       doNotPublishWithoutExplicitApproval: false,
       needsReview: false,
-      rightsApprovalStatus: 'approved',
-      rightsApprovalEvidence: approvalEvidence,
-      rightsApprovedAt: now,
       seo: {noIndex: true},
     }) as DocumentValue
   }
@@ -191,9 +186,6 @@ async function main() {
       tags: ['Michael', 'Photography'],
       project: reference(michaelWork._id),
       projectOrder: index,
-      rightsApprovalStatus: 'approved',
-      rightsApprovalEvidence: approvalEvidence,
-      rightsApprovedAt: now,
     }
     const existing = existingMichaelByKey.get(migrationSourceKey)
     const media = existing
@@ -265,9 +257,6 @@ async function main() {
     visible: true,
     needsReview: false,
     doNotPublishWithoutExplicitApproval: false,
-    rightsApprovalStatus: 'approved',
-    rightsApprovalEvidence: approvalEvidence,
-    rightsApprovedAt: now,
   }).commit()
 
   const allMedia = [...migratedExisting, ...michaelMedia]

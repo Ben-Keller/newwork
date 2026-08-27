@@ -7,7 +7,23 @@ test.beforeEach(async ({page}) => {
 });
 
 test('holds an aligned opening reel in place while WebGL content loads', async ({page}, testInfo) => {
+  test.setTimeout(90_000);
   test.skip(testInfo.project.name !== 'desktop-chromium', 'The enhanced reel runs on desktop Chromium.');
+  await page.addInitScript(() => {
+    const routeWindow = window as Window & {__aboutPlaceholderOpacities?: number[]};
+    routeWindow.__aboutPlaceholderOpacities = [];
+    const startedAt = performance.now();
+    const sample = (): void => {
+      const placeholder = document.querySelector<HTMLElement>('[data-reel-opening-placeholder]');
+      if (placeholder) {
+        routeWindow.__aboutPlaceholderOpacities!.push(
+          Number.parseFloat(getComputedStyle(placeholder).opacity),
+        );
+      }
+      if (performance.now() - startedAt < 5_000) requestAnimationFrame(sample);
+    };
+    requestAnimationFrame(sample);
+  });
   await page.emulateMedia({reducedMotion: 'no-preference'});
 
   let releaseAtlas: (() => void) | undefined;
@@ -23,7 +39,30 @@ test('holds an aligned opening reel in place while WebGL content loads', async (
   const about = page.locator('[data-about-experience]');
   const placeholder = about.locator('[data-reel-opening-placeholder]');
   await expect(about).toHaveAttribute('data-mode', 'loading');
+  await expect(about).toHaveAttribute('data-reel-scroll-ready', 'false');
+  await expect(page.locator('html')).toHaveAttribute('data-about-reel-scroll-locked', 'true');
   await expect(placeholder).toBeVisible();
+  await expect(placeholder).toHaveAttribute('data-placeholder-visible', 'true');
+  await expect(placeholder).toHaveCSS('transition-duration', '1.8s, 0s');
+  await expect.poll(() => placeholder.evaluate((element) => getComputedStyle(element).opacity))
+    .toBe('1');
+  const layerOrder = await about.evaluate((element) => ({
+    canvas: Number.parseInt(getComputedStyle(
+      element.querySelector<HTMLElement>('[data-reel-canvas]')!,
+    ).zIndex, 10),
+    placeholder: Number.parseInt(getComputedStyle(
+      element.querySelector<HTMLElement>('[data-reel-opening-placeholder]')!,
+    ).zIndex, 10),
+    wash: Number.parseInt(getComputedStyle(
+      element.querySelector<HTMLElement>('.reel-paper-wash')!,
+    ).zIndex, 10),
+  }));
+  expect(layerOrder.canvas).toBeGreaterThan(layerOrder.placeholder);
+  expect(layerOrder.wash).toBeGreaterThan(layerOrder.canvas);
+  const placeholderOpacities = await page.evaluate(() => (
+    window as Window & {__aboutPlaceholderOpacities?: number[]}
+  ).__aboutPlaceholderOpacities ?? []);
+  expect(placeholderOpacities.some((opacity) => opacity > 0 && opacity < 1)).toBe(true);
 
   const placement = await placeholder.evaluate((element) => {
     const upper = element.querySelector<HTMLElement>('.reel-opening-placeholder__track--upper')!;
@@ -36,6 +75,9 @@ test('holds an aligned opening reel in place while WebGL content loads', async (
     const lowerBounds = lower.getBoundingClientRect();
     const frameBounds = frame.getBoundingClientRect();
     const feedFrameBounds = feedFrame.getBoundingClientRect();
+    const frameStyles = getComputedStyle(frame);
+    const frameWindowStyles = getComputedStyle(frame, '::before');
+    const perforationStyles = getComputedStyle(frame, '::after');
     return {
       viewportWidth: window.innerWidth,
       viewportHeight: window.innerHeight,
@@ -49,6 +91,9 @@ test('holds an aligned opening reel in place while WebGL content loads', async (
       frameHeight: frameBounds.height,
       feedFrameWidth: feedFrameBounds.width,
       feedFrameHeight: feedFrameBounds.height,
+      frameBackground: frameStyles.backgroundColor,
+      frameWindowBackground: frameWindowStyles.backgroundImage,
+      perforationBackground: perforationStyles.backgroundImage,
     };
   });
   expect(placement.upperLeft).toBeCloseTo(placement.viewportWidth * 0.00334, 0);
@@ -73,25 +118,83 @@ test('holds an aligned opening reel in place while WebGL content loads', async (
     / openingDepthScale;
   expect(placement.feedFrameWidth).toBeCloseTo(expectedFeedWidth, 0);
   expect(placement.feedFrameHeight).toBeCloseTo(expectedFeedWidth / (16 / 9), 0);
+  expect(placement.frameBackground).toBe('rgb(8, 8, 7)');
+  expect(placement.frameWindowBackground).toContain('linear-gradient');
+  expect(placement.perforationBackground).toContain('repeating-linear-gradient');
 
   await about.evaluate((element) => {
     (element as HTMLElement).dataset.mode = 'enhanced';
   });
-  await expect(placeholder).toBeHidden();
+  await expect(placeholder).toBeVisible();
+  await page.mouse.wheel(0, 1_800);
+  await page.waitForTimeout(200);
+  expect(await page.evaluate(() => window.scrollY)).toBe(0);
+  await expect(about).toHaveCSS('height', `${await page.evaluate(() => window.innerHeight)}px`);
   releaseAtlas?.();
+  await expect(placeholder).toHaveCount(0, {timeout: 60_000});
+  await expect(about).toHaveAttribute('data-reel-scroll-ready', 'true');
+  await expect(page.locator('html')).not.toHaveAttribute('data-about-reel-scroll-locked');
+  await page.mouse.wheel(0, 1_800);
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
 });
 
 test('initializes one reel renderer and preloads its critical imagery', async ({page}, testInfo) => {
+  test.setTimeout(60_000);
   test.skip(testInfo.project.name !== 'desktop-chromium', 'The enhanced reel runs on desktop Chromium.');
   await page.addInitScript(() => {
-    const routeWindow = window as Window & {__aboutCanvasAdds?: number};
+    const routeWindow = window as Window & {
+      __aboutCanvasAdds?: number;
+      __aboutCanvasInitialOpacities?: string[];
+      __aboutCanvasOpacities?: number[];
+      __aboutPlaceholderPresentAtFadeStart?: boolean;
+      __aboutPlaceholderExitOpacities?: number[];
+      __aboutAssetsCompletedWithPlaceholderRemoved?: boolean;
+    };
     routeWindow.__aboutCanvasAdds = 0;
+    routeWindow.__aboutCanvasInitialOpacities = [];
+    routeWindow.__aboutCanvasOpacities = [];
+    routeWindow.__aboutPlaceholderExitOpacities = [];
+    const recordCanvas = (canvas: Element): void => {
+      routeWindow.__aboutCanvasAdds! += 1;
+      routeWindow.__aboutCanvasInitialOpacities!.push(getComputedStyle(canvas).opacity);
+      const sample = (): void => {
+        const opacity = Number.parseFloat(getComputedStyle(canvas).opacity);
+        routeWindow.__aboutCanvasOpacities!.push(opacity);
+        if (canvas.isConnected && opacity < 1) requestAnimationFrame(sample);
+      };
+      requestAnimationFrame(sample);
+      new MutationObserver(() => {
+        if ((canvas as HTMLElement).dataset.assetFade === 'active') {
+          const placeholder = document.querySelector<HTMLElement>(
+            '[data-reel-opening-placeholder]',
+          );
+          routeWindow.__aboutPlaceholderPresentAtFadeStart = Boolean(placeholder);
+          const samplePlaceholderExit = (): void => {
+            if (!placeholder?.isConnected) return;
+            routeWindow.__aboutPlaceholderExitOpacities!.push(
+              Number.parseFloat(getComputedStyle(placeholder).opacity),
+            );
+            requestAnimationFrame(samplePlaceholderExit);
+          };
+          requestAnimationFrame(samplePlaceholderExit);
+        }
+        if ((canvas as HTMLElement).dataset.assetFade === 'complete') {
+          const about = document.querySelector<HTMLElement>('[data-about-experience]');
+          routeWindow.__aboutAssetsCompletedWithPlaceholderRemoved = Boolean(
+            !document.querySelector('[data-reel-opening-placeholder]')
+            && Number.parseFloat(getComputedStyle(canvas).opacity) === 1
+            && document.documentElement.dataset.aboutReelScrollLocked !== 'true'
+            && about?.dataset.reelScrollReady === 'true',
+          );
+        }
+      }).observe(canvas, {attributes: true, attributeFilter: ['data-asset-fade']});
+    };
     new MutationObserver((mutations) => {
       for (const mutation of mutations) {
         for (const node of mutation.addedNodes) {
           if (!(node instanceof Element)) continue;
-          if (node.matches('canvas.reel-media-canvas')) routeWindow.__aboutCanvasAdds! += 1;
-          routeWindow.__aboutCanvasAdds! += node.querySelectorAll('canvas.reel-media-canvas').length;
+          if (node.matches('canvas.reel-media-canvas')) recordCanvas(node);
+          node.querySelectorAll('canvas.reel-media-canvas').forEach(recordCanvas);
         }
       }
     }).observe(document, {childList: true, subtree: true});
@@ -101,12 +204,66 @@ test('initializes one reel renderer and preloads its critical imagery', async ({
 
   const about = page.locator('[data-about-experience]');
   await expect.poll(() => about.getAttribute('data-mode'), {timeout: 30_000}).toBe('enhanced');
-  await expect(about.locator('canvas.reel-media-canvas')).toHaveCount(1);
+  await expect(about).toHaveAttribute('data-reel-assets-ready', 'true');
+  const canvas = about.locator('canvas.reel-media-canvas');
+  await expect(canvas).toHaveCount(1);
   await expect.poll(() => page.evaluate(() =>
     (window as Window & {__aboutCanvasAdds?: number}).__aboutCanvasAdds ?? 0))
     .toBe(1);
+  expect(await page.evaluate(() => (
+    window as Window & {__aboutCanvasInitialOpacities?: string[]}
+  ).__aboutCanvasInitialOpacities)).toEqual(['0']);
+  await expect(canvas).toHaveAttribute('data-asset-fade', 'complete', {timeout: 10_000});
+  await expect(canvas).toHaveCSS('opacity', '1');
+  expect(await page.evaluate(() => (
+    window as Window & {__aboutPlaceholderPresentAtFadeStart?: boolean}
+  ).__aboutPlaceholderPresentAtFadeStart)).toBe(true);
+  expect(await page.evaluate(() => (
+    window as Window & {__aboutAssetsCompletedWithPlaceholderRemoved?: boolean}
+  ).__aboutAssetsCompletedWithPlaceholderRemoved)).toBe(true);
+  await expect(about.locator('[data-reel-opening-placeholder]')).toHaveCount(0, {timeout: 10_000});
+  await expect(about).toHaveAttribute('aria-busy', 'false');
+  await expect(about).toHaveAttribute('data-reel-scroll-ready', 'true');
+  await expect(page.locator('html')).not.toHaveAttribute('data-about-reel-scroll-locked');
+  const canvasOpacities = await page.evaluate(() => (
+    window as Window & {__aboutCanvasOpacities?: number[]}
+  ).__aboutCanvasOpacities ?? []);
+  expect(canvasOpacities.some((opacity) => opacity > 0 && opacity < 1)).toBe(true);
+  const placeholderExitOpacities = await page.evaluate(() => (
+    window as Window & {__aboutPlaceholderExitOpacities?: number[]}
+  ).__aboutPlaceholderExitOpacities ?? []);
+  expect(placeholderExitOpacities.length).toBeGreaterThan(0);
+  expect(placeholderExitOpacities.every((opacity) => opacity >= 0 && opacity <= 1)).toBe(true);
+  expect(placeholderExitOpacities.every((opacity, index, opacities) => (
+    index === 0 || opacity >= (opacities[index - 1] ?? opacity) - .0001
+  ))).toBe(true);
   await expect(page.locator('link[data-reel-preload="atlas"]')).toHaveCount(1);
   await expect(page.locator('link[data-reel-preload="feature"]')).toHaveCount(1);
+});
+
+test('fallback About assets fade in when each image finishes loading', async ({page}) => {
+  let releaseImage: (() => void) | undefined;
+  const imageGate = new Promise<void>((resolve) => {
+    releaseImage = resolve;
+  });
+  await page.route('**/media/images/anjali/anjali-adobe-portrait.webp', async (route) => {
+    await imageGate;
+    await route.continue();
+  });
+  await page.emulateMedia({reducedMotion: 'reduce'});
+  await page.goto('/about', {waitUntil: 'domcontentloaded'});
+
+  const about = page.locator('[data-about-experience]');
+  await expect(about).toHaveAttribute('data-mode', 'fallback');
+  await page.emulateMedia({reducedMotion: 'no-preference'});
+  const firstAsset = about.locator('[data-reel-fallback-asset]').first();
+  await firstAsset.scrollIntoViewIfNeeded();
+  await expect(firstAsset).toHaveCSS('opacity', '0');
+  await expect(firstAsset).toHaveCSS('transition-duration', '0.65s, 0.9s');
+  releaseImage?.();
+  await expect(firstAsset).toHaveAttribute('data-asset-loaded', 'true');
+  await expect.poll(() => firstAsset.evaluate((element) => getComputedStyle(element).opacity))
+    .toBe('1');
 });
 
 test('the About tab opens a progressive WebGL experience without layout overflow', async ({page}) => {

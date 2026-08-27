@@ -69,12 +69,44 @@ const waitForMetadata = async (video: HTMLVideoElement): Promise<void> => {
   ]);
 };
 
+const waitForCurrentFrame = async (video: HTMLVideoElement): Promise<void> => {
+  if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
+    await Promise.race([
+      new Promise<void>((resolve) => {
+        const settle = () => {
+          video.removeEventListener('loadeddata', settle);
+          video.removeEventListener('canplay', settle);
+          video.removeEventListener('error', settle);
+          resolve();
+        };
+        video.addEventListener('loadeddata', settle, { once: true });
+        video.addEventListener('canplay', settle, { once: true });
+        video.addEventListener('error', settle, { once: true });
+      }),
+      new Promise<void>((resolve) => window.setTimeout(resolve, 1_200)),
+    ]);
+  }
+
+  if ('requestVideoFrameCallback' in video && video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+    await Promise.race([
+      new Promise<void>((resolve) => video.requestVideoFrameCallback(() => resolve())),
+      new Promise<void>((resolve) => window.setTimeout(resolve, 240)),
+    ]);
+  }
+};
+
 export const restoreRouteVideo = async (
   video: HTMLVideoElement,
   slug: string,
 ): Promise<boolean> => {
   const state = window.__newWorkRouteVideoState;
   if (!state || state.slug !== slug) return false;
+  const destinationEmptyHost = video.closest<HTMLElement>('[data-route-media-destination-empty]');
+  const usePosterUntilFrame = video.matches('[data-preview-video]');
+  if (usePosterUntilFrame) {
+    video.dataset.routeTransitionPoster = 'true';
+    destinationEmptyHost?.removeAttribute('data-route-media-destination-empty');
+  }
 
   attachRouteSource(video);
   await waitForMetadata(video);
@@ -100,17 +132,22 @@ export const restoreRouteVideo = async (
     try {
       await video.play();
       if (video.matches('[data-preview-video]')) {
-        video.dataset.playing = 'true';
         // Let the route transition finish before the gallery's normal
         // visibility pool is allowed to recycle this just-restored preview.
         video.dataset.routeContinuityUntil = String(performance.now() + 1_200);
+        await waitForCurrentFrame(video);
+        video.removeAttribute('data-route-transition-poster');
+        video.dataset.playing = 'true';
       }
       if (video.matches('[data-short-loop]')) video.dataset.mediaActive = 'true';
     } catch {
       // The preserved frame and timestamp remain correct if autoplay is denied.
+    } finally {
+      video.removeAttribute('data-route-transition-poster');
     }
   } else {
     video.pause();
+    video.removeAttribute('data-route-transition-poster');
   }
 
   video.dataset.routeVideoRestored = 'true';

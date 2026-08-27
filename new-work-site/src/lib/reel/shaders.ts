@@ -26,7 +26,7 @@ export const mediaVertexShader = /* glsl */ `
   const float TOTAL = 80.0;
   const float REEL_TILE_ASPECT = 1.7777777778;
   const float REEL_TILE_SCALE = 0.1696460033;
-  const float INTRO_PATH_SPEED = 1.28;
+  const float INTRO_PATH_SPEED = 1.536;
   const float FEED_RESERVE_FRAMES = 3.0;
   const float CONTACT_DRAPE_FRAMES = 3.25;
   const float PANEL_ROW_OFFSET = 0.032;
@@ -514,6 +514,7 @@ export const mediaFragmentShader = /* glsl */ `
   uniform sampler2D uTexture;
   uniform float uUseAtlas;
   uniform float uSourceAspect;
+  uniform float uOpacity;
 
   varying vec2 vUv;
   varying float vAtlasIndex;
@@ -569,7 +570,7 @@ export const mediaFragmentShader = /* glsl */ `
     float shapeLight = 0.88 + 0.12 * abs(dot(normal, normalize(vec3(0.12, 0.28, 1.0))));
     vec3 color = mix(media.rgb * shapeLight, vec3(0.055), inkMix);
 
-    gl_FragColor = vec4(color, 1.0);
+    gl_FragColor = vec4(color, uOpacity);
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
   }

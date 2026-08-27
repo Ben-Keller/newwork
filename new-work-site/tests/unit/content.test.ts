@@ -57,8 +57,6 @@ function approvedRawProject() {
     visible: true,
     needsReview: false,
     doNotPublishWithoutExplicitApproval: false,
-    rightsApprovalStatus: 'approved',
-    rightsApprovalEvidence: 'Owner approval recorded in ticket NW-1.',
     title: 'Approved work',
     slug: 'approved-work',
     types: ['Photography'],
@@ -190,8 +188,6 @@ describe('production eligibility', () => {
     ['hidden project', { visible: false }],
     ['project awaiting review', { needsReview: true }],
     ['explicit approval block', { doNotPublishWithoutExplicitApproval: true }],
-    ['pending rights', { rightsApprovalStatus: 'pending' }],
-    ['missing rights evidence', { rightsApprovalEvidence: '' }],
     ['missing title', { title: '' }],
     ['missing slug', { slug: '' }],
     ['future publication', { publishAt: '2026-08-15T12:00:00.000Z' }],
@@ -263,8 +259,6 @@ describe('production eligibility', () => {
   it('requires complete, approved note media', () => {
     const note = {
       title: 'A note', slug: 'a-note', date: '2026-08-13', summary: 'A concise summary.',
-      rightsApprovalStatus: 'approved',
-      rightsApprovalEvidence: 'Owner approval recorded in ticket NW-2.',
       media: {
         kind: 'video',
         poster: { asset: { url: 'https://cdn.sanity.io/images/example/poster.jpg' } },

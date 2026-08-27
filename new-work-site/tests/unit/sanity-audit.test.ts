@@ -61,8 +61,6 @@ function validSnapshot(): AuditFixture {
         title: 'Arc cover',
         slug: 'arc-cover',
         kind: 'image',
-        rightsApprovalStatus: 'approved',
-        hasRightsEvidence: true,
         hasMedia: true,
         hasAccessibilityText: true,
       }],

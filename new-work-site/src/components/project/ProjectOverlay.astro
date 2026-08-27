@@ -175,15 +175,26 @@ const backdropProjects = [...projects]
     backdrop-filter: blur(clamp(12px, 1.45vw, 22px)) saturate(.78);
   }
 
+  .project-overlay[data-overlay-backdrop="retained"] .project-overlay__backdrop {
+    background: rgb(243 240 232 / 42%);
+    backdrop-filter: blur(clamp(12px, 1.45vw, 22px)) saturate(.78);
+  }
+
   :global(body.project-page:has([data-route-gallery-layer] [data-work-gallery]))
   .project-overlay__backdrop::after {
+    background: rgb(243 240 232 / 18%);
+  }
+
+  .project-overlay[data-overlay-backdrop="retained"] .project-overlay__backdrop::after {
     background: rgb(243 240 232 / 18%);
   }
 
   :global(body.project-page:has([data-route-gallery-layer] [data-work-gallery]))
   .project-overlay__fallback,
   :global(body.project-page:has([data-route-gallery-layer] [data-work-gallery]))
-  .project-overlay__snapshot {
+  .project-overlay__snapshot,
+  .project-overlay[data-overlay-backdrop="retained"] .project-overlay__fallback,
+  .project-overlay[data-overlay-backdrop="retained"] .project-overlay__snapshot {
     display: none;
   }
 

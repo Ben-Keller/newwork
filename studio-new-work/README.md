@@ -18,14 +18,19 @@ Regenerate the shared schema and query types after changing a schema or GROQ que
 npm run typegen
 ```
 
-Validate and build the standalone Studio before a manual deployment:
+Validate, build, and deploy the Studio with one command:
 
 ```sh
-npm run build
 npm run deploy
 ```
 
-Pushes to GitHub `main` deploy the schema and hosted Studio automatically through the root `deploy-studio.yml` workflow. Its `deploy:ci` command is unattended, deploys the pre-built Studio, and fails when the schema upload fails.
+This runs the schema validation, regenerates shared query types, type-checks, lints,
+builds, and then deploys the hosted Studio and schema.
+
+For a one-click GitHub deployment, open **Actions → Deploy Sanity Studio → Run
+workflow** and select `main`. Pushes to GitHub `main` also run that workflow
+automatically. GitHub needs the repository secret `SANITY_AUTH_TOKEN`; once set,
+the same secret can continue to be used for each deployment.
 
 The local Studio reads the shared production dataset directly; content is not pulled into or merged with Git. Create a gitignored recovery snapshot and validate the current dataset with:
 

@@ -125,10 +125,7 @@ export function auditPublishedSanity(
       if (
         !isNonEmptyString(asset.slug)
         || asset.hasMedia !== true
-        || asset.hasRightsEvidence !== true
         || asset.hasAccessibilityText !== true
-        || asset.rightsApprovalStatus !== 'approved'
-        || !isDue(asset.rightsExpiresAt, now)
       ) {
         errors.push(`${assetLabel} is linked to ${label(work)} but is not production-ready.`);
       }

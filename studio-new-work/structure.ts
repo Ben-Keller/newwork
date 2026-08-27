@@ -42,56 +42,23 @@ export const structure: StructureResolver = (S) =>
             .title('Projects')
             .items([
               S.listItem()
-                .id('work-all')
-                .title('All projects')
-                .child(
-                  S.documentList()
-                    .id('work-all-list')
-                    .title('All projects')
-                    .schemaType('work')
-                    .filter('_type == "work"')
-                    .defaultOrdering([{field: 'title', direction: 'asc'}]),
-                ),
-              S.listItem()
                 .id('work-drafts')
-                .title('Working drafts')
+                .title('Drafts')
                 .child(
                   S.documentList()
                     .id('work-drafts-list')
-                    .title('Working drafts')
+                    .title('Drafts')
                     .schemaType('work')
                     .filter('_type == "work" && editorialStatus == "draft"')
                     .defaultOrdering([{field: '_updatedAt', direction: 'desc'}]),
                 ),
               S.listItem()
-                .id('work-ready')
-                .title('Ready to publish')
-                .child(
-                  S.documentList()
-                    .id('work-ready-list')
-                    .title('Ready to publish')
-                    .schemaType('work')
-                    .filter('_type == "work" && editorialStatus == "ready"')
-                    .defaultOrdering([{field: 'title', direction: 'asc'}]),
-                ),
-              S.listItem()
-                .id('work-needs-attention')
-                .title('Needs client review')
-                .child(
-                  S.documentList()
-                    .id('work-needs-attention-list')
-                    .title('Needs client review')
-                    .schemaType('work')
-                    .filter('_type == "work" && (editorialStatus == "review" || doNotPublishWithoutExplicitApproval == true || rightsApprovalStatus != "approved")')
-                    .defaultOrdering([{field: 'title', direction: 'asc'}]),
-                ),
-              S.listItem()
                 .id('work-live')
-                .title('Approved for website')
+                .title('Approved')
                 .child(
                   S.documentList()
                     .id('work-live-list')
-                    .title('Approved for website')
+                    .title('Approved')
                     .schemaType('work')
                     .filter('_type == "work" && editorialStatus == "approved"')
                     .defaultOrdering([{field: 'title', direction: 'asc'}]),
@@ -141,14 +108,6 @@ export const structure: StructureResolver = (S) =>
                 .id('assets-files')
                 .title('Brand & files')
                 .child(S.documentList().id('assets-files-list').title('Brand & files').schemaType('mediaItem').filter('_type == "mediaItem" && kind == "file"').defaultOrdering([{field: 'title', direction: 'asc'}])),
-              S.listItem()
-                .id('assets-accessibility')
-                .title('Needs descriptions')
-                .child(S.documentList().id('assets-accessibility-list').title('Needs descriptions').schemaType('mediaItem').filter('_type == "mediaItem" && kind in ["image", "video"] && decorative != true && !defined(alt)').defaultOrdering([{field: 'title', direction: 'asc'}])),
-              S.listItem()
-                .id('assets-rights')
-                .title('Rights & approval')
-                .child(S.documentList().id('assets-rights-list').title('Rights & approval').schemaType('mediaItem').filter('_type == "mediaItem" && (rightsApprovalStatus != "approved" || (defined(rightsExpiresAt) && rightsExpiresAt <= now()))').defaultOrdering([{field: 'title', direction: 'asc'}])),
             ]),
         ),
       S.divider(),

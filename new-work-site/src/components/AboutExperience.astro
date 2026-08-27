@@ -76,6 +76,7 @@ const stages = [
   data-about-experience
   data-asset-base={normalizedAssetBase}
   data-mode="loading"
+  data-reel-scroll-ready="false"
   aria-busy="true"
 >
   <a class="reel-skip-link" href="#about-archive" aria-label="Skip the motion experience">Lorem ipsum</a>
@@ -150,7 +151,12 @@ const stages = [
       {reducedMotionFeaturedStills.map((asset, index) => (
         <figure class:list={['reel-fallback-card', `reel-card-${index + 1}`]}>
           <div class="reel-fallback-image">
-            <img src={assetUrl(asset.poster)} alt={asset.alt} loading="lazy" />
+            <img
+              src={assetUrl(asset.poster)}
+              alt={asset.alt}
+              loading="lazy"
+              data-reel-fallback-asset
+            />
           </div>
           <figcaption>
             <span>Lorem ipsum</span>
@@ -177,7 +183,10 @@ const stages = [
 </section>
 
 <script>
-  type AboutController = { destroy: () => void };
+  type AboutController = {
+    destroy: () => void;
+    refresh: () => void;
+  };
 
   declare global {
     interface Window {
@@ -219,6 +228,31 @@ const stages = [
 
     let cancelled = false;
     let controller: AboutController | undefined;
+    let placeholderRevealFrame = 0;
+    let canvasRevealFrame = 0;
+    const assetController = new AbortController();
+    const openingPlaceholder = root.querySelector<HTMLElement>('[data-reel-opening-placeholder]');
+    const fallbackAssets = Array.from(
+      root.querySelectorAll<HTMLImageElement>('[data-reel-fallback-asset]'),
+    );
+    root.dataset.reelAssetsManaged = 'true';
+    root.dataset.reelScrollReady = 'false';
+    document.documentElement.dataset.aboutReelScrollLocked = 'true';
+    const queuedAssets = new WeakSet<HTMLImageElement>();
+    const revealFallbackAsset = (image: HTMLImageElement): void => {
+      if (queuedAssets.has(image)) return;
+      queuedAssets.add(image);
+      window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
+        if (!cancelled && image.isConnected) image.dataset.assetLoaded = 'true';
+      }));
+    };
+    fallbackAssets.forEach((image) => {
+      if (image.complete && image.naturalWidth > 0) revealFallbackAsset(image);
+      else image.addEventListener('load', () => revealFallbackAsset(image), {
+        once: true,
+        signal: assetController.signal,
+      });
+    });
     const syncPlaceholderGeometry = (): void => {
       const cameraZ = 7.5;
       const viewHeight = 2 * cameraZ * Math.tan(19 * Math.PI / 180);
@@ -235,6 +269,16 @@ const stages = [
     window.addEventListener('resize', syncPlaceholderGeometry, {passive: true});
     root.dataset.mode = 'loading';
     root.setAttribute('aria-busy', 'true');
+    // Commit the transparent placeholder before asking the browser to reveal
+    // it. Without the frame boundary a warm cache can collapse both states
+    // into one paint and skip the transition entirely.
+    openingPlaceholder?.getBoundingClientRect();
+    placeholderRevealFrame = window.requestAnimationFrame(() => {
+      placeholderRevealFrame = 0;
+      if (!cancelled && openingPlaceholder?.isConnected) {
+        openingPlaceholder.dataset.placeholderVisible = 'true';
+      }
+    });
 
     const settleFallback = (): void => {
       if (cancelled) return;
@@ -242,14 +286,24 @@ const stages = [
       controller = undefined;
       root.dataset.mode = 'fallback';
       root.setAttribute('aria-busy', 'false');
+      openingPlaceholder?.remove();
+      root.dataset.reelScrollReady = 'true';
+      delete document.documentElement.dataset.aboutReelScrollLocked;
     };
 
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || !supportsWebGL2()) {
       settleFallback();
       window.__newWorkAboutCleanup = () => {
         cancelled = true;
+        assetController.abort();
+        if (placeholderRevealFrame) window.cancelAnimationFrame(placeholderRevealFrame);
+        if (canvasRevealFrame) window.cancelAnimationFrame(canvasRevealFrame);
         window.removeEventListener('resize', syncPlaceholderGeometry);
+        delete root.dataset.reelAssetsManaged;
+        delete root.dataset.reelAssetsReady;
+        delete root.dataset.reelScrollReady;
         delete root.dataset.reelLifecycleReady;
+        delete document.documentElement.dataset.aboutReelScrollLocked;
       };
       return;
     }
@@ -331,7 +385,40 @@ const stages = [
           onReady: () => {
             if (cancelled) return;
             root.dataset.mode = 'enhanced';
-            root.setAttribute('aria-busy', 'false');
+            const canvas = mount.querySelector<HTMLCanvasElement>('.reel-media-canvas');
+            canvas?.getBoundingClientRect();
+            canvasRevealFrame = window.requestAnimationFrame(() => {
+              canvasRevealFrame = 0;
+              if (cancelled || !canvas?.isConnected) return;
+              root.dataset.reelAssetsReady = 'true';
+              canvas.dataset.assetFade = 'active';
+              canvas.style.opacity = '0';
+              const startedAt = performance.now();
+              let paintedFrames = 0;
+              const paintFadeFrame = (now: number): void => {
+                if (cancelled || !canvas.isConnected) return;
+                paintedFrames += 1;
+                // Require several painted steps as well as elapsed time. This
+                // keeps a busy first render from jumping directly to opaque.
+                const elapsedProgress = Math.min(1, (now - startedAt) / 720);
+                const frameProgress = Math.min(1, paintedFrames / 18);
+                const progress = Math.min(elapsedProgress, frameProgress);
+                const easedProgress = quintic(0, 1, progress);
+                canvas.style.opacity = easedProgress.toFixed(4);
+                if (progress < 1) {
+                  canvasRevealFrame = window.requestAnimationFrame(paintFadeFrame);
+                  return;
+                }
+                canvasRevealFrame = 0;
+                canvas.dataset.assetFade = 'complete';
+                openingPlaceholder?.remove();
+                root.setAttribute('aria-busy', 'false');
+                root.dataset.reelScrollReady = 'true';
+                delete document.documentElement.dataset.aboutReelScrollLocked;
+                window.requestAnimationFrame(() => controller?.refresh());
+              };
+              canvasRevealFrame = window.requestAnimationFrame(paintFadeFrame);
+            });
           },
           onFailure: settleFallback,
           onProgress: updateInterface,
@@ -340,7 +427,10 @@ const stages = [
       .then((createdController) => {
         if (!createdController) return;
         if (cancelled) createdController.destroy();
-        else controller = createdController;
+        else {
+          controller = createdController;
+          if (root.dataset.reelScrollReady === 'true') createdController.refresh();
+        }
       })
       .catch(settleFallback);
 
@@ -348,9 +438,16 @@ const stages = [
       cancelled = true;
       controller?.destroy();
       controller = undefined;
+      assetController.abort();
+      if (placeholderRevealFrame) window.cancelAnimationFrame(placeholderRevealFrame);
+      if (canvasRevealFrame) window.cancelAnimationFrame(canvasRevealFrame);
       window.removeEventListener('resize', syncPlaceholderGeometry);
       root.style.removeProperty('--reel-progress');
+      delete root.dataset.reelAssetsManaged;
+      delete root.dataset.reelAssetsReady;
+      delete root.dataset.reelScrollReady;
       delete root.dataset.reelLifecycleReady;
+      delete document.documentElement.dataset.aboutReelScrollLocked;
     };
   };
 

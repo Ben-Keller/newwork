@@ -363,10 +363,11 @@ const tabletColumnStarts = tabletColumns.map((column, index) =>
 
     gallery.dataset.galleryRestore = 'true';
     gallery.dataset.galleryEntrancePlayed = 'true';
-    gallery.style.setProperty('--gallery-pointer-x', '0px');
     entrance.dataset.galleryEntranceState = 'settled';
-    entrance.style.removeProperty('transform');
-    entrance.style.removeProperty('will-change');
+    if (!gallery.closest('[data-gallery-layer-state="background"]')) {
+      entrance.style.removeProperty('transform');
+      entrance.style.removeProperty('will-change');
+    }
     setupEditorialGrid(true);
 
     if (typeof origin.scrollY === 'number') {

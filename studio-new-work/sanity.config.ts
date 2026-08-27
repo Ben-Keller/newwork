@@ -2,7 +2,7 @@ import {defineConfig} from 'sanity'
 import {presentationTool} from 'sanity/presentation'
 import {structureTool} from 'sanity/structure'
 import {NewWorkIcon} from './components/NewWorkIcon'
-import {rightsBadge, workflowBadge} from './components/documentBadges'
+import {workflowBadge} from './components/documentBadges'
 import {schemaTypes} from './schemaTypes'
 import {presentationResolve} from './presentation'
 import {structure} from './structure'
@@ -49,7 +49,6 @@ export default defineConfig({
           types: ['Film'],
           template: 'video',
           editorialStatus: 'draft',
-          rightsApprovalStatus: 'pending',
           needsReview: false,
         },
       },
@@ -61,7 +60,6 @@ export default defineConfig({
           types: ['Photography'],
           template: 'photo',
           editorialStatus: 'draft',
-          rightsApprovalStatus: 'pending',
           needsReview: false,
         },
       },
@@ -73,7 +71,6 @@ export default defineConfig({
           types: ['Campaign'],
           template: 'featured',
           editorialStatus: 'draft',
-          rightsApprovalStatus: 'pending',
           needsReview: false,
         },
       },
@@ -84,7 +81,6 @@ export default defineConfig({
         value: {
           kind: 'image',
           decorative: false,
-          rightsApprovalStatus: 'pending',
         },
       },
       {
@@ -94,7 +90,6 @@ export default defineConfig({
         value: {
           kind: 'video',
           decorative: false,
-          rightsApprovalStatus: 'pending',
         },
       },
       {
@@ -104,7 +99,6 @@ export default defineConfig({
         value: {
           kind: 'file',
           decorative: false,
-          rightsApprovalStatus: 'pending',
         },
       },
       ...previous.filter(
@@ -131,8 +125,7 @@ export default defineConfig({
         ? previous.filter((action) => !['delete', 'duplicate'].includes(action.action ?? ''))
         : previous,
     badges: (previous, context) => {
-      if (context.schemaType === 'work') return [workflowBadge, rightsBadge, ...previous]
-      if (context.schemaType === 'mediaItem') return [rightsBadge, ...previous]
+      if (context.schemaType === 'work') return [workflowBadge, ...previous]
       return previous
     },
   },

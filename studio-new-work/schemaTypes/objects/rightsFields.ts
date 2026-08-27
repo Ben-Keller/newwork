@@ -1,48 +1,62 @@
 import {defineArrayMember, defineField} from 'sanity'
 
+const LEGACY_RIGHTS_REASON =
+  'Rights are managed by the content owner outside Sanity. This field is retained only to preserve existing data.'
+
 export function rightsApprovalFieldsFor(group = 'internal') {
   return [
   defineField({
     name: 'rightsApprovalStatus',
-    title: 'Rights approval',
+    title: 'Rights approval (legacy)',
     type: 'string',
     group,
-    initialValue: 'pending',
+    initialValue: undefined,
+    hidden: true,
+    readOnly: true,
+    deprecated: {reason: LEGACY_RIGHTS_REASON},
     options: {list: [
       {title: 'Pending review', value: 'pending'},
       {title: 'Approved for portfolio publication', value: 'approved'},
       {title: 'Expired / withdrawn', value: 'expired'},
     ], layout: 'radio'},
-    validation: (Rule) => Rule.required(),
   }),
   defineField({
     name: 'rightsApprovalEvidence',
-    title: 'Rights approval evidence',
+    title: 'Rights approval evidence (legacy)',
     type: 'text',
     rows: 3,
     group,
-    description: 'Record the approver, source, ticket/email location, and permitted portfolio use. Do not paste secrets.',
+    hidden: true,
+    readOnly: true,
+    deprecated: {reason: LEGACY_RIGHTS_REASON},
   }),
   defineField({
     name: 'rightsApprovedAt',
-    title: 'Rights approved at',
+    title: 'Rights approved at (legacy)',
     type: 'datetime',
     group,
+    hidden: true,
+    readOnly: true,
+    deprecated: {reason: LEGACY_RIGHTS_REASON},
   }),
   defineField({
     name: 'rightsExpiresAt',
-    title: 'Rights expire at',
+    title: 'Rights expire at (legacy)',
     type: 'datetime',
     group,
-    description: 'Leave empty only when approval is genuinely open-ended.',
+    hidden: true,
+    readOnly: true,
+    deprecated: {reason: LEGACY_RIGHTS_REASON},
   }),
   defineField({
     name: 'rightsTerritories',
-    title: 'Approved territories',
+    title: 'Approved territories (legacy)',
     type: 'array',
     group,
+    hidden: true,
+    readOnly: true,
+    deprecated: {reason: LEGACY_RIGHTS_REASON},
     of: [defineArrayMember({type: 'string'})],
-    validation: (Rule) => Rule.unique(),
   }),
   ]
 }

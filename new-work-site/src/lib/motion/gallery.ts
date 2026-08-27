@@ -1,20 +1,32 @@
 /* v8 ignore file -- pointer and ScrollTrigger integration is covered by Playwright. */
 import type { MotionCleanup, MotionEnvironment } from './types';
-import { MOTION_DURATION, MOTION_EASE, MOTION_LIMIT } from './tokens';
+import { MOTION_DURATION, MOTION_EASE, MOTION_LIMIT, clampMotionValue } from './tokens';
 import { ScrollTrigger, gsap } from './vendor';
 
-const zeroGalleryMotion = (gallery: HTMLElement): void => {
+const galleryIsRetained = (gallery: HTMLElement): boolean => (
+  Boolean(gallery.closest('[data-gallery-layer-state="background"]'))
+);
+
+const zeroGalleryMotion = (
+  gallery: HTMLElement,
+  {preservePointerOffset = false}: {preservePointerOffset?: boolean} = {},
+): void => {
   gallery.removeAttribute('data-gallery-motion');
   gallery.removeAttribute('data-gallery-pointer');
-  gallery.style.setProperty('--gallery-pointer-x', '0px');
+  if (!preservePointerOffset) gallery.style.setProperty('--gallery-pointer-x', '0px');
 };
 
-const settleGalleryEntrance = (gallery: HTMLElement): void => {
+const settleGalleryEntrance = (
+  gallery: HTMLElement,
+  {preserveTransform = false}: {preserveTransform?: boolean} = {},
+): void => {
   const entrance = gallery.querySelector<HTMLElement>('[data-gallery-entrance]');
   if (!entrance) return;
   entrance.dataset.galleryEntranceState = 'settled';
-  entrance.style.removeProperty('transform');
-  entrance.style.removeProperty('will-change');
+  if (!preserveTransform) {
+    entrance.style.removeProperty('transform');
+    entrance.style.removeProperty('will-change');
+  }
 };
 
 const initializeGalleryEntrance = (gallery: HTMLElement): MotionCleanup => {
@@ -50,7 +62,7 @@ const initializeGalleryEntrance = (gallery: HTMLElement): MotionCleanup => {
 
   return () => {
     tween.kill();
-    settleGalleryEntrance(gallery);
+    settleGalleryEntrance(gallery, {preserveTransform: galleryIsRetained(gallery)});
   };
 };
 
@@ -60,6 +72,71 @@ const initializeGalleryScroll = (gallery: HTMLElement): MotionCleanup => {
 
   return () => {
     zeroGalleryMotion(gallery);
+  };
+};
+
+const initializeGalleryPointer = (gallery: HTMLElement): MotionCleanup => {
+  gallery.dataset.galleryPointer = 'true';
+  let animationFrame = 0;
+  let targetX = 0;
+  let currentX = 0;
+  let pointerInside = false;
+
+  const apply = (): void => {
+    animationFrame = 0;
+    currentX += (targetX - currentX) * 0.18;
+    if (Math.abs(currentX - targetX) < 0.05) currentX = targetX;
+    gallery.style.setProperty('--gallery-pointer-x', `${currentX.toFixed(2)}px`);
+    if (currentX !== targetX) animationFrame = requestAnimationFrame(apply);
+  };
+
+  const requestApply = (): void => {
+    if (!animationFrame) animationFrame = requestAnimationFrame(apply);
+  };
+
+  const galleryIsVisible = (): boolean => {
+    const bounds = gallery.getBoundingClientRect();
+    return bounds.width > 0
+      && bounds.height > 0
+      && bounds.bottom > 0
+      && bounds.top < window.innerHeight
+      && !gallery.closest('[data-gallery-layer-state="background"]');
+  };
+
+  const setTarget = (value: number): void => {
+    targetX = value;
+    requestApply();
+  };
+
+  const onPointerMove = (event: PointerEvent): void => {
+    if (event.pointerType === 'touch' || !galleryIsVisible()) return;
+    pointerInside = true;
+    const normalized = clampMotionValue((event.clientX / window.innerWidth) * 2 - 1, -1, 1);
+    setTarget(normalized * MOTION_LIMIT.galleryPointerX);
+  };
+
+  const onPointerLeave = (): void => {
+    pointerInside = false;
+    setTarget(0);
+  };
+
+  const onScrollOrResize = (): void => {
+    if (!pointerInside || galleryIsVisible()) return;
+    setTarget(0);
+  };
+
+  window.addEventListener('pointermove', onPointerMove, { passive: true });
+  window.addEventListener('pointerleave', onPointerLeave);
+  window.addEventListener('scroll', onScrollOrResize, { passive: true });
+  window.addEventListener('resize', onScrollOrResize, { passive: true });
+
+  return () => {
+    if (animationFrame) cancelAnimationFrame(animationFrame);
+    window.removeEventListener('pointermove', onPointerMove);
+    window.removeEventListener('pointerleave', onPointerLeave);
+    window.removeEventListener('scroll', onScrollOrResize);
+    window.removeEventListener('resize', onScrollOrResize);
+    zeroGalleryMotion(gallery, {preservePointerOffset: galleryIsRetained(gallery)});
   };
 };
 
@@ -79,6 +156,7 @@ export const initializeGalleryMotion = (environment: MotionEnvironment): MotionC
     }
     cleanups.push(initializeGalleryEntrance(gallery));
     cleanups.push(initializeGalleryScroll(gallery));
+    if (environment.pointer.desktopFine) cleanups.push(initializeGalleryPointer(gallery));
   });
 
   return () => cleanups.reverse().forEach((cleanup) => cleanup());

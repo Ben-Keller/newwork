@@ -24,6 +24,7 @@ const FEATURE_SOURCE_ASPECT = 16 / 9;
 const FEATURE_REVEAL = [0.875, 0.905] as const;
 const PORTAL_RIM_BLEND = 0.22;
 const PORTAL_FEATHER_BLEND = 0.08;
+const ASSET_FADE_DURATION = 0.65;
 const PORTAL_RIM_SAMPLES = 48;
 const PORTAL_FULL_COVER = 0.955;
 const PORTAL_PROJECTION_NEAR = 0.25;
@@ -50,6 +51,7 @@ type MediaUniforms = SharedUniforms & {
   uUseAtlas: Uniform;
   uSourceAspect: Uniform;
   uIntroTop: Uniform;
+  uOpacity: Uniform;
 };
 
 type FeatureUniforms = {
@@ -80,14 +82,16 @@ type VideoRecord = {
   video: HTMLVideoElement;
   texture: THREE.VideoTexture;
   mesh: THREE.Mesh;
-  material: THREE.ShaderMaterial;
+  material: TypedShaderMaterial<MediaUniforms>;
   ready: boolean;
+  fadeProgress: number;
   loadedData: () => void;
   error: () => void;
 };
 
 export type ExperienceController = {
   destroy: () => void;
+  refresh: () => void;
 };
 
 export type ExperienceOptions = {
@@ -262,6 +266,7 @@ function createMediaMaterial(
       uUseAtlas: { value: useAtlas ? 1 : 0 },
       uSourceAspect: { value: sourceAspect },
       uIntroTop: { value: introTop ? 1 : 0 },
+      uOpacity: { value: useAtlas ? 1 : 0 },
   };
   return new THREE.ShaderMaterial({
     uniforms,
@@ -271,7 +276,7 @@ function createMediaMaterial(
     depthTest: true,
     depthWrite: useAtlas,
     depthFunc: THREE.LessEqualDepth,
-    transparent: false,
+    transparent: !useAtlas,
   }) as TypedShaderMaterial<MediaUniforms>;
 }
 
@@ -461,11 +466,14 @@ export async function createExperience(
       mesh,
       material,
       ready: false,
+      fadeProgress: 0,
       loadedData: () => undefined,
       error: () => undefined,
     };
     record.loadedData = () => {
       record.ready = true;
+      record.fadeProgress = 0;
+      material.uniforms.uOpacity.value = 0;
       mesh.visible = true;
       if (spec.id === "olympics") {
         feature.uniforms.uTexture.value = texture;
@@ -473,6 +481,9 @@ export async function createExperience(
       void video.play().catch(() => undefined);
     };
     record.error = () => {
+      record.ready = false;
+      record.fadeProgress = 0;
+      material.uniforms.uOpacity.value = 0;
       mesh.visible = false;
     };
     video.addEventListener("loadeddata", record.loadedData);
@@ -723,6 +734,14 @@ export async function createExperience(
 
     sharedUniforms.uProgress.value = displayProgress;
     sharedUniforms.uTime.value += deltaSeconds;
+    for (const record of videoRecords) {
+      if (!record.ready || !record.mesh.visible || record.fadeProgress >= 1) continue;
+      record.fadeProgress = Math.min(
+        1,
+        record.fadeProgress + deltaSeconds / ASSET_FADE_DURATION,
+      );
+      record.material.uniforms.uOpacity.value = smoother(0, 1, record.fadeProgress);
+    }
     updateFeature(displayProgress);
     options.onProgress(displayProgress);
     renderer.render(scene, camera);
@@ -853,6 +872,11 @@ export async function createExperience(
   startLoop();
 
   return {
+    refresh: () => {
+      ScrollTrigger.refresh();
+      targetProgress = scrollTrigger.progress;
+      startLoop();
+    },
     destroy: () => {
       if (destroyed) return;
       destroyed = true;

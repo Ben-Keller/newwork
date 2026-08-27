@@ -43,6 +43,7 @@ test.describe('logo mask study', () => {
   test('paints the color field first while requesting the title video immediately', async ({page}, testInfo) => {
     test.skip(testInfo.project.name !== 'desktop-chromium', 'The first-paint sequence is browser-independent and covered once.');
     await page.addInitScript(() => {
+      Math.random = () => .125;
       type BootFrame = {
         background: string;
         opacity: string;
@@ -88,7 +89,7 @@ test.describe('logo mask study', () => {
     const backgroundFrameIndex = frames.findIndex((frame) => frame === backgroundFrame);
 
     expect(backgroundFrame).toBeDefined();
-    expect(backgroundFrame?.background).toBe('rgb(71, 0, 0)');
+    expect(backgroundFrame?.background).toBe('rgb(71, 0, 71)');
     expect(backgroundFrame?.opacity).toBe('0');
     expect(backgroundFrames.some((frame) => frame.videoRequested)).toBe(true);
     const backgroundChannels = backgroundFrames.map((frame) =>
@@ -102,6 +103,29 @@ test.describe('logo mask study', () => {
     expect(largestFrameJump).toBeLessThanOrEqual(2);
     expect(contentFrameIndex).toBeGreaterThan(backgroundFrameIndex);
     await expect(experience.locator('source[data-src]').first()).toHaveAttribute('src', /.+/u);
+  });
+
+  test('chooses a new automatic color seed for each page load', async ({page}, testInfo) => {
+    test.skip(testInfo.project.name !== 'desktop-chromium', 'The load seed is browser-independent and covered once.');
+    await page.emulateMedia({reducedMotion: 'reduce'});
+    await page.addInitScript(() => {
+      Math.random = () => window.sessionStorage.getItem('new-work-color-probe') === 'second'
+        ? .625
+        : .125;
+    });
+
+    await page.goto('/');
+    await expectLogoPageReady(page);
+    const hero = page.locator('[data-logo-work-hero]');
+    const firstColor = await hero.evaluate((element) => getComputedStyle(element).backgroundColor);
+    expect(firstColor).toBe('rgb(71, 0, 71)');
+
+    await page.evaluate(() => window.sessionStorage.setItem('new-work-color-probe', 'second'));
+    await page.reload();
+    await expectLogoPageReady(page);
+    const secondColor = await hero.evaluate((element) => getComputedStyle(element).backgroundColor);
+    expect(secondColor).toBe('rgb(0, 71, 71)');
+    expect(secondColor).not.toBe(firstColor);
   });
 
   test('is merged into Work with no standalone Logo navigation or route', async ({ page }) => {

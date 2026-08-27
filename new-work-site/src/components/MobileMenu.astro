@@ -207,7 +207,7 @@ const isCurrent = (item: NavItem): boolean => {
         document.body.style.overflow = 'hidden';
       };
 
-      const unlockBackground = (): void => {
+      const unlockBackground = (restoreScroll = true): void => {
         lockedElements.reverse().forEach(({ element, wasInert }) => {
           element.inert = wasInert;
         });
@@ -223,10 +223,10 @@ const isCurrent = (item: NavItem): boolean => {
         }
 
         document.body.classList.remove('has-open-mobile-menu');
-        window.scrollTo(0, lockedScrollY);
+        if (restoreScroll) window.scrollTo(0, lockedScrollY);
       };
 
-      const closeMenu = (restoreFocus = true): void => {
+      const closeMenu = (restoreFocus = true, restoreScroll = true): void => {
         if (!isOpen) {
           trigger.setAttribute('aria-expanded', 'false');
           panel.removeAttribute('aria-modal');
@@ -242,7 +242,7 @@ const isCurrent = (item: NavItem): boolean => {
         guards.forEach((guard) => {
           guard.tabIndex = -1;
         });
-        unlockBackground();
+        unlockBackground(restoreScroll);
 
         if (restoreFocus && previousFocus?.isConnected) {
           previousFocus.focus();
@@ -250,8 +250,8 @@ const isCurrent = (item: NavItem): boolean => {
         previousFocus = null;
       };
 
-      const requestClose = (restoreFocus = true): void => {
-        closeMenu(false);
+      const requestClose = (restoreFocus = true, restoreScroll = true): void => {
+        closeMenu(false, restoreScroll);
         details.open = false;
         if (restoreFocus) {
           window.setTimeout(() => trigger.focus(), 0);
@@ -327,7 +327,7 @@ const isCurrent = (item: NavItem): boolean => {
       });
 
       root.querySelectorAll<HTMLElement>('[data-menu-link]').forEach((link) => {
-        link.addEventListener('click', () => requestClose(false));
+        link.addEventListener('click', () => requestClose(false, false));
       });
 
       guards.forEach((guard) => {

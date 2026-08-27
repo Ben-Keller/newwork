@@ -11,6 +11,12 @@
 ::view-transition-old(root) { animation: new-work-fade-out 120ms ease-in both; }
 ::view-transition-new(root) { animation: new-work-fade-in 180ms ease-out both; }
 
+html[data-work-navigation-transition="true"]::view-transition-group(root),
+html[data-work-navigation-transition="true"]::view-transition-old(root),
+html[data-work-navigation-transition="true"]::view-transition-new(root) {
+  animation: none !important;
+}
+
 /* Project handoffs transport the exact live media node themselves. Opt the
    document root out before native capture so no temporary full-page surface
    can reveal the incoming backdrop between the click and the live portal. */
@@ -92,7 +98,13 @@ html[data-work-project-transition="to-project"] .project-overlay__panel {
   body.project-page { background: var(--color-project, #e8e8e4); }
   body.menu-open { overflow: hidden; }
   main { min-height: 60vh; }
-  .route-gallery-layer { position: relative; }
+  /* Keep the gallery's negative opening margin contained in the same box in
+     normal flow and while that box is fixed behind a project. This makes the
+     retained cards geometrically identical on both sides of the swap. */
+  .route-gallery-layer {
+    display: flow-root;
+    position: relative;
+  }
   .route-project-layer { position: relative; z-index: 2; }
   .route-gallery-layer[data-gallery-layer-state="background"] {
     position: fixed;
@@ -105,39 +117,18 @@ html[data-work-project-transition="to-project"] .project-overlay__panel {
     pointer-events: none;
     user-select: none;
   }
-  /* The opening hero belongs only to the home reveal. Astro keeps the gallery
-     DOM alive behind projects but removes index-only styles during the swap;
-     without this route-global guard, its video reverts to a huge visible box. */
-  body.project-page .route-gallery-layer[data-gallery-layer-state="background"]
-  [data-logo-work-hero] {
-    display: none !important;
-  }
-  /* The title is in normal flow above the gallery, so retain its measured box
-     while taking it out of paint. Collapsing it would move every background
-     card during the handoff. */
-  body.project-page .route-gallery-layer[data-gallery-layer-state="background"]
-  [data-logo-work-title][data-route-gallery-title-locked="true"] {
-    height: var(--route-gallery-title-height) !important;
-    min-height: var(--route-gallery-title-height) !important;
-    max-height: var(--route-gallery-title-height) !important;
-    overflow: hidden !important;
-    visibility: hidden !important;
-    pointer-events: none !important;
-  }
-  /* These are decoder surfaces for the title canvases and must never paint as
-     standalone videos, even while their component stylesheet is between pages. */
-  body.project-page .route-gallery-layer[data-gallery-layer-state="background"]
-  [data-type-letter-video] {
-    position: fixed !important;
-    width: 1px !important;
-    height: 1px !important;
-    inset: auto auto 0 0 !important;
-    opacity: 0 !important;
-    pointer-events: none !important;
-  }
   .route-gallery-layer[data-gallery-layer-state="background"]
   > .route-gallery-layer__content {
     transform: translate3d(0, var(--route-gallery-offset, 0px), 0);
+  }
+  html[data-work-project-transition="to-gallery"][data-work-project-media="live"]::view-transition,
+  html[data-work-project-transition="to-gallery"][data-work-project-media="live"]::view-transition-group(root),
+  html[data-work-project-transition="to-gallery"][data-work-project-media="live"]::view-transition-image-pair(root),
+  html[data-work-project-transition="to-gallery"][data-work-project-media="live"]::view-transition-old(root),
+  html[data-work-project-transition="to-gallery"][data-work-project-media="live"]::view-transition-new(root) {
+    animation: none !important;
+    opacity: 0 !important;
+    mix-blend-mode: normal !important;
   }
   body.home-page .route-gallery-layer:not([data-gallery-layer-state="background"])
   > .route-gallery-layer__content {
@@ -166,14 +157,15 @@ html[data-work-project-transition="to-project"] .project-overlay__panel {
     padding: 0 var(--page-gutter);
   }
   .project-grid-stage {
-    transform: scale(1.12);
+    transform: translate3d(var(--gallery-pointer-x, 0px), 0, 0) scale(1.12);
     transform-origin: 50% 0%;
+    transition: transform 640ms cubic-bezier(.22, 1, .36, 1);
     will-change: transform;
   }
   .project-grid-stage[data-gallery-entrance-state="settled"],
   .project-grid-stage[data-gallery-entrance-state="static"] {
-    transform: none;
-    will-change: auto;
+    transform: translate3d(var(--gallery-pointer-x, 0px), 0, 0);
+    will-change: transform;
   }
   .project-grid {
     position: relative;
@@ -307,15 +299,28 @@ html[data-work-project-transition="to-project"] .project-overlay__panel {
     transition: opacity var(--duration-fast);
   }
   .preview-video video[data-playing="true"] { opacity: 1; }
+  .project-card__media-inner:has(.preview-video video[data-playing="true"])
+  > .responsive-image {
+    visibility: hidden;
+  }
   .preview-video video[data-route-transition-poster] { opacity: 0; transition: none; }
   [data-project-hero-media][data-route-media-destination-empty]
+  :is(.responsive-image, .hosted-video, .lazy-embed, .media-placeholder, .error-media),
+  [data-project-hero-media][data-route-media-destination-empty]
   .hosted-video > .video-controls,
+  .project-card__media[data-route-media-source-empty]
+  > .project-card__media-inner > :is(.responsive-image, .preview-video),
   .project-card__media[data-route-media-destination-empty]
   > .project-card__media-inner > .responsive-image {
     visibility: hidden !important;
   }
   [data-project-hero-media][data-route-media-destination-empty]
   :is(.hosted-video, .responsive-image),
+  .project-card__media[data-route-media-source-empty],
+  .project-card__media[data-route-media-source-empty]
+  > .project-card__media-inner,
+  .project-card__media[data-route-media-source-empty]
+  > .project-card__media-inner > :is(.responsive-image, .preview-video),
   .project-card__media[data-route-media-destination-empty],
   .project-card__media[data-route-media-destination-empty]
   > .project-card__media-inner,

@@ -13,7 +13,7 @@ export const workPlacement = defineType({
       title: 'Gallery asset',
       type: 'reference',
       to: [{type: 'mediaItem'}],
-      description: 'Choose any approved image or video Asset. Its linked Project controls the destination page.',
+      description: 'Choose any complete image or video Asset. Its linked Project controls the destination page.',
       options: {
         disableNew: true,
         filter: 'kind in ["image", "video"] && defined(project)',
@@ -28,14 +28,11 @@ export const workPlacement = defineType({
             defined(project) &&
             kind in ["image", "video"] &&
             select(kind == "image" => defined(image.asset), defined(poster.asset)) &&
-            rightsApprovalStatus == "approved" &&
-            length(coalesce(rightsApprovalEvidence, "")) > 0 &&
-            (!defined(rightsExpiresAt) || rightsExpiresAt > now()) &&
             (decorative == true || length(coalesce(alt, "")) > 0)
           ]) > 0`,
           {assetId},
         )
-        return eligible ? true : 'Choose a published visual Asset with a linked Project, accessibility text, and current rights approval.'
+        return eligible ? true : 'Choose a complete visual Asset with a linked Project and accessibility text.'
       }),
     }),
     defineField({

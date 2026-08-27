@@ -25,6 +25,7 @@ import {
   supportsRouteMediaPersistence,
   type RouteMediaAnimation,
   type RouteMediaHandoff,
+  clearRouteMediaTransportStyles,
 } from './route-media-persistence';
 
 export interface WorkOrigin {
@@ -69,8 +70,6 @@ interface RouteSession {
   detachAbort?: () => void;
   animateReturn?: boolean;
   releaseScrollLock?: () => void;
-  departureVeil?: HTMLElement;
-  departureVeilAnimation?: Animation;
 }
 
 declare global {
@@ -87,13 +86,13 @@ const originStorageKey = 'new-work-origin';
 const restoreRequestKey = 'new-work-restore-requested';
 const persistedMediaAttribute = 'data-transition-persist-media';
 const returnStyleAttribute = 'data-work-project-return-transition';
-const routerVersion = 6;
+const sourceEmptyAttribute = 'data-route-media-source-empty';
+const routerVersion = 7;
 const projectLinkSelector = '[data-project-grid] :is([data-project-link], [data-gallery-link])';
 const returnLinkSelector = '[data-project-overlay] [data-project-return]';
 const galleryLayerSelector = '[data-route-gallery-layer]';
 const galleryFlowHoldSelector = '[data-route-gallery-flow-hold]';
 const galleryPersistAttribute = 'data-astro-transition-persist';
-const galleryTitleHeightProperty = '--route-gallery-title-height';
 
 let sessionSequence = 0;
 let activeSession: RouteSession | undefined;
@@ -141,18 +140,22 @@ const slugForLink = (link: HTMLAnchorElement): string | undefined => {
   }
 };
 
-const markGallerySettled = (targetDocument: Document): void => {
+const markGallerySettled = (
+  targetDocument: Document,
+  {preserveEntranceTransform = false}: {preserveEntranceTransform?: boolean} = {},
+): void => {
   const gallery = targetDocument.querySelector<HTMLElement>('[data-work-gallery]');
   const entrance = gallery?.querySelector<HTMLElement>('[data-gallery-entrance]');
   if (gallery) {
     gallery.dataset.galleryRestore = 'true';
     gallery.dataset.galleryEntrancePlayed = 'true';
-    gallery.style.setProperty('--gallery-pointer-x', '0px');
   }
   if (entrance) {
     entrance.dataset.galleryEntranceState = 'settled';
-    entrance.style.removeProperty('transform');
-    entrance.style.removeProperty('will-change');
+    if (!preserveEntranceTransform) {
+      entrance.style.removeProperty('transform');
+      entrance.style.removeProperty('will-change');
+    }
   }
 };
 
@@ -171,16 +174,11 @@ const installGalleryFlowHold = (
   requestedHeight?: number,
 ): void => {
   removeGalleryFlowHold();
-  const content = layer.querySelector<HTMLElement>('.route-gallery-layer__content');
+  const measuredHeight = requestedHeight || 0;
   const storedHeight = Number(layer.dataset.routeGalleryFlowHeight || 0);
-  const height = Math.max(
-    requestedHeight || 0,
-    storedHeight,
-    layer.scrollHeight,
-    content?.scrollHeight || 0,
-  );
+  const height = measuredHeight > 0 ? measuredHeight : storedHeight;
   if (height <= 0) return;
-  layer.dataset.routeGalleryFlowHeight = String(height);
+  if (measuredHeight > 0) layer.dataset.routeGalleryFlowHeight = String(measuredHeight);
   const flowHold = document.createElement('div');
   flowHold.dataset.routeGalleryFlowHold = 'true';
   flowHold.setAttribute('aria-hidden', 'true');
@@ -195,77 +193,12 @@ const installGalleryFlowHold = (
   layer.insertAdjacentElement('afterend', flowHold);
 };
 
-const captureProjectDepartureVeil = (overlay: HTMLElement): HTMLElement | undefined => {
-  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
-  const overlayRect = overlay.getBoundingClientRect();
-  if (overlayRect.width <= 0 || overlayRect.height <= 0) return undefined;
-
-  const veil = document.createElement('div');
-  veil.dataset.routeProjectVeil = 'true';
-  veil.setAttribute('aria-hidden', 'true');
-  veil.inert = true;
-  Object.assign(veil.style, {
-    position: 'fixed',
-    zIndex: '30',
-    inset: '0',
-    overflow: 'hidden',
-    opacity: '1',
-    pointerEvents: 'none',
-    isolation: 'isolate',
-  });
-
-  const clone = overlay.cloneNode(true) as HTMLElement;
-  clone.querySelectorAll<HTMLElement>('[data-project-hero-media]')
-    .forEach((element) => { element.dataset.routeVeilHero = 'true'; });
-  [clone, ...clone.querySelectorAll<HTMLElement>('*')].forEach((element) => {
-    element.removeAttribute('id');
-    [...element.attributes].forEach(({name}) => {
-      if (
-        name.startsWith('data-')
-        && !name.startsWith('data-astro-')
-        && name !== 'data-route-veil-hero'
-      ) element.removeAttribute(name);
-    });
-    element.style.viewTransitionName = 'none';
-  });
-  Object.assign(clone.style, {
-    position: 'absolute',
-    left: `${overlayRect.left}px`,
-    top: `${overlayRect.top}px`,
-    width: `${overlayRect.width}px`,
-    minHeight: `${overlayRect.height}px`,
-    margin: '0',
-    pointerEvents: 'none',
-  });
-  veil.append(clone);
-  return veil;
-};
-
-const fadeProjectDepartureVeil = (routeSession: RouteSession): void => {
-  const veil = routeSession.departureVeil;
-  if (!veil?.isConnected) return;
-  veil.querySelectorAll<HTMLElement>('[data-route-veil-hero]')
-    .forEach((element) => { element.style.visibility = 'hidden'; });
-  const animation = veil.animate(
-    [{opacity: 1}, {opacity: 0}],
-    {duration: 320, easing: 'cubic-bezier(.22, 1, .36, 1)', fill: 'forwards'},
-  );
-  routeSession.departureVeilAnimation = animation;
-  void animation.finished.catch(() => undefined).then(() => veil.remove());
-};
-
 const retainGalleryLayer = (origin: WorkOrigin): void => {
   const layer = liveGalleryLayer();
   if (!layer) return;
   const scrollY = typeof origin.scrollY === 'number' ? origin.scrollY : window.scrollY;
   const layerRect = layer.getBoundingClientRect();
   const documentTop = layerRect.top + window.scrollY;
-  const openingTitle = layer.querySelector<HTMLElement>('[data-logo-work-title]');
-  const openingTitleHeight = openingTitle?.getBoundingClientRect().height ?? 0;
-  if (openingTitle && openingTitleHeight > 0) {
-    openingTitle.dataset.routeGalleryTitleLocked = 'true';
-    openingTitle.style.setProperty(galleryTitleHeightProperty, `${openingTitleHeight}px`);
-  }
   installGalleryFlowHold(layer, layerRect.height);
   layer.dataset.galleryLayerState = 'background';
   // A fixed layer loses the normal-flow offset contributed by the site
@@ -274,7 +207,7 @@ const retainGalleryLayer = (origin: WorkOrigin): void => {
   layer.style.setProperty('--route-gallery-offset', `${documentTop - scrollY}px`);
   layer.setAttribute('aria-hidden', 'true');
   layer.inert = true;
-  markGallerySettled(document);
+  markGallerySettled(document, {preserveEntranceTransform: true});
 };
 
 const releaseGalleryLayer = (): void => {
@@ -284,9 +217,9 @@ const releaseGalleryLayer = (): void => {
   layer.style.removeProperty('--route-gallery-offset');
   layer.removeAttribute('aria-hidden');
   layer.inert = false;
-  const openingTitle = layer.querySelector<HTMLElement>('[data-logo-work-title]');
-  openingTitle?.removeAttribute('data-route-gallery-title-locked');
-  openingTitle?.style.removeProperty(galleryTitleHeightProperty);
+  delete layer.dataset.routeGalleryFlowHeight;
+  document.querySelectorAll<HTMLElement>(`[${sourceEmptyAttribute}]`)
+    .forEach((element) => element.removeAttribute(sourceEmptyAttribute));
   document.dispatchEvent(new Event('new-work:gallery-layer-released'));
 };
 
@@ -374,8 +307,6 @@ const finishSession = (routeSession: RouteSession): void => {
   activeSession = undefined;
   routeSession.detachAbort?.();
   routeSession.releaseScrollLock?.();
-  routeSession.departureVeilAnimation?.cancel();
-  routeSession.departureVeil?.remove();
   routeSession.presentation?.cancel();
   routeSession.sourceVideo?.removeAttribute(persistedMediaAttribute);
   if (routeSession.sourceVideo && routeSession.slug) {
@@ -461,6 +392,7 @@ const beginProjectNavigation = (
   history.scrollRestoration = 'manual';
   if (sourceVideo && slug) {
     sourceVideo.setAttribute(persistedMediaAttribute, '');
+    sourceMedia?.setAttribute(sourceEmptyAttribute, 'true');
     captureRouteVideo(sourceVideo, slug);
   }
 
@@ -488,10 +420,8 @@ const beginProjectNavigation = (
     // Live-media routes must never run the generic page fade underneath the
     // exact-node portal, otherwise the click frame can briefly double-flash.
     document.documentElement.dataset.workProjectMedia = 'live';
+    disableRouteMediaSnapshots(document);
   }
-  // Individual snapshots are never allowed to compete with the live media
-  // transport. The root remains available as a fallback when persistence is
-  // unsupported or the incoming project does not expose a matching target.
   disableRouteMediaSnapshots(document, false);
   return routeSession;
 };
@@ -517,9 +447,7 @@ const beginGalleryNavigation = (
     ? undefined
     : sourceMedia?.querySelector<HTMLElement>('.responsive-image') ?? undefined;
   const handoffElement = sourceVideo || sourceImage;
-  const departureVeil = handoffElement && liveGalleryLayer()
-    ? captureProjectDepartureVeil(overlay)
-    : undefined;
+  if (handoffElement) clearRouteMediaTransportStyles(handoffElement);
   if (!liveGalleryLayer()) {
     // A direct project visit has an intentionally empty persistence target.
     // Let the incoming home scene replace it instead of retaining that shell.
@@ -546,7 +474,6 @@ const beginGalleryNavigation = (
       : undefined,
     persistedVideo: false,
     animateReturn: !returnsToTop,
-    departureVeil,
   };
   activeSession = routeSession;
   bindAbort(routeSession, signal);
@@ -555,6 +482,7 @@ const beginGalleryNavigation = (
   document.documentElement.dataset.workProjectTransition = 'to-gallery';
   if (handoffElement && routeSession.handoff && liveGalleryLayer()) {
     document.documentElement.dataset.workProjectMedia = 'live';
+    disableRouteMediaSnapshots(document);
   }
   disableRouteMediaSnapshots(document, false);
   return routeSession;
@@ -563,6 +491,11 @@ const beginGalleryNavigation = (
 const persistToProject = (routeSession: RouteSession, event: RouteSwapEvent): void => {
   const { slug, sourceImage, sourceMedia, sourceVideo } = routeSession;
   if (!supportsRouteMediaPersistence() || !slug) return;
+  const incomingOverlay = event.newDocument.querySelector<HTMLElement>('[data-project-overlay]');
+  if (incomingOverlay && liveGalleryLayer()) {
+    incomingOverlay.dataset.overlayBackdrop = 'retained';
+    incomingOverlay.dataset.overlayReady = 'true';
+  }
   const target = event.newDocument.querySelector<HTMLElement>(
     '[data-project-hero-media][data-first-media="true"]',
   );
@@ -617,7 +550,6 @@ const persistToGallery = (routeSession: RouteSession, event: RouteSwapEvent): vo
     const imageOrigin = targetMedia.querySelector<HTMLElement>(
       `[data-route-media-origin="${CSS.escape(routeMediaPersistKey(`${slug}-image`))}"]`,
     );
-    targetMedia.dataset.routeMediaDestinationEmpty = 'true';
     routeSession.persistedImage = persistResponsiveImage(
       sourceImage,
       imageOrigin || targetMedia,
@@ -629,8 +561,10 @@ const persistToGallery = (routeSession: RouteSession, event: RouteSwapEvent): vo
     `[data-route-media-origin="${CSS.escape(routeMediaPersistKey(`${slug}-video`))}"], [data-preview-video]`,
   );
   if (canPersist && slug && sourceVideo && targetVideo) {
-    targetMedia?.setAttribute('data-route-media-destination-empty', 'true');
     routeSession.persistedVideo = persistMatchingVideo(sourceVideo, targetVideo, slug, event);
+  }
+  if (routeSession.animateReturn && (routeSession.persistedImage || routeSession.persistedVideo)) {
+    targetMedia?.removeAttribute('data-route-media-destination-empty');
   }
 
   markGallerySettled(event.newDocument);
@@ -646,12 +580,11 @@ const persistToGallery = (routeSession: RouteSession, event: RouteSwapEvent): vo
   const preparedSwap = event.swap;
   if (typeof preparedSwap === 'function') {
     event.swap = () => {
-      if (routeSession.departureVeil && !routeSession.departureVeil.isConnected) {
-        document.documentElement.append(routeSession.departureVeil);
-      }
       preparedSwap();
       const retainedGallery = liveGalleryLayer();
       if (hasLiveMedia && routeSession.animateReturn && retainedGallery) {
+        document.documentElement.dataset.workProjectMedia = 'live';
+        disableRouteMediaSnapshots(document);
         installGalleryFlowHold(retainedGallery);
       }
       if (!hasLiveMedia || !routeSession.animateReturn) {
@@ -694,7 +627,6 @@ const handleAfterSwap = (): void => {
   if (routeSession.direction === 'to-project') removeGalleryFlowHold();
 
   if (routeSession.direction === 'to-gallery') {
-    fadeProjectDepartureVeil(routeSession);
     removeStorageValue('session', restoreRequestKey);
     if (routeSession.persistedImage) {
       if (routeSession.animateReturn && routeSession.slug) {
@@ -732,7 +664,6 @@ const handleAfterSwap = (): void => {
       settleGallery(routeSession.origin);
       holdGalleryScroll(routeSession);
     }
-    restoreRouteMediaSnapshots();
     finishAfterPresentation(routeSession);
     return;
   }
@@ -757,9 +688,6 @@ const handleAfterSwap = (): void => {
     );
     if (targetVideo) void restoreRouteVideo(targetVideo, routeSession.slug);
   }
-  // Native capture is complete by after-swap. Re-enable names immediately;
-  // the live portal owns the remaining presentation and cleanup.
-  restoreRouteMediaSnapshots();
   finishAfterPresentation(routeSession);
 };
 

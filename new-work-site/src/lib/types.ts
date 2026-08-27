@@ -216,7 +216,7 @@ export interface ProjectView {
   heroTreatment: HeroTreatment;
   layoutVariant: ProjectLayoutVariant;
   motionIntensity: MotionIntensity;
-  editorialStatus: 'draft' | 'review' | 'ready' | 'approved';
+  editorialStatus: 'draft' | 'approved';
   visible: boolean;
   publishAt?: string;
   needsReview: boolean;

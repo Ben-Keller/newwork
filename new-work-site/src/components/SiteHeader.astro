@@ -64,7 +64,6 @@ const showGalleryTools = galleryEditing && currentPath === '/';
       href={withBase('/')}
       class:list={['site-header__brand', compactMarkAsset && 'site-header__brand--has-compact']}
       aria-label={siteName}
-      transition:persist="site-wordmark"
     >
       <BrandLockup
         class="site-header__full-mark"
@@ -125,7 +124,11 @@ const showGalleryTools = galleryEditing && currentPath === '/';
 </header>
 
 <script>
-  import {removeStorageValue} from '../lib/browser-storage';
+  import {
+    readStorageValue,
+    removeStorageValue,
+    writeStorageValue,
+  } from '../lib/browser-storage';
 
   declare global {
     interface Window {
@@ -137,6 +140,7 @@ const showGalleryTools = galleryEditing && currentPath === '/';
   const LEGACY_TITLE_ALIGNMENT_KEY = 'new-work:title-alignment';
   const LEGACY_HEADER_LOGO_KEY = 'new-work:header-logo';
   const GALLERY_RESTORE_REQUEST_KEY = 'new-work-restore-requested';
+  const WORK_NAVIGATION_ENTRY_KEY = 'new-work:work-navigation-entry';
 
   const handleWorkNavigation = (event: MouseEvent): void => {
     if (
@@ -154,12 +158,18 @@ const showGalleryTools = galleryEditing && currentPath === '/';
     removeStorageValue('session', GALLERY_RESTORE_REQUEST_KEY);
 
     const destination = new URL(link.href, window.location.href);
-    if (
-      destination.origin !== window.location.origin
-      || destination.pathname !== window.location.pathname
-    ) return;
+    if (destination.origin !== window.location.origin) return;
+    if (destination.pathname !== window.location.pathname) {
+      writeStorageValue('session', WORK_NAVIGATION_ENTRY_KEY, 'true');
+      history.scrollRestoration = 'manual';
+      return;
+    }
 
     event.preventDefault();
+    removeStorageValue('session', WORK_NAVIGATION_ENTRY_KEY);
+    delete document.documentElement.dataset.workNavigationTransition;
+    history.scrollRestoration = 'auto';
+    showWorkNavigationState(document);
     window.history.replaceState(
       window.history.state,
       '',
@@ -187,6 +197,156 @@ const showGalleryTools = galleryEditing && currentPath === '/';
         if (Number.isFinite(defaultHeight)) image.height = defaultHeight;
       });
     }
+  };
+
+  const resetWorkScroll = (): void => {
+    window.scrollTo({top: 0, left: 0, behavior: 'auto'});
+  };
+
+  const workEntryIsActive = (): boolean => (
+    readStorageValue('session', WORK_NAVIGATION_ENTRY_KEY) === 'true'
+  );
+
+  const showWorkNavigationState = (targetDocument: Document): void => {
+    targetDocument
+      .querySelectorAll<HTMLAnchorElement>('[data-desktop-nav] a, [data-mobile-menu-root] [data-menu-link]')
+      .forEach((navLink) => {
+        const isWorkLink = navLink.hasAttribute('data-work-navigation');
+        navLink.classList.toggle('is-current', isWorkLink);
+        if (isWorkLink) navLink.setAttribute('aria-current', 'page');
+        else navLink.removeAttribute('aria-current');
+      });
+  };
+
+  const markGalleryImageReady = (image: HTMLImageElement): void => {
+    image.dataset.galleryImageReady = 'true';
+    image.closest<HTMLElement>('[data-media-frame]')?.setAttribute('data-media-ready', 'true');
+  };
+
+  const firstMatchingSource = (image: HTMLImageElement): HTMLSourceElement | undefined => {
+    const sources = Array.from(
+      image.closest('picture')?.querySelectorAll<HTMLSourceElement>('source') ?? [],
+    );
+    return sources.find((source) => (
+      source.type === 'image/avif'
+      && (!source.media || window.matchMedia(source.media).matches)
+    )) ?? sources.find((source) => (
+      !source.media || window.matchMedia(source.media).matches
+    ));
+  };
+
+  const decodeGalleryImage = async (
+    sourceImage: HTMLImageElement,
+    signal: AbortSignal | undefined,
+  ): Promise<void> => {
+    if (signal?.aborted) return;
+    const preferredSource = firstMatchingSource(sourceImage);
+    const preload = new Image();
+    preload.alt = '';
+    preload.decoding = 'async';
+    preload.fetchPriority = 'high';
+    preload.sizes = preferredSource?.sizes || sourceImage.sizes;
+    preload.srcset = preferredSource?.srcset || sourceImage.srcset;
+    preload.src = sourceImage.src;
+    try {
+      await preload.decode();
+    } catch {
+      if (preload.complete || signal?.aborted) return;
+      await new Promise<void>((resolve) => {
+        const settle = () => resolve();
+        preload.addEventListener('load', settle, {once: true});
+        preload.addEventListener('error', settle, {once: true});
+        signal?.addEventListener('abort', settle, {once: true});
+      });
+    }
+    if (!signal?.aborted && preload.naturalWidth > 0) markGalleryImageReady(sourceImage);
+  };
+
+  const decodeWorkEntryGalleryImages = async (
+    targetDocument: Document | undefined,
+    signal: AbortSignal | undefined,
+  ): Promise<void> => {
+    if (!targetDocument || signal?.aborted) return;
+    const images = Array.from(
+      targetDocument.querySelectorAll<HTMLImageElement>('img[data-gallery-image]'),
+    ).slice(0, 8);
+    if (!images.length) return;
+    await Promise.race([
+      Promise.allSettled(images.map((image) => decodeGalleryImage(image, signal))),
+      new Promise((resolve) => window.setTimeout(resolve, 1_200)),
+    ]);
+  };
+
+  const prepareWorkDocumentForDirectEntry = (targetDocument: Document | undefined): void => {
+    if (!targetDocument) return;
+
+    targetDocument.documentElement.setAttribute(
+      'data-work-navigation-transition',
+      'true',
+    );
+    showWorkNavigationState(targetDocument);
+    const incomingBody = targetDocument.body;
+    if (incomingBody) incomingBody.dataset.logoHeaderVisible = 'true';
+    const incomingWorkPage = targetDocument.querySelector<HTMLElement>('[data-logo-work-page]');
+    const incomingGallery = targetDocument.querySelector<HTMLElement>('[data-work-gallery]');
+    const incomingEntrance = incomingGallery?.querySelector<HTMLElement>('[data-gallery-entrance]');
+    if (incomingWorkPage) {
+      incomingWorkPage.dataset.handoff = 'true';
+      incomingWorkPage.dataset.workEntryAtTop = 'true';
+    }
+    targetDocument.querySelector<HTMLElement>('[data-logo-work-hero]')?.setAttribute('data-faded', 'true');
+    targetDocument.querySelector<HTMLElement>('[data-logo-work-content]')?.setAttribute('aria-hidden', 'false');
+    if (incomingGallery) incomingGallery.dataset.galleryEntrancePlayed = 'true';
+    if (incomingEntrance) {
+      incomingEntrance.dataset.galleryEntranceState = 'settled';
+      incomingEntrance.style.removeProperty('transform');
+      incomingEntrance.style.removeProperty('will-change');
+    }
+  };
+
+  const prepareWorkNavigationLoad = (rawEvent: Event): void => {
+    const event = rawEvent as Event & {
+      loader?: () => Promise<void>;
+      newDocument?: Document;
+      signal?: AbortSignal;
+      sourceElement?: Element;
+      to?: URL;
+    };
+    if (!workEntryIsActive()) return;
+    const originalLoader = event.loader;
+    if (typeof originalLoader !== 'function') return;
+    event.loader = async () => {
+      await originalLoader();
+      if (event.signal?.aborted) return;
+      await decodeWorkEntryGalleryImages(event.newDocument, event.signal);
+      prepareWorkDocumentForDirectEntry(event.newDocument);
+    };
+  };
+
+  const prepareWorkNavigationSwap = (rawEvent: Event): void => {
+    if (!workEntryIsActive()) return;
+    const event = rawEvent as Event & {
+      newDocument?: Document;
+      viewTransition?: ViewTransition;
+    };
+    prepareWorkDocumentForDirectEntry(event.newDocument);
+    void event.viewTransition?.ready.catch(() => undefined);
+    void event.viewTransition?.updateCallbackDone.catch(() => undefined);
+    void event.viewTransition?.finished.catch(() => undefined);
+    try {
+      event.viewTransition?.skipTransition();
+    } catch {
+      // A superseded navigation may already have completed or skipped it.
+    }
+  };
+
+  const finishWorkNavigationSwap = (): void => {
+    if (!workEntryIsActive()) return;
+    history.scrollRestoration = 'manual';
+    document.documentElement.dataset.workNavigationTransition = 'true';
+    document.body.dataset.logoHeaderVisible = 'true';
+    prepareWorkDocumentForDirectEntry(document);
+    resetWorkScroll();
   };
 
   const setupGalleryOrderTools = (): void => {
@@ -238,6 +398,9 @@ const showGalleryTools = galleryEditing && currentPath === '/';
   setupGalleryOrderTools();
   resetHeaderPreviewState();
   document.addEventListener('click', handleWorkNavigation, { capture: true });
+  document.addEventListener('astro:before-preparation', prepareWorkNavigationLoad);
+  document.addEventListener('astro:before-swap', prepareWorkNavigationSwap);
+  document.addEventListener('astro:after-swap', finishWorkNavigationSwap);
   document.addEventListener('astro:page-load', setupGalleryOrderTools);
   document.addEventListener('astro:page-load', resetHeaderPreviewState);
   document.addEventListener('astro:before-swap', () => window.__newWorkGalleryToolsFeedbackCleanup?.());

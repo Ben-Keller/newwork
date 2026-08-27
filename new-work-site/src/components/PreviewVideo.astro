@@ -350,12 +350,27 @@ const { source, poster, mobilePoster, title, placeholder = false } = Astro.props
     state.preloadTimer = 0;
     state.refreshTimers.forEach((timer) => window.clearTimeout(timer));
     state.refreshTimers = [];
+    const routeDirection = document.documentElement.dataset.workProjectTransition;
+    const preservesGallery = routeDirection === 'to-project' || routeDirection === 'to-gallery';
+    const continuityUntil = String(performance.now() + 2_000);
     document.querySelectorAll<HTMLVideoElement>('[data-preview-video]').forEach((video) => {
       // The selected route preview remains alive until the browser captures the
-      // outgoing transition frame. Every unrelated preview is still released.
-      if (video.dataset.routeTransitionActive !== 'true') detachSource(video);
+      // outgoing transition frame. Gallery videos also remain alive while the
+      // gallery is retained behind a project, so returning does not briefly
+      // repaint video cards as empty/still surfaces before the preview manager
+      // restarts them.
+      if (
+        video.dataset.routeTransitionActive === 'true'
+        || (preservesGallery && video.closest('[data-route-gallery-layer]'))
+      ) {
+        video.dataset.routeContinuityUntil = continuityUntil;
+        return;
+      }
+      detachSource(video);
     });
-    state.active = [];
+    state.active = preservesGallery
+      ? state.active.filter((video) => video.isConnected && video.closest('[data-route-gallery-layer]'))
+      : [];
     state.visibility.clear();
   });
   setupPreviews();

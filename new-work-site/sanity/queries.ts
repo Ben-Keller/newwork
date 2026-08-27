@@ -10,9 +10,6 @@ export const PUBLIC_ASSET_FILTER = `
   !(_id in path("drafts.**")) &&
   defined(project) &&
   defined(slug.current) && length(slug.current) > 0 &&
-  rightsApprovalStatus == "approved" &&
-  length(coalesce(rightsApprovalEvidence, "")) > 0 &&
-  (!defined(rightsExpiresAt) || rightsExpiresAt > now()) &&
   (kind == "file" || decorative == true || length(coalesce(alt, "")) > 0) &&
   select(
     kind == "image" => defined(image.asset),
@@ -25,9 +22,6 @@ export const PUBLIC_ASSET_FILTER = `
 export const PUBLIC_PROJECT_FILTER = `
   !(_id in path("drafts.**")) &&
   (editorialStatus == "approved" || (!defined(editorialStatus) && visible == true)) &&
-  rightsApprovalStatus == "approved" &&
-  length(coalesce(rightsApprovalEvidence, "")) > 0 &&
-  (!defined(rightsExpiresAt) || rightsExpiresAt > now()) &&
   (defined(editorialStatus) || needsReview != true) &&
   doNotPublishWithoutExplicitApproval != true &&
   (!defined(publishAt) || publishAt <= now()) &&
@@ -112,19 +106,12 @@ export const PUBLIC_PROJECT_FILTER = `
   count(contentBlocks[_type in ["heroVideo", "video"] && !defined(mediaItem) &&
     !defined(source.asset) && !defined(remoteSource) && !defined(vimeoId) && !defined(youtubeId) && !defined(externalUrl)
   ]) == 0 &&
-  count(contentBlocks[_type in ["heroImage", "fullBleedImage", "containedImage", "heroVideo", "video"] && defined(mediaItem) && (
-    mediaItem->rightsApprovalStatus != "approved" ||
-    (defined(mediaItem->rightsExpiresAt) && mediaItem->rightsExpiresAt <= now())
-  )]) == 0 &&
   count(contentBlocks[_type == "shortLoop" && length(coalesce(alt, "")) == 0 && decorative != true]) == 0
 `
 
 export const PUBLIC_NOTE_FILTER = `
   !(_id in path("drafts.**")) &&
   visible == true &&
-  rightsApprovalStatus == "approved" &&
-  length(coalesce(rightsApprovalEvidence, "")) > 0 &&
-  (!defined(rightsExpiresAt) || rightsExpiresAt > now()) &&
   needsReview != true &&
   doNotPublishWithoutExplicitApproval != true &&
   (!defined(publishAt) || publishAt <= now()) &&
@@ -174,7 +161,7 @@ const FILE_PROJECTION = `{
 
 const IMAGE_ITEM_PROJECTION = `{
   _key,
-  mediaItem->{_id, kind, image${IMAGE_PROJECTION}, alt, decorative, caption, credit, rightsApprovalStatus, rightsExpiresAt},
+  mediaItem->{_id, kind, image${IMAGE_PROJECTION}, alt, decorative, caption, credit},
   image${IMAGE_PROJECTION},
   alt,
   decorative,
@@ -369,9 +356,6 @@ export const SANITY_RELEASE_AUDIT_QUERY = defineQuery(/* groq */ `{
       title,
       "slug": slug.current,
       kind,
-      rightsApprovalStatus,
-      rightsExpiresAt,
-      "hasRightsEvidence": length(coalesce(rightsApprovalEvidence, "")) > 0,
       "hasMedia": select(
         kind == "image" => defined(image.asset),
         kind == "video" => defined(poster.asset) && (defined(videoFile.asset) || defined(videoUrl)),
@@ -479,9 +463,6 @@ const PROJECT_DETAIL_FIELDS = `
 const PROJECT_DETAIL_PROJECTION = `{
   ${PROJECT_DETAIL_FIELDS},
   editorialStatus,
-  rightsApprovalStatus,
-  "rightsApprovalEvidence": "verified",
-  rightsExpiresAt,
   "visible": true,
   "needsReview": false,
   "doNotPublishWithoutExplicitApproval": false
@@ -493,9 +474,6 @@ export const ALL_PUBLIC_PROJECT_DETAILS_QUERY = defineQuery(/* groq */ `*[_type 
 const PREVIEW_PROJECT_PROJECTION = `{
   ${PROJECT_DETAIL_FIELDS},
   editorialStatus,
-  rightsApprovalStatus,
-  rightsApprovalEvidence,
-  rightsExpiresAt,
   visible,
   needsReview,
   doNotPublishWithoutExplicitApproval
@@ -540,9 +518,6 @@ const NOTE_CARD_FIELDS = `
     ${INTERNAL_SAFETY_PROJECTION}
   },
   seo${SEO_PROJECTION},
-  rightsApprovalStatus,
-  "rightsApprovalEvidence": "verified",
-  rightsExpiresAt,
   "visible": true,
   "needsReview": false,
   "doNotPublishWithoutExplicitApproval": false

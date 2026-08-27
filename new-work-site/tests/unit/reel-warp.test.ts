@@ -198,7 +198,7 @@ describe("reel winding contact geometry", () => {
     expect(mediaVertexShader).toContain("introPathPosition");
     expect(mediaVertexShader).toContain("pathDistance < lowerRunLength");
     expect(mediaVertexShader).toContain("pathDistance < lowerRunLength + turnLength");
-    expect(mediaVertexShader).toContain("const float INTRO_PATH_SPEED = 1.28");
+    expect(mediaVertexShader).toContain("const float INTRO_PATH_SPEED = 1.536");
     expect(mediaVertexShader).toContain("float introAdvance = INTRO_PATH_SPEED");
     expect(mediaVertexShader).toContain("introPathDistance");
   });

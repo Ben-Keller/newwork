@@ -42,7 +42,6 @@ async function approvedProjectAssetsError(
     _id: string
     accessible: boolean
     hasMedia: boolean
-    rightsApproved: boolean
   }>>(
     `*[_type == "mediaItem" && project._ref == $workId]{
       _id,
@@ -52,17 +51,14 @@ async function approvedProjectAssetsError(
         kind == "file" => defined(file.asset),
         false
       ),
-      "accessible": kind == "file" || decorative == true || length(coalesce(alt, "")) > 0,
-      "rightsApproved": rightsApprovalStatus == "approved" &&
-        length(coalesce(rightsApprovalEvidence, "")) > 0 &&
-        (!defined(rightsExpiresAt) || rightsExpiresAt > now())
+      "accessible": kind == "file" || decorative == true || length(coalesce(alt, "")) > 0
     }`,
     {workId},
   )
   if (!assets.length) return 'Link at least one flat Asset to this Project before approving it.'
-  const blocked = assets.filter((asset) => !asset.hasMedia || !asset.accessible || !asset.rightsApproved)
+  const blocked = assets.filter((asset) => !asset.hasMedia || !asset.accessible)
   return blocked.length === 0 ? true
-    : `${blocked.length} linked Project assets cannot be published. Each needs valid media, accessibility text, and current recorded rights approval.`
+    : `${blocked.length} linked Project assets cannot be published. Each needs valid media and accessibility text.`
 }
 
 export const work = defineType({
@@ -413,12 +409,10 @@ export const work = defineType({
       title: 'Editorial status',
       type: 'string',
       group: 'publishing',
-      description: 'This describes readiness. The Sanity Publish button still controls whether changes go live.',
+      description: 'Drafts stay off the website. Approved projects become eligible after you click Publish.',
       options: {
         list: [
-          {title: 'Working draft', value: 'draft'},
-          {title: 'Needs review', value: 'review'},
-          {title: 'Ready to publish', value: 'ready'},
+          {title: 'Draft', value: 'draft'},
           {title: 'Approved for website', value: 'approved'},
         ],
         layout: 'radio',
@@ -492,7 +486,6 @@ export const work = defineType({
     layoutVariant: 'cinematic',
     motionIntensity: 'medium',
     doNotPublishWithoutExplicitApproval: false,
-    rightsApprovalStatus: 'pending',
   },
   validation: (Rule) => [
     Rule.custom(workPublicationError),
@@ -514,7 +507,7 @@ export const work = defineType({
     prepare: ({title, media, blocked, status, types, year}) => ({
       title: title || 'Untitled Project',
       subtitle: [
-        status === 'approved' ? 'Approved' : status === 'ready' ? 'Ready to publish' : status === 'review' ? 'Needs review' : 'Working draft',
+        status === 'approved' ? 'Approved' : 'Draft',
         Array.isArray(types) ? types.join(' / ') : undefined,
         typeof year === 'number' ? String(year) : undefined,
         blocked ? 'approval blocked' : undefined,

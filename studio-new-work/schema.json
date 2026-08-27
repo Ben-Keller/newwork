@@ -3366,7 +3366,7 @@
             }
           ]
         },
-        "optional": false
+        "optional": true
       },
       "rightsApprovalEvidence": {
         "type": "objectAttribute",
@@ -3781,7 +3781,7 @@
             }
           ]
         },
-        "optional": false
+        "optional": true
       },
       "rightsApprovalEvidence": {
         "type": "objectAttribute",
@@ -4486,14 +4486,6 @@
             },
             {
               "type": "string",
-              "value": "review"
-            },
-            {
-              "type": "string",
-              "value": "ready"
-            },
-            {
-              "type": "string",
               "value": "approved"
             }
           ]
@@ -4547,7 +4539,7 @@
             }
           ]
         },
-        "optional": false
+        "optional": true
       },
       "rightsApprovalEvidence": {
         "type": "objectAttribute",

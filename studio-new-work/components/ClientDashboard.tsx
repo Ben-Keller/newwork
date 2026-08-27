@@ -15,21 +15,15 @@ const PREVIEW_ENABLED =
   Boolean(process.env.SANITY_STUDIO_PREVIEW_ORIGIN) || process.env.NODE_ENV === 'development'
 
 type DashboardStats = {
-  review: number
   missingDescriptions: number
-  rightsPending: number
 }
 
 const EMPTY_STATS: DashboardStats = {
-  review: 0,
   missingDescriptions: 0,
-  rightsPending: 0,
 }
 
 const DASHBOARD_STATS_QUERY = defineQuery(/* groq */ `{
-  "review": count(*[_type == "work" && !(_id in path("drafts.**")) && editorialStatus == "review"]),
-  "missingDescriptions": count(*[_type == "mediaItem" && !(_id in path("drafts.**")) && kind in ["image", "video"] && decorative != true && !defined(alt)]),
-  "rightsPending": count(*[_type == "mediaItem" && !(_id in path("drafts.**")) && rightsApprovalStatus != "approved"])
+  "missingDescriptions": count(*[_type == "mediaItem" && !(_id in path("drafts.**")) && kind in ["image", "video"] && decorative != true && !defined(alt)])
 }`)
 
 const DashboardShell = styled(Box)`
@@ -199,16 +193,16 @@ const quickLinks = [
     description: 'Edit the motion page, fallback, and sharing copy.',
   },
   {
-    href: '/structure/work;work-needs-attention',
+    href: '/structure/work;work-drafts',
     icon: ProjectsIcon,
     title: 'Project pages',
-    description: 'Review project content, media, and approvals.',
+    description: 'Edit draft projects or review approved pages.',
   },
   {
-    href: '/structure/assets;assets-accessibility',
+    href: '/structure/assets',
     icon: ImagesIcon,
     title: 'Asset library',
-    description: 'Manage media descriptions and usage rights.',
+    description: 'Manage project images, videos, and files.',
   },
 ]
 
@@ -237,19 +231,9 @@ export function ClientDashboard() {
 
   const attentionItems = [
     {
-      href: '/structure/work;work-needs-attention',
-      label: 'Needs review',
-      value: stats.review,
-    },
-    {
-      href: '/structure/assets;assets-accessibility',
+      href: '/structure/assets',
       label: 'Missing descriptions',
       value: stats.missingDescriptions,
-    },
-    {
-      href: '/structure/assets;assets-rights',
-      label: 'Rights to confirm',
-      value: stats.rightsPending,
     },
   ].filter((item) => item.value > 0)
 

@@ -77,7 +77,6 @@ export const note = defineType({
     visible: false,
     needsReview: true,
     doNotPublishWithoutExplicitApproval: false,
-    rightsApprovalStatus: 'pending',
   },
   validation: (Rule) => Rule.custom(notePublicationError),
   orderings: [{title: 'Date, newest', name: 'dateDesc', by: [{field: 'date', direction: 'desc'}]}],

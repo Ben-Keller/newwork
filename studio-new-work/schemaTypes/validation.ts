@@ -119,16 +119,6 @@ export function workPublicationError(value: unknown): true | string {
   const cover = isRecord(value.cover) ? value.cover : undefined
   const blocks = Array.isArray(value.contentBlocks) ? value.contentBlocks : []
 
-  if (value.rightsApprovalStatus !== 'approved') {
-    problems.push('record approved portfolio rights')
-  }
-  if (!isNonEmptyString(value.rightsApprovalEvidence)) {
-    problems.push('record rights approval evidence')
-  }
-  if (isNonEmptyString(value.rightsExpiresAt) && new Date(value.rightsExpiresAt) <= new Date()) {
-    problems.push('renew expired portfolio rights')
-  }
-
   const safetyFlags = collectBlockingSafetyFlags({...value, needsReview: false})
   if (safetyFlags.length > 0) {
     problems.push(`clear publication safety flags: ${safetyFlags.join(', ')}`)
@@ -227,12 +217,6 @@ export function notePublicationError(value: unknown): true | string {
   const problems: string[] = []
   const flags = collectBlockingSafetyFlags(value)
   const media = isRecord(value.media) ? value.media : undefined
-
-  if (value.rightsApprovalStatus !== 'approved') problems.push('record approved portfolio rights')
-  if (!isNonEmptyString(value.rightsApprovalEvidence)) problems.push('record rights approval evidence')
-  if (isNonEmptyString(value.rightsExpiresAt) && new Date(value.rightsExpiresAt) <= new Date()) {
-    problems.push('renew expired portfolio rights')
-  }
 
   if (flags.length > 0) problems.push(`clear publication safety flags: ${flags.join(', ')}`)
   if (!media || !hasMediaSource(media)) problems.push('add note media')

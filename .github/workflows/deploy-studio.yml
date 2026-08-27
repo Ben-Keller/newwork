@@ -37,37 +37,15 @@ jobs:
         working-directory: studio-new-work
         run: npm ci
 
-      - name: Validate Studio schema
+      - name: Validate, type-check, and build Studio
         working-directory: studio-new-work
-        run: npm run schema:validate
-
-      - name: Extract schema and regenerate frontend query types
-        working-directory: studio-new-work
-        run: npm run typegen
+        run: npm run deploy:check
 
       - name: Require generated schema and query types to be committed
         run: >-
           git diff --exit-code --
           studio-new-work/schema.json
           new-work-site/src/sanity.types.ts
-
-      - name: Check Studio types
-        working-directory: studio-new-work
-        run: npm run typecheck
-
-      - name: Check Studio source quality
-        working-directory: studio-new-work
-        run: npm run lint
-
-      - name: Validate production documents against this schema
-        working-directory: studio-new-work
-        run: npm run content:validate:ci
-        env:
-          SANITY_AUTH_TOKEN: ${{ secrets.SANITY_AUTH_TOKEN }}
-
-      - name: Build standalone Studio
-        working-directory: studio-new-work
-        run: npm run build
 
       - name: Deploy Studio and require schema upload
         working-directory: studio-new-work

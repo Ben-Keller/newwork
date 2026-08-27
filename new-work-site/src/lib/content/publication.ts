@@ -111,11 +111,6 @@ export function isProductionEligible(project: UnknownRecord, now = new Date()): 
     || (project.editorialStatus === undefined && project.visible === true);
   if (!approvedForWebsite || project.doNotPublishWithoutExplicitApproval) return false;
   if (project.editorialStatus === undefined && project.needsReview) return false;
-  if (
-    project.rightsApprovalStatus !== 'approved'
-    || !isNonEmptyString(project.rightsApprovalEvidence)
-  ) return false;
-  if (typeof project.rightsExpiresAt === 'string' && new Date(project.rightsExpiresAt) <= now) return false;
   const slugRecord = recordOrEmpty(project.slug);
   const slug = typeof project.slug === 'string' ? project.slug : slugRecord.current;
   const assets = Array.isArray(project.assets) ? project.assets : [];
@@ -157,8 +152,6 @@ export function isProductionEligible(project: UnknownRecord, now = new Date()): 
 }
 
 export function isProductionEligibleNote(raw: UnknownRecord): boolean {
-  if (raw.rightsApprovalStatus !== 'approved' || !isNonEmptyString(raw.rightsApprovalEvidence)) return false;
-  if (typeof raw.rightsExpiresAt === 'string' && new Date(raw.rightsExpiresAt) <= new Date()) return false;
   const slug = typeof raw.slug === 'string' ? raw.slug : recordOrEmpty(raw.slug).current;
   if (!isNonEmptyString(raw.title) || !isNonEmptyString(slug) || !isNonEmptyString(raw.date)) return false;
   if (!isNonEmptyString(raw.summary) || String(raw.summary).length > 220) return false;

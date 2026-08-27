@@ -11,7 +11,7 @@ export const mediaItem = defineType({
   groups: [
     {name: 'content', title: 'Asset', default: true},
     {name: 'usage', title: 'Usage & credits'},
-    {name: 'internal', title: 'Rights & approval'},
+    {name: 'internal', title: 'Internal'},
     hiddenAllFieldsGroup,
   ],
   fields: [
@@ -120,7 +120,7 @@ export const mediaItem = defineType({
     }),
     ...rightsApprovalFields,
   ],
-  initialValue: {kind: 'image', decorative: false, rightsApprovalStatus: 'pending'},
+  initialValue: {kind: 'image', decorative: false},
   validation: (Rule) => Rule.custom((value) => {
     if (!value || typeof value !== 'object') return true
     const asset = value as {kind?: string; image?: unknown; poster?: unknown; videoUrl?: unknown; decorative?: boolean; alt?: unknown}
@@ -131,14 +131,13 @@ export const mediaItem = defineType({
     return true
   }),
   preview: {
-    select: {title: 'title', kind: 'kind', image: 'image', poster: 'poster', approval: 'rightsApprovalStatus', project: 'project.title', alt: 'alt', decorative: 'decorative'},
-    prepare: ({title, kind, image, poster, approval, project, alt, decorative}) => ({
+    select: {title: 'title', kind: 'kind', image: 'image', poster: 'poster', project: 'project.title', alt: 'alt', decorative: 'decorative'},
+    prepare: ({title, kind, image, poster, project, alt, decorative}) => ({
       title: title || 'Untitled asset',
       subtitle: [
         kind === 'video' ? 'Video' : kind === 'file' ? 'File' : 'Image',
         project || 'Not assigned to a Project',
         kind !== 'file' && decorative !== true && !alt ? 'Needs description' : undefined,
-        approval === 'expired' ? 'Rights expired' : undefined,
       ].filter(Boolean).join(' · '),
       media: kind === 'video' ? poster : image,
     }),

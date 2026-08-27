@@ -637,8 +637,9 @@ export function normalizeProject(raw: UnknownRecord): ProjectView {
     heroTreatment: enumValue(raw.heroTreatment, ['contained', 'fullViewport', 'split', 'masked'] as const) || 'contained',
     layoutVariant: legacyLayout || inferredLayoutVariant(types),
     motionIntensity: enumValue(raw.motionIntensity, ['low', 'medium', 'high'] as const) || 'medium',
-    editorialStatus: enumValue(raw.editorialStatus, ['draft', 'review', 'ready', 'approved'] as const)
-      || (raw.visible ? 'approved' : raw.needsReview ? 'review' : 'draft'),
+    editorialStatus: raw.editorialStatus === 'approved' || (
+      raw.editorialStatus === undefined && raw.visible === true
+    ) ? 'approved' : 'draft',
     visible: Boolean(raw.visible),
     publishAt: typeof raw.publishAt === 'string' ? raw.publishAt : undefined,
     needsReview: Boolean(raw.needsReview),

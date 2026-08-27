@@ -35,11 +35,11 @@ Complete the tabs from left to right:
 5. Approval & publishing
 6. Search & sharing
 
-Link Assets to the Project from the Asset library and set their Project order. Use **Project page sections** for any authored supporting sequence. Drag sections to reorder them. Set **Editorial status** to Ready to publish when the Project is complete. Use Approved for website only after rights, descriptions, credits, and media have been checked.
+Link Assets to the Project from the Asset library and set their Project order. Use **Project page sections** for any authored supporting sequence. Drag sections to reorder them. Keep the Project as **Draft** while editing, then choose **Approved for website** when it is complete.
 
 ## Asset library
 
-Every photo, video, or file is one independent Asset record with one canonical description, caption, credit, and rights record. Optionally link an Asset to a Project and set its order within that Project. Global brand Assets can remain unlinked. Any approved Project image or video can be selected directly in the Front gallery.
+Every photo, video, or file is one independent Asset record with one canonical description, caption, and credit. Optionally link an Asset to a Project and set its order within that Project. Global brand Assets can remain unlinked. Any complete Project image or video can be selected directly in the Front gallery.
 
 Production films should use Vimeo or YouTube. Sanity file uploads are intended only for small preview clips, posters, documents, and images.
 
@@ -53,8 +53,8 @@ Production films should use Vimeo or YouTube. Sanity file uploads are intended o
 
 - Preview the page.
 - Resolve validation messages and accessibility descriptions.
-- Confirm credits and usage rights.
-- Set the Project to Ready to publish, then Approved for website after review.
+- Confirm credits and media.
+- Set the Project to Approved for website.
 - Select Publish in Sanity.
 
 The Page style tab contains optional art-direction controls. Imported technical details are kept in collapsed sections and most routine edits do not require them.

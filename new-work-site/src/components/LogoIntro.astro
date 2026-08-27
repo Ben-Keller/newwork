@@ -210,6 +210,7 @@ const titleWordmarkMarkup = titleKit.wordmark
                     <source data-type-letter-video-source data-src={videoSource} type={videoMime} />
                   </video>
                 ) : null}
+                <span class="logo-intro__type-letter-hit" data-type-letter-hit aria-hidden="true"></span>
               </span>
             ))}
           </span>
@@ -590,6 +591,21 @@ const titleWordmarkMarkup = titleKit.wordmark
   .logo-intro__type-letter {
     position: relative;
     display: inline-block;
+    pointer-events: none;
+  }
+
+  .logo-intro__type-letter[data-glyph="w"] { --type-letter-hit-top: .176em; }
+  .logo-intro__type-letter[data-glyph="r"] { --type-letter-hit-top: .172em; }
+  .logo-intro__type-letter[data-glyph="k"] { --type-letter-hit-top: -.028em; }
+  .logo-intro__type-letter:is([data-glyph="e"], [data-glyph="o"]) {
+    --type-letter-hit-bottom: -.017em;
+  }
+
+  .logo-intro__type-letter-hit {
+    position: absolute;
+    z-index: 3;
+    inset-block: var(--type-letter-hit-top, .16em) var(--type-letter-hit-bottom, 0);
+    inset-inline: 0;
     cursor: crosshair;
     pointer-events: auto;
   }
@@ -865,6 +881,7 @@ const titleWordmarkMarkup = titleKit.wordmark
      gives it a wide viewport. In both phone layouts and that mode, paint one
      resting word and remove the independently composited hover-letter layers. */
   @media (max-width: 767px), (hover: none) and (pointer: coarse) {
+    .logo-intro__type-letter-hit { display: none; }
     .logo-intro__type-line--outline {
       color: transparent;
       -webkit-text-stroke-width: 0;

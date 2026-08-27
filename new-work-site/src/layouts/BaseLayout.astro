@@ -100,7 +100,6 @@ const preloadMobileAvifSrcset = preloadMobileImage
   ? buildResponsiveAvifSrcset(preloadMobileImage)
   : undefined;
 const avifHref = (image: ImageView) => image.src.replace(/\.webp$/iu, '.avif');
-const isWorkIndex = pageClass.includes('home-page');
 const isWorkProject = pageClass.includes('project-page');
 ---
 <!doctype html>
@@ -189,17 +188,7 @@ const isWorkProject = pageClass.includes('project-page');
       />
     ) : null}
     <main id="main-content" tabindex="-1" data-motion-root>
-      {isWorkIndex ? (
-        <div
-          class="route-gallery-layer"
-          data-route-gallery-layer
-          transition:persist="new-work-gallery-scene"
-        >
-          <div class="route-gallery-layer__content" data-route-gallery-content>
-            <slot />
-          </div>
-        </div>
-      ) : isWorkProject ? (
+      {isWorkProject ? (
         <>
           <div
             class="route-gallery-layer"

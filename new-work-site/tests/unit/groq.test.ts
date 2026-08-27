@@ -32,8 +32,6 @@ function approvedProject() {
     visible: true,
     featuredOnHome: true,
     homeOrder: 10,
-    rightsApprovalStatus: 'approved',
-    rightsApprovalEvidence: 'Owner approval recorded in ticket NW-1.',
     cover: {
       poster: {asset: {_ref: 'image-cover'}},
       alt: 'A confirmed project cover.',
@@ -59,8 +57,6 @@ function approvedAsset(projectId = 'project.approved') {
     projectOrder: 0,
     image: {asset: {_ref: 'image-asset'}},
     alt: 'A confirmed project image.',
-    rightsApprovalStatus: 'approved',
-    rightsApprovalEvidence: 'Owner approval recorded in ticket NW-3.',
   };
 }
 
@@ -73,8 +69,6 @@ function approvedNote() {
     summary: 'One confirmed sentence.',
     date: '2025-01-01',
     visible: true,
-    rightsApprovalStatus: 'approved',
-    rightsApprovalEvidence: 'Owner approval recorded in ticket NW-2.',
     media: {
       kind: 'image',
       image: {asset: {_ref: 'image-note'}},
@@ -89,8 +83,6 @@ describe('public GROQ safety filters', () => {
     const blocked = [
       {...approved, _id: 'hidden', visible: false},
       {...approved, _id: 'review', needsReview: true},
-      {...approved, _id: 'rights', rightsApprovalStatus: 'pending'},
-      {...approved, _id: 'evidence', rightsApprovalEvidence: ''},
       {...approved, _id: 'placeholder', cover: {...approved.cover, previewIsPlaceholder: true}},
       {...approved, _id: 'blocker', contentBlocks: [{...approved.contentBlocks[0], needsApprovedMaster: true}]},
       {...approved, _id: 'missing-image', contentBlocks: [{...approved.contentBlocks[0], image: undefined}]},
@@ -102,22 +94,21 @@ describe('public GROQ safety filters', () => {
   it('treats every linked Asset equally and blocks an invalid Project asset', async () => {
     const project = approvedProject();
     const approved = approvedAsset(project._id);
-    const pending = {
+    const incomplete = {
       ...approvedAsset(project._id),
-      _id: 'asset.pending',
-      slug: {current: 'pending'},
+      _id: 'asset.incomplete',
+      slug: {current: 'incomplete'},
       projectOrder: 1,
-      rightsApprovalStatus: 'pending',
+      alt: '',
     };
-    expect(await idsFor(PUBLIC_ASSET_FILTER, [approved, pending])).toEqual([approved._id]);
-    expect(await idsFor(PUBLIC_PROJECT_FILTER, [project, approved, pending])).toEqual([]);
+    expect(await idsFor(PUBLIC_ASSET_FILTER, [approved, incomplete])).toEqual([approved._id]);
+    expect(await idsFor(PUBLIC_PROJECT_FILTER, [project, approved, incomplete])).toEqual([]);
   });
 
   it('accepts only the fully approved note', async () => {
     const approved = approvedNote();
     const blocked = [
       {...approved, _id: 'note-hidden', visible: false},
-      {...approved, _id: 'note-rights', rightsApprovalStatus: 'pending'},
       {...approved, _id: 'note-alt', media: {...approved.media, alt: ''}},
       {...approved, _id: 'note-review', media: {...approved.media, needsReview: true}},
     ];

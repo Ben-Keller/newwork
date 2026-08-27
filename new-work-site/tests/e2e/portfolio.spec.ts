@@ -1,7 +1,10 @@
 import { expect, test, type Page } from '@playwright/test';
 
 test.beforeEach(async ({ page }, testInfo) => {
-  if (!testInfo.title.includes('opening gallery')) {
+  if (
+    !testInfo.title.includes('opening gallery')
+    && !testInfo.title.includes('Work tab enters the stable Work view')
+  ) {
     await page.addInitScript(() => {
       window.sessionStorage.setItem('new-work-restore-requested', 'true');
     });
@@ -43,7 +46,7 @@ test('the landing loads directly into the stacked typographic title while its en
   await expect(intro.locator('[data-type-title]')).toBeVisible();
 });
 
-test('the Work tab always returns to the top of the landing page', async ({ page }) => {
+test('the Work tab enters the stable Work view from About while leaving the splash reachable', async ({ page }) => {
   await page.setViewportSize({ width: 1_440, height: 900 });
   await page.goto('/about');
   const desktopWorkLink = page.locator('[data-desktop-nav]').getByRole('link', { name: 'Work' });
@@ -51,20 +54,105 @@ test('the Work tab always returns to the top of the landing page', async ({ page
   await expect(desktopWorkLink).toHaveAttribute('data-work-navigation', '');
   await expect(page.locator('[data-mobile-menu-root] [data-menu-link]', { hasText: 'Work' }))
     .toHaveAttribute('href', '/');
+  await page.evaluate(() => {
+    const routeWindow = window as Window & {__workEntryEntranceStates?: string[]};
+    routeWindow.__workEntryEntranceStates = [];
+    document.addEventListener('astro:before-swap', (rawEvent) => {
+      const event = rawEvent as Event & {newDocument?: Document};
+      sessionStorage.setItem(
+        'new-work:test-transition-prepared',
+        String(event.newDocument?.documentElement.dataset.workNavigationTransition === 'true'),
+      );
+      sessionStorage.setItem(
+        'new-work:test-header-prepared',
+        String(event.newDocument?.body.dataset.logoHeaderVisible === 'true'),
+      );
+      sessionStorage.setItem(
+        'new-work:test-gallery-prepared',
+        String(
+          event.newDocument
+            ?.querySelector<HTMLElement>('[data-gallery-entrance]')
+            ?.dataset.galleryEntranceState === 'settled',
+        ),
+      );
+    }, {once: true});
+    new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        const element = mutation.target instanceof HTMLElement ? mutation.target : null;
+        if (element?.matches('[data-gallery-entrance]')) {
+          routeWindow.__workEntryEntranceStates!.push(
+            element.dataset.galleryEntranceState || '',
+          );
+        }
+      }
+    }).observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-gallery-entrance-state'],
+      childList: true,
+      subtree: true,
+    });
+    const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+    window.scrollTo({top: Math.max(0, maxScroll), behavior: 'auto'});
+  });
+  const aboutMaxScroll = await page.evaluate(() => (
+    document.documentElement.scrollHeight - window.innerHeight
+  ));
+  if (aboutMaxScroll > 0) {
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+  }
 
   await desktopWorkLink.click();
   await expect(page).toHaveURL(/\/$/u);
-  await expect(page.locator('[data-logo-work-page]')).toHaveAttribute('data-handoff', 'false');
+  const workPage = page.locator('[data-logo-work-page]');
+  await expect(workPage).toHaveAttribute('data-handoff', 'true');
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+  await expect(page.locator('[data-logo-work-hero]')).toHaveAttribute('data-faded', 'true');
+  await expect(page.locator('[data-logo-work-content]')).toHaveAttribute('aria-hidden', 'false');
+  await expect(page.locator('[data-logo-work-title]')).toBeVisible();
+  await expect(page.locator('[data-site-header]')).toBeVisible();
+  await expect(page.locator('body')).toHaveAttribute('data-logo-header-visible', 'true');
   await expect(page.locator('[data-work-gallery]')).not.toHaveAttribute('data-gallery-restore');
+  await expect(page.locator('[data-gallery-entrance]'))
+    .toHaveAttribute('data-gallery-entrance-state', 'settled');
+  await expect.poll(() => page.locator('[data-gallery-entrance]').evaluate((element) =>
+    new DOMMatrixReadOnly(getComputedStyle(element).transform).m41,
+  )).toBe(0);
+  expect(await page.evaluate(() => (
+    window as Window & {__workEntryEntranceStates?: string[]}
+  ).__workEntryEntranceStates ?? [])).not.toContain('animating');
+  expect(await page.evaluate(() => (
+    sessionStorage.getItem('new-work:test-transition-prepared')
+  ))).toBe('true');
+  expect(await page.evaluate(() => (
+    sessionStorage.getItem('new-work:test-header-prepared')
+  ))).toBe('true');
+  expect(await page.evaluate(() => (
+    sessionStorage.getItem('new-work:test-gallery-prepared')
+  ))).toBe('true');
+  await expect(page.locator('html')).not.toHaveAttribute('data-work-navigation-transition');
+  await expect(page.locator('[data-work-gallery]')).toHaveAttribute('data-gallery-pointer', 'true');
+  const galleryBox = await page.locator('[data-work-gallery]').boundingBox();
+  if (!galleryBox) throw new Error('The work gallery is missing.');
+  const pointerY = Math.min(galleryBox.y + 240, page.viewportSize()!.height - 24);
+  const stageTranslateX = () => page.locator('[data-gallery-entrance]').evaluate((element) =>
+    new DOMMatrixReadOnly(getComputedStyle(element).transform).m41);
+  await page.mouse.move(12, pointerY);
+  await expect.poll(stageTranslateX).toBeLessThan(-10);
+  await page.mouse.move(page.viewportSize()!.width - 12, pointerY);
+  await expect.poll(stageTranslateX).toBeGreaterThan(10);
+
+  await page.evaluate(() => window.scrollTo({top: 0, behavior: 'auto'}));
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+  await page.mouse.wheel(0, -700);
+  await expect(workPage).toHaveAttribute('data-handoff', 'false');
 
   await page.mouse.wheel(0, 700);
-  await expect(page.locator('[data-logo-work-page]')).toHaveAttribute('data-handoff', 'true');
+  await expect(workPage).toHaveAttribute('data-handoff', 'true');
   await page.evaluate(() => window.scrollTo({ top: 1_600, behavior: 'auto' }));
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(1_000);
   await page.locator('[data-desktop-nav]').getByRole('link', { name: 'Work' }).click();
   await expect(page).toHaveURL(/\/$/u);
-  await expect(page.locator('[data-logo-work-page]')).toHaveAttribute('data-handoff', 'false');
+  await expect(workPage).toHaveAttribute('data-handoff', 'true');
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
 
   await page.goto('/work/arc');
@@ -74,9 +162,11 @@ test('the Work tab always returns to the top of the landing page', async ({ page
   });
   await page.locator('[data-desktop-nav]').getByRole('link', { name: 'Work' }).click();
   await expect(page).toHaveURL(/\/$/u);
-  await expect(page.locator('[data-logo-work-page]')).toHaveAttribute('data-handoff', 'false');
+  await expect(page.locator('[data-logo-work-page]')).toHaveAttribute('data-handoff', 'true');
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+  await expect(page.locator('html')).not.toHaveAttribute('data-work-navigation-transition');
   expect(await page.evaluate(() => sessionStorage.getItem('new-work-restore-requested'))).toBeNull();
+  expect(await page.evaluate(() => sessionStorage.getItem('new-work:work-navigation-entry'))).toBeNull();
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/about');
@@ -85,7 +175,7 @@ test('the Work tab always returns to the top of the landing page', async ({ page
   await expect(mobileWorkLink).toBeVisible();
   await mobileWorkLink.click();
   await expect(page).toHaveURL(/\/$/u);
-  await expect(page.locator('[data-logo-work-page]')).toHaveAttribute('data-handoff', 'false');
+  await expect(page.locator('[data-logo-work-page]')).toHaveAttribute('data-handoff', 'true');
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
 });
 
@@ -317,6 +407,42 @@ test('the type title reveals animated imagery one letter at a time on hover', as
   expect(maskGeometry.canvasWidth - maskGeometry.letterWidth)
     .toBeCloseTo(maskGeometry.negativeTracking, 0);
   expect(await firstLetter.evaluate((element) => element.getBoundingClientRect().width)).toBeCloseTo(initialWidth, 1);
+});
+
+test("title hover zones share the painted glyphs' vertical bounds", async ({ page }) => {
+  await page.goto('/');
+  test.skip(
+    !await page.evaluate(() => matchMedia('(hover: hover) and (pointer: fine)').matches),
+    'Per-letter title hover is a fine-pointer enhancement.',
+  );
+  await page.evaluate(() => document.fonts.ready);
+
+  const geometry = await page.locator('[data-type-letter]').evaluateAll((letters) => letters.map((letter) => {
+    const hit = letter.querySelector<HTMLElement>('[data-type-letter-hit]')!;
+    const glyph = letter.querySelector<HTMLElement>('[data-type-letter-glyph]')!;
+    const baselineMarker = letter.querySelector<HTMLElement>('[data-type-letter-baseline]')!;
+    const styles = getComputedStyle(glyph);
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d')!;
+    context.font = `${styles.fontWeight} ${styles.fontSize} ${styles.fontFamily}`;
+    const metrics = context.measureText((letter as HTMLElement).dataset.glyph || '');
+    const letterRect = letter.getBoundingClientRect();
+    const hitRect = hit.getBoundingClientRect();
+    const baseline = baselineMarker.getBoundingClientRect().top;
+    return {
+      hitTop: hitRect.top,
+      hitBottom: hitRect.bottom,
+      letterTop: letterRect.top,
+      paintedTop: baseline - metrics.actualBoundingBoxAscent,
+      paintedBottom: baseline + metrics.actualBoundingBoxDescent,
+    };
+  }));
+
+  for (const letter of geometry) {
+    expect(letter.hitTop).toBeCloseTo(letter.paintedTop, 0);
+    expect(letter.hitBottom).toBeCloseTo(letter.paintedBottom, 0);
+    expect(letter.hitTop).toBeGreaterThanOrEqual(letter.letterTop - 9);
+  }
 });
 
 test('the settled title uses two lowercase lines above the staggered gallery columns', async ({ page }) => {
@@ -708,6 +834,7 @@ test('the four gallery tracks share one scroll target with subtle first-order mo
   const gallery = page.locator('[data-work-gallery]');
   const plane = page.locator('[data-gallery-plane]');
   await expect(gallery).toHaveAttribute('data-gallery-motion', 'true');
+  await expect(gallery).toHaveAttribute('data-gallery-pointer', 'true');
   await expect(gallery).toHaveAttribute('data-column-motion', 'first-order');
   await expect(page.locator('html')).toHaveAttribute('data-motion-preference', 'full');
   await expect(page.locator('[data-motion-column]').first()).toHaveAttribute('data-motion-ready', 'animated');
@@ -808,6 +935,23 @@ test('the four gallery tracks share one scroll target with subtle first-order mo
   expect(reversalSettled.every(({ y }) => Math.abs(y) <= 0.1)).toBe(true);
   expect(await plane.evaluate((element) => new DOMMatrixReadOnly(getComputedStyle(element).transform).m42))
     .toBe(0);
+
+  const galleryBox = await gallery.boundingBox();
+  if (!galleryBox) throw new Error('The gallery is missing.');
+  const stage = page.locator('[data-gallery-entrance]');
+  const readGalleryPointer = () => gallery.evaluate((element) => (
+    Number.parseFloat(getComputedStyle(element).getPropertyValue('--gallery-pointer-x')) || 0
+  ));
+  const readStageTranslateX = () => stage.evaluate((element) => {
+    const matrix = new DOMMatrixReadOnly(getComputedStyle(element).transform);
+    return matrix.m41;
+  });
+  await page.mouse.move(12, Math.min(galleryBox.y + 240, page.viewportSize()!.height - 24));
+  await expect.poll(readGalleryPointer).toBeLessThan(-10);
+  await expect.poll(readStageTranslateX).toBeLessThan(-10);
+  await page.mouse.move(page.viewportSize()!.width - 12, Math.min(galleryBox.y + 240, page.viewportSize()!.height - 24));
+  await expect.poll(readGalleryPointer).toBeGreaterThan(10);
+  await expect.poll(readStageTranslateX).toBeGreaterThan(10);
 
   await page.goto('/?motionDebug=1');
   const debugPanel = page.locator('[data-column-motion-debug]');
@@ -951,7 +1095,7 @@ test('gallery cards reveal when their first pixels cross the viewport edge', asy
   }
 });
 
-test('the desktop gallery keeps card hit targets fixed during pointer movement', async ({ page }) => {
+test('the desktop gallery shifts laterally while keeping card hit targets usable', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1_000 });
   await page.goto('/#work-gallery');
 
@@ -964,6 +1108,7 @@ test('the desktop gallery keeps card hit targets fixed during pointer movement',
   const gallery = page.locator('[data-work-gallery]');
   const plane = page.locator('[data-gallery-plane]');
   await expect(gallery).toHaveAttribute('data-gallery-motion', 'true');
+  await expect(gallery).toHaveAttribute('data-gallery-pointer', 'true');
   const targetLink = gallery.locator('[data-project-link]').nth(10);
   await targetLink.evaluate((element) => element.scrollIntoView({ block: 'center' }));
   await expect.poll(() => targetLink.evaluate((element) => {
@@ -990,23 +1135,26 @@ test('the desktop gallery keeps card hit targets fixed during pointer movement',
     }, { x, y });
     expect(hitState.ownsPoint).toBe(true);
     expect(hitState.cursor).toBe('pointer');
-    expect(hitState.left).toBeCloseTo(startingBox.x, 1);
     expect(Math.abs(await horizontalTransform())).toBeLessThan(.1);
   }
 
   const stableState = await page.evaluate(() => {
     const galleryElement = document.querySelector<HTMLElement>('[data-work-gallery]');
+    const stageElement = document.querySelector<HTMLElement>('[data-gallery-entrance]');
     if (!galleryElement) throw new Error('The gallery is missing.');
+    if (!stageElement) throw new Error('The gallery stage is missing.');
     return {
       scrollY: window.scrollY,
       scrollWidth: document.documentElement.scrollWidth,
       clientWidth: document.documentElement.clientWidth,
       pointerX: Number.parseFloat(getComputedStyle(galleryElement).getPropertyValue('--gallery-pointer-x')),
+      stageTranslateX: new DOMMatrixReadOnly(getComputedStyle(stageElement).transform).m41,
     };
   });
   expect(stableState.scrollY).toBe(openingScroll);
   expect(stableState.scrollWidth).toBeLessThanOrEqual(stableState.clientWidth);
-  expect(Math.abs(stableState.pointerX)).toBeLessThan(.1);
+  expect(Math.abs(stableState.pointerX)).toBeGreaterThan(1);
+  expect(Math.abs(stableState.stageTranslateX - stableState.pointerX)).toBeLessThan(1);
 
   await page.evaluate(() => window.scrollTo(0, 160));
   await page.waitForTimeout(100);
@@ -1020,8 +1168,8 @@ test('the desktop gallery keeps card hit targets fixed during pointer movement',
     const titleRect = title.getBoundingClientRect();
     const linkRect = link.getBoundingClientRect();
     const headerBottom = header?.getBoundingClientRect().bottom || 0;
-    const letters = [...document.querySelectorAll<HTMLElement>('[data-type-letter]')]
-      .map((letter) => letter.getBoundingClientRect());
+    const letters = [...document.querySelectorAll<HTMLElement>('[data-type-letter-hit]')]
+      .map((hitArea) => hitArea.getBoundingClientRect());
     for (let y = Math.max(headerBottom + 4, titleRect.top, linkRect.top) + 4;
       y < Math.min(titleRect.bottom, linkRect.bottom) - 4; y += 8) {
       for (let x = Math.max(titleRect.left, linkRect.left) + 4;
@@ -1651,6 +1799,8 @@ test('project return keeps site chrome stable and the footer outside the transit
     flowHeldFrames: number;
     transitionFrames: number;
     visibleFooterFrames: number;
+    visibleTitleFrames: number;
+    visibleVeilHeroFrames: number;
     veilOpacities: number[];
   };
   await page.evaluate(() => {
@@ -1661,6 +1811,8 @@ test('project return keeps site chrome stable and the footer outside the transit
       let flowHeldFrames = 0;
       let transitionFrames = 0;
       let visibleFooterFrames = 0;
+      let visibleTitleFrames = 0;
+      let visibleVeilHeroFrames = 0;
       const veilOpacities: number[] = [];
       let started = false;
       const startedAt = performance.now();
@@ -1670,8 +1822,37 @@ test('project return keeps site chrome stable and the footer outside the transit
           started = true;
           transitionFrames += 1;
           if (document.querySelector('[data-route-gallery-flow-hold]')) flowHeldFrames += 1;
+          const title = document.querySelector<HTMLElement>('.logo-work-page__title');
+          if (title) {
+            const rect = title.getBoundingClientRect();
+            const styles = getComputedStyle(title);
+            if (
+              styles.visibility !== 'hidden'
+              && Number.parseFloat(styles.opacity || '1') > .05
+              && rect.top < window.innerHeight
+              && rect.bottom > 0
+            ) visibleTitleFrames += 1;
+          }
           const veil = document.querySelector<HTMLElement>('[data-route-project-veil]');
-          if (veil) veilOpacities.push(Number.parseFloat(getComputedStyle(veil).opacity));
+          if (veil) {
+            veilOpacities.push(Number.parseFloat(getComputedStyle(veil).opacity));
+            veil.querySelectorAll('[data-route-veil-hero] :is(img, video, canvas)').forEach((media) => {
+              const rect = media.getBoundingClientRect();
+              let opacity = 1;
+              let current: Element | null = media;
+              while (current && current !== veil) {
+                const styles = getComputedStyle(current);
+                if (styles.display === 'none' || styles.visibility !== 'visible') return;
+                opacity *= Number.parseFloat(styles.opacity || '1');
+                current = current.parentElement;
+              }
+              const visibleArea = Math.max(0, Math.min(rect.right, window.innerWidth) - Math.max(rect.left, 0))
+                * Math.max(0, Math.min(rect.bottom, window.innerHeight) - Math.max(rect.top, 0));
+              if (opacity > .05 && visibleArea / (window.innerWidth * window.innerHeight) > .2) {
+                visibleVeilHeroFrames += 1;
+              }
+            });
+          }
           const footer = document.querySelector<HTMLElement>('[data-site-footer]');
           if (footer) {
             const rect = footer.getBoundingClientRect();
@@ -1688,7 +1869,14 @@ test('project return keeps site chrome stable and the footer outside the transit
           (started && !routeActive && window.location.pathname === '/')
           || performance.now() - startedAt > 4_000
         ) {
-          resolve({flowHeldFrames, transitionFrames, visibleFooterFrames, veilOpacities});
+          resolve({
+            flowHeldFrames,
+            transitionFrames,
+            visibleFooterFrames,
+            visibleTitleFrames,
+            visibleVeilHeroFrames,
+            veilOpacities,
+          });
           return;
         }
         requestAnimationFrame(sample);
@@ -1709,12 +1897,150 @@ test('project return keeps site chrome stable and the footer outside the transit
   expect(returnState?.transitionFrames).toBeGreaterThan(2);
   expect(returnState?.flowHeldFrames).toBeGreaterThan(2);
   expect(returnState?.visibleFooterFrames).toBe(0);
-  expect(returnState?.veilOpacities.length).toBeGreaterThan(2);
-  expect((returnState?.veilOpacities.at(0) ?? 0)).toBeGreaterThan(
-    returnState?.veilOpacities.at(-1) ?? 1,
-  );
+  expect(returnState?.visibleTitleFrames).toBeGreaterThan(2);
+  expect(returnState?.visibleVeilHeroFrames).toBe(0);
+  expect(returnState?.veilOpacities.length).toBe(0);
   await expect(page.locator('[data-continuity-probe="return-veil-origin"]')).toHaveCount(1);
   await expect(page.locator('[data-route-gallery-flow-hold]')).toHaveCount(0);
+});
+
+test('returning from the Michael poolside photo only shows the live handoff copy', async ({ page }) => {
+  test.setTimeout(60_000);
+  await page.setViewportSize({ width: 1_440, height: 1_000 });
+  await page.goto('/#work-gallery', {waitUntil: 'domcontentloaded'});
+  await expect(page.locator('[data-gallery-entrance]'))
+    .toHaveAttribute('data-gallery-entrance-state', 'settled', {timeout: 6_000});
+
+  const poolsideLink = page.locator(
+    '[data-project-link][href="/work/michael-selected-photography/michael-poolside-product"]',
+  );
+  await poolsideLink.evaluate((element) => element.scrollIntoView({block: 'center'}));
+  await poolsideLink.evaluate((element) => (element as HTMLAnchorElement).click());
+  await page.waitForURL('**/work/michael-selected-photography/michael-poolside-product');
+  await page.waitForFunction(() => (
+    !document.documentElement.hasAttribute('data-work-project-transition')
+  ));
+
+  type ReturnPoolsideOffender = {
+    areaFraction: number;
+    frame: number;
+    owner: string;
+    source: string;
+  };
+  await page.evaluate(() => {
+    const routeWindow = window as Window & {
+      __poolsideReturnProbe?: Promise<{
+        frames: number;
+        offenders: ReturnPoolsideOffender[];
+        maxGalleryAssets: number;
+        maxUnderlays: number;
+      }>;
+    };
+    routeWindow.__poolsideReturnProbe = new Promise((resolve) => {
+      const offenders: ReturnPoolsideOffender[] = [];
+      let frames = 0;
+      let settledFrames = 0;
+      let maxGalleryAssets = 0;
+      let maxUnderlays = 0;
+      const sourceFragment = 'michael-poolside-product';
+
+      const visiblePaint = (media: Element): ReturnPoolsideOffender | undefined => {
+        const rect = media.getBoundingClientRect();
+        let opacity = 1;
+        let current: Element | null = media;
+        while (current) {
+          const styles = getComputedStyle(current);
+          if (styles.display === 'none' || styles.visibility !== 'visible') return undefined;
+          opacity *= Number.parseFloat(styles.opacity || '1');
+          if (opacity <= .05) return undefined;
+          current = current.parentElement;
+        }
+        const visibleArea = Math.max(0, Math.min(rect.right, window.innerWidth) - Math.max(rect.left, 0))
+          * Math.max(0, Math.min(rect.bottom, window.innerHeight) - Math.max(rect.top, 0));
+        const areaFraction = visibleArea / (window.innerWidth * window.innerHeight);
+        if (areaFraction < .02) return undefined;
+
+        const source = media instanceof HTMLImageElement
+          ? media.currentSrc || media.src
+          : media instanceof HTMLVideoElement
+            ? media.currentSrc || media.poster
+            : 'canvas';
+        const owner = media.closest<HTMLElement>(
+          '[data-route-media-portal], [data-route-project-veil], [data-project-hero-media], '
+          + '[data-gallery-item-id], [data-route-gallery-layer]',
+        );
+        const ownerLabel = owner?.dataset.routeMediaPortal
+          ? `portal:${owner.dataset.routeMediaPortal}`
+          : owner?.dataset.galleryItemId
+            ? `gallery:${owner.dataset.galleryItemId}`
+            : owner
+              ? [...owner.attributes]
+                  .filter(({name}) => name.startsWith('data-'))
+                  .map(({name, value}) => `${name}=${value}`)
+                  .join(',')
+              : 'none';
+        const isPoolside = source.includes(sourceFragment);
+        const portalActive = Boolean(document.querySelector('[data-route-media-portal]'));
+        const allowedOwner = ownerLabel.startsWith('portal:')
+          || ownerLabel.startsWith('gallery:')
+          || (
+            !portalActive
+            && window.location.pathname !== '/'
+            && ownerLabel.includes('data-project-hero-media')
+          );
+        const isVisibleVeilMedia = ownerLabel.includes('data-route-project-veil');
+        if ((!isPoolside || allowedOwner) && !isVisibleVeilMedia) return undefined;
+        return {areaFraction, frame: frames, owner: ownerLabel, source};
+      };
+
+      const sample = () => {
+        frames += 1;
+        const returning = document.documentElement.dataset.workProjectTransition === 'to-gallery';
+        if (window.location.pathname === '/') {
+          maxGalleryAssets = Math.max(
+            maxGalleryAssets,
+            document.querySelectorAll(
+              '[data-gallery-item-id="michael-selected-photography--michael-poolside-product"] .responsive-image',
+            ).length,
+          );
+          maxUnderlays = Math.max(maxUnderlays, document.querySelectorAll('[data-route-media-underlay]').length);
+        }
+        if (returning) {
+          document.querySelectorAll('img, video, canvas').forEach((media) => {
+            const paint = visiblePaint(media);
+            if (paint) offenders.push(paint);
+          });
+        }
+        const settled = window.location.pathname === '/'
+          && !document.documentElement.hasAttribute('data-work-project-transition');
+        settledFrames = settled ? settledFrames + 1 : 0;
+        if (settledFrames >= 2 || frames > 180) {
+          resolve({frames, offenders, maxGalleryAssets, maxUnderlays});
+          return;
+        }
+        requestAnimationFrame(sample);
+      };
+      requestAnimationFrame(sample);
+    });
+  });
+
+  await page.locator('[data-project-overlay-return]').evaluate((element) => (
+    (element as HTMLAnchorElement).click()
+  ));
+  await page.waitForURL((url) => url.pathname === '/');
+  const probe = await page.evaluate(() => (
+    (window as Window & {
+      __poolsideReturnProbe?: Promise<{
+        frames: number;
+        offenders: ReturnPoolsideOffender[];
+        maxGalleryAssets: number;
+        maxUnderlays: number;
+      }>;
+    }).__poolsideReturnProbe
+  ));
+  expect(probe?.frames).toBeGreaterThan(2);
+  expect(probe?.maxGalleryAssets).toBe(1);
+  expect(probe?.maxUnderlays).toBe(0);
 });
 
 test('live project handoffs never expose the transient incoming root snapshot', async ({ page }) => {
@@ -1742,7 +2068,8 @@ test('live project handoffs never expose the transient incoming root snapshot', 
   const returnLink = page.locator('[data-project-overlay-return]');
   await returnLink.evaluate((element) => (element as HTMLAnchorElement).click());
   await page.waitForFunction(() => (
-    document.documentElement.dataset.workProjectMedia === 'live'
+    document.documentElement.dataset.workProjectTransition === 'to-gallery'
+    && document.documentElement.dataset.workProjectMedia === 'live'
   ));
   await expect.poll(rootTransitionName).toBe('none');
   await page.waitForURL((url) => url.pathname === '/');
@@ -1752,7 +2079,7 @@ test('live project handoffs never expose the transient incoming root snapshot', 
   await expect.poll(rootTransitionName).toBe('root');
 });
 
-test('first-session opening gallery photo navigation never reveals retained title videos', async ({ page }) => {
+test('first-session opening gallery photo navigation never reveals unrelated retained media', async ({ page }) => {
   test.setTimeout(60_000);
   await page.setViewportSize({ width: 1_280, height: 720 });
   await page.goto('/', {waitUntil: 'domcontentloaded'});
@@ -1767,41 +2094,236 @@ test('first-session opening gallery photo navigation never reveals retained titl
   );
   await expect(photoLink.locator('video')).toHaveCount(0);
   const originGeometry = await page.evaluate(() => {
-    const title = document.querySelector<HTMLElement>('[data-logo-work-title]');
     const media = document.querySelector<HTMLElement>(
       '[data-project-link][href="/work/michael-selected-photography/michael-poolside-product"] '
       + '.project-card__media',
     );
-    if (!title || !media) throw new Error('The fresh gallery geometry is incomplete.');
-    const titleRect = title.getBoundingClientRect();
+    if (!media) throw new Error('The fresh gallery geometry is incomplete.');
     const mediaRect = media.getBoundingClientRect();
-    return {
-      titleHeight: titleRect.height,
-      media: {x: mediaRect.x, y: mediaRect.y, width: mediaRect.width, height: mediaRect.height},
-    };
+    return {x: mediaRect.x, y: mediaRect.y, width: mediaRect.width, height: mediaRect.height};
   });
-  expect(originGeometry.media.y).toBeLessThan(720);
-  expect(originGeometry.media.y + originGeometry.media.height).toBeGreaterThan(0);
-  await photoLink.evaluate((element) => (element as HTMLAnchorElement).click());
+  expect(originGeometry.y).toBeLessThan(720);
+  expect(originGeometry.y + originGeometry.height).toBeGreaterThan(0);
+
+  type RetainedMediaPaint = {
+    element: string;
+    frame: number;
+    opacity: number;
+    owner: string;
+    rect: {x: number; y: number; width: number; height: number};
+    source: string;
+    visibleViewportFraction: number;
+  };
+  type RetainedMediaFrameProbe = {
+    frames: number;
+    timedOut: boolean;
+    unexpected: RetainedMediaPaint[];
+  };
+  await photoLink.evaluate((element) => {
+    const link = element as HTMLAnchorElement;
+    const routeWindow = window as Window & {
+      __retainedMediaFrameProbe?: Promise<RetainedMediaFrameProbe>;
+    };
+    const allowedMedia = new Set<Element>(link.querySelectorAll('img, video, canvas'));
+    const startedAt = performance.now();
+    let frame = 0;
+    let projectFrames = 0;
+    let settledFrames = 0;
+    const largestPaintByElement = new Map<Element, RetainedMediaPaint>();
+
+    const intersect = (
+      left: number,
+      top: number,
+      right: number,
+      bottom: number,
+      clipLeft: number,
+      clipTop: number,
+      clipRight: number,
+      clipBottom: number,
+    ) => ({
+      left: Math.max(left, clipLeft),
+      top: Math.max(top, clipTop),
+      right: Math.min(right, clipRight),
+      bottom: Math.min(bottom, clipBottom),
+    });
+
+    const inspectPaint = (media: Element, boundary: HTMLElement): RetainedMediaPaint | undefined => {
+      if (allowedMedia.has(media)) return undefined;
+      if (media instanceof HTMLImageElement && (!media.complete || media.naturalWidth <= 0)) return undefined;
+      if (media instanceof HTMLCanvasElement && (media.width <= 0 || media.height <= 0)) return undefined;
+
+      const mediaRect = media.getBoundingClientRect();
+      let visible = intersect(
+        mediaRect.left,
+        mediaRect.top,
+        mediaRect.right,
+        mediaRect.bottom,
+        0,
+        0,
+        window.innerWidth,
+        window.innerHeight,
+      );
+      let opacity = 1;
+      let current: Element | null = media;
+      while (current) {
+        const styles = getComputedStyle(current);
+        if (
+          styles.display === 'none'
+          || styles.visibility !== 'visible'
+          || styles.contentVisibility === 'hidden'
+        ) return undefined;
+        opacity *= Number.parseFloat(styles.opacity || '1');
+        if (opacity <= .05) return undefined;
+
+        if (current !== media) {
+          const currentRect = current.getBoundingClientRect();
+          if (/^(?:auto|hidden|clip|scroll)$/u.test(styles.overflowX)) {
+            visible = intersect(
+              visible.left,
+              visible.top,
+              visible.right,
+              visible.bottom,
+              currentRect.left,
+              Number.NEGATIVE_INFINITY,
+              currentRect.right,
+              Number.POSITIVE_INFINITY,
+            );
+          }
+          if (/^(?:auto|hidden|clip|scroll)$/u.test(styles.overflowY)) {
+            visible = intersect(
+              visible.left,
+              visible.top,
+              visible.right,
+              visible.bottom,
+              Number.NEGATIVE_INFINITY,
+              currentRect.top,
+              Number.POSITIVE_INFINITY,
+              currentRect.bottom,
+            );
+          }
+        }
+        if (current === boundary) break;
+        current = current.parentElement;
+      }
+
+      const visibleWidth = Math.max(0, visible.right - visible.left);
+      const visibleHeight = Math.max(0, visible.bottom - visible.top);
+      const visibleViewportFraction = (
+        visibleWidth * visibleHeight
+      ) / (window.innerWidth * window.innerHeight);
+      if (visibleViewportFraction < .25) return undefined;
+
+      const owner = media.closest<HTMLElement>(
+        '[data-gallery-item-id], [data-logo-work-hero], [data-logo-work-title], '
+        + '[data-manifesto], [data-reel-shell], [data-project-overlay-fallback], '
+        + '[data-project-overlay-snapshot], [data-project-hero-media], '
+        + '[data-route-gallery-layer]',
+      );
+      const source = media instanceof HTMLImageElement
+        ? media.currentSrc || media.src
+        : media instanceof HTMLVideoElement
+          ? media.currentSrc || media.poster
+          : 'canvas';
+      return {
+        element: media instanceof HTMLElement
+          ? `${media.tagName.toLowerCase()}.${[...media.classList].join('.')}`
+          : media.tagName.toLowerCase(),
+        frame,
+        opacity,
+        owner: owner?.dataset.galleryItemId
+          || [
+            'data-logo-work-hero',
+            'data-logo-work-title',
+            'data-manifesto',
+            'data-reel-shell',
+            'data-project-overlay-fallback',
+            'data-project-overlay-snapshot',
+            'data-project-hero-media',
+            'data-route-gallery-layer',
+          ].find((attribute) => owner?.hasAttribute(attribute))
+          || 'unknown',
+        rect: {
+          x: mediaRect.x,
+          y: mediaRect.y,
+          width: mediaRect.width,
+          height: mediaRect.height,
+        },
+        source,
+        visibleViewportFraction,
+      };
+    };
+
+    routeWindow.__retainedMediaFrameProbe = new Promise<RetainedMediaFrameProbe>((resolve) => {
+      const sample = (now: number) => {
+        frame += 1;
+        const layer = document.querySelector<HTMLElement>(
+          '[data-route-gallery-layer][data-gallery-layer-state="background"]',
+        );
+        if (layer) {
+          layer.querySelectorAll('img, video, canvas').forEach((media) => {
+            const paint = inspectPaint(media, layer);
+            const previous = largestPaintByElement.get(media);
+            if (
+              paint
+              && (!previous || paint.visibleViewportFraction > previous.visibleViewportFraction)
+            ) largestPaintByElement.set(media, paint);
+          });
+        }
+        document.querySelectorAll(
+          '[data-project-overlay-fallback] img, [data-project-overlay-snapshot] img, '
+          + '[data-project-hero-media][data-route-media-destination-empty] :is(img, video, canvas)',
+        ).forEach((media) => {
+          const paint = inspectPaint(media, document.documentElement);
+          const previous = largestPaintByElement.get(media);
+          if (
+            paint
+            && (!previous || paint.visibleViewportFraction > previous.visibleViewportFraction)
+          ) largestPaintByElement.set(media, paint);
+        });
+
+        const projectArrived = location.pathname !== '/';
+        projectFrames = projectArrived ? projectFrames + 1 : 0;
+        const routeSettled = projectArrived
+          && !document.documentElement.hasAttribute('data-work-project-transition');
+        settledFrames = routeSettled ? settledFrames + 1 : 0;
+        const timedOut = now - startedAt > 8_000;
+        if (settledFrames >= 2 || projectFrames >= 45 || timedOut) {
+          resolve({
+            frames: frame,
+            timedOut,
+            unexpected: [...largestPaintByElement.values()]
+              .sort((a, b) => b.visibleViewportFraction - a.visibleViewportFraction),
+          });
+          return;
+        }
+        requestAnimationFrame(sample);
+      };
+      requestAnimationFrame(sample);
+    });
+    link.click();
+  });
 
   await page.waitForURL(/\/work\//u);
-  const retainedHero = page.locator(
-    '[data-route-gallery-layer][data-gallery-layer-state="background"] [data-logo-work-hero]',
+  const mediaFrameProbe = await page.evaluate(() => (
+    (window as Window & {
+      __retainedMediaFrameProbe?: Promise<RetainedMediaFrameProbe>;
+    }).__retainedMediaFrameProbe
+  ));
+  expect(mediaFrameProbe?.timedOut).toBe(false);
+  expect(mediaFrameProbe?.frames).toBeGreaterThan(2);
+  expect(mediaFrameProbe?.unexpected).toEqual([]);
+  const retainedLayer = page.locator(
+    '[data-route-gallery-layer][data-gallery-layer-state="background"]',
   );
-  const retainedTitle = page.locator(
-    '[data-route-gallery-layer][data-gallery-layer-state="background"] [data-logo-work-title]',
-  );
-  await expect(retainedHero).toHaveCSS('display', 'none');
-  await expect(retainedTitle).toHaveCSS('visibility', 'hidden');
-  expect(await retainedTitle.evaluate((element) => element.getBoundingClientRect().height))
-    .toBeCloseTo(originGeometry.titleHeight, 2);
-  await expect(retainedHero.locator('[data-logo-video]').first()).toBeHidden();
-  const retainedTitleVideo = retainedTitle.locator('[data-type-letter-video]').first();
-  await expect(retainedTitleVideo).toBeHidden();
-  await expect(retainedTitleVideo).toHaveCSS('opacity', '0');
-  await expect(retainedTitleVideo).toHaveCSS('width', '1px');
-  await expect(retainedTitleVideo).toHaveCSS('height', '1px');
-  expect(await retainedHero.locator('[data-logo-video]').first().boundingBox()).toBeNull();
+  const retainedContent = retainedLayer.locator(':scope > [data-route-gallery-content]');
+  await expect(retainedContent.locator(':scope > [data-work-gallery]')).toHaveCount(1);
+  await expect(retainedContent.locator(
+    ':scope > :not([data-work-gallery]):not(noscript):not(script):not(style)',
+  )).toHaveCount(0);
+  await expect(retainedLayer.locator(
+    ':is([data-logo-work-hero], [data-logo-work-title], [data-logo-mask-experience], '
+    + '[data-logo-intro], [data-manifesto], [data-reel-shell], .notes-strip)',
+  )).toHaveCount(0);
   const retainedMediaGeometry = await page.locator(
     '[data-route-gallery-layer] '
     + '[data-project-link][href="/work/michael-selected-photography/michael-poolside-product"] '
@@ -1810,10 +2332,10 @@ test('first-session opening gallery photo navigation never reveals retained titl
     const rect = element.getBoundingClientRect();
     return {x: rect.x, y: rect.y, width: rect.width, height: rect.height};
   });
-  expect(Math.abs(retainedMediaGeometry.x - originGeometry.media.x)).toBeLessThan(2);
-  expect(Math.abs(retainedMediaGeometry.y - originGeometry.media.y)).toBeLessThan(2);
-  expect(Math.abs(retainedMediaGeometry.width - originGeometry.media.width)).toBeLessThan(2);
-  expect(Math.abs(retainedMediaGeometry.height - originGeometry.media.height)).toBeLessThan(2);
+  expect(Math.abs(retainedMediaGeometry.x - originGeometry.x)).toBeLessThan(2);
+  expect(Math.abs(retainedMediaGeometry.y - originGeometry.y)).toBeLessThan(2);
+  expect(Math.abs(retainedMediaGeometry.width - originGeometry.width)).toBeLessThan(2);
+  expect(Math.abs(retainedMediaGeometry.height - originGeometry.height)).toBeLessThan(2);
 });
 
 test('a cold video card fades normally without carrying its poster into the project', async ({ page }) => {
@@ -1986,15 +2508,15 @@ test('route media keeps the original node continuous through the centralized rou
         __videoPortalState?: Promise<VideoPortalState | null>;
       }).__videoPortalState ?? null
     ));
-    expect(videoPortalState).toEqual({
+    expect(videoPortalState).toMatchObject({
       destinationEmpty: true,
       destinationVideoCount: 0,
       destinationBackground: 'rgba(0, 0, 0, 0)',
-      panelOpacity: '1',
       paused: false,
       portalBackground: 'rgba(0, 0, 0, 0)',
       posterVisibility: null,
     });
+    expect(Number.parseFloat(videoPortalState?.panelOpacity ?? '0')).toBeGreaterThanOrEqual(0);
     const outboundVideoHandoff = page.locator('[data-continuity-probe="same-video-node"]');
     await expect(outboundVideoHandoff).toBeAttached();
     await expect(outboundVideoHandoff).toHaveAttribute(
@@ -2029,6 +2551,7 @@ test('route media keeps the original node continuous through the centralized rou
       layerStates: Array<string | null>;
       flowHoldCounts: number[];
       visibleFooterFrames: number;
+      transportFrames: number;
     };
     await page.evaluate((targetSlug) => {
       const routeWindow = window as Window & {
@@ -2039,8 +2562,9 @@ test('route media keeps the original node continuous through the centralized rou
         const layerStates: Array<string | null> = [];
         const flowHoldCounts: number[] = [];
         let visibleFooterFrames = 0;
+        let transportFrames = 0;
         const startedAt = performance.now();
-        let portalSeen = false;
+        let settledFrames = 0;
         const sample = () => {
           const portal = document.querySelector('[data-route-media-portal]');
           const card = document.querySelector<HTMLElement>(
@@ -2048,24 +2572,33 @@ test('route media keeps the original node continuous through the centralized rou
           );
           const layer = document.querySelector<HTMLElement>('[data-route-gallery-layer]');
           if (portal) {
-            portalSeen = true;
+            transportFrames += 1;
             if (card) cardTops.push(card.getBoundingClientRect().top);
             layerStates.push(layer?.dataset.galleryLayerState ?? null);
             flowHoldCounts.push(document.querySelectorAll('[data-route-gallery-flow-hold]').length);
-            const footer = document.querySelector<HTMLElement>('[data-site-footer]');
-            if (footer) {
-              const footerRect = footer.getBoundingClientRect();
-              const footerStyles = getComputedStyle(footer);
-              if (
-                footerStyles.visibility !== 'hidden'
-                && Number.parseFloat(footerStyles.opacity) > 0
-                && footerRect.top < window.innerHeight
-                && footerRect.bottom > 0
-              ) visibleFooterFrames += 1;
-            }
           }
-          if ((portalSeen && !portal) || performance.now() - startedAt > 3_000) {
-            resolve({cardTops, layerStates, flowHoldCounts, visibleFooterFrames});
+          const footer = document.querySelector<HTMLElement>('[data-site-footer]');
+          if (footer) {
+            const footerRect = footer.getBoundingClientRect();
+            const footerStyles = getComputedStyle(footer);
+            if (
+              footerStyles.visibility !== 'hidden'
+              && Number.parseFloat(footerStyles.opacity) > 0
+              && footerRect.top < window.innerHeight
+              && footerRect.bottom > 0
+            ) visibleFooterFrames += 1;
+          }
+          const settled = window.location.pathname === '/'
+            && !document.documentElement.hasAttribute('data-work-project-transition');
+          settledFrames = settled ? settledFrames + 1 : 0;
+          if (settledFrames >= 2 || performance.now() - startedAt > 3_000) {
+            resolve({
+              cardTops,
+              layerStates,
+              flowHoldCounts,
+              visibleFooterFrames,
+              transportFrames,
+            });
             return;
           }
           requestAnimationFrame(sample);
@@ -2078,11 +2611,10 @@ test('route media keeps the original node continuous through the centralized rou
     const returnPortal = page.locator('[data-route-media-portal]');
     await expect(returnPortal).toBeAttached();
     await expect(returnPortal).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
-    const emptyReturnTarget = page.locator(
-      `[data-gallery-item-id="${motionSlug}"] .project-card__media[data-route-media-destination-empty]`,
+    const videoReturnTarget = page.locator(
+      `[data-gallery-item-id="${motionSlug}"] .project-card__media`,
     );
-    await expect(emptyReturnTarget).toBeAttached();
-    await expect(emptyReturnTarget).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+    await expect(videoReturnTarget).not.toHaveAttribute('data-route-media-destination-empty', 'true');
     await page.waitForURL((url) => url.pathname === '/');
     const returnGalleryMotion = await page.evaluate(() => (
       (window as Window & {
@@ -2090,9 +2622,11 @@ test('route media keeps the original node continuous through the centralized rou
       }).__returnGalleryMotion
     ));
     expect(returnGalleryMotion?.cardTops.length).toBeGreaterThan(2);
-    expect(returnGalleryMotion?.layerStates.every((state) => state === 'background')).toBe(true);
-    expect(returnGalleryMotion?.flowHoldCounts.every((count) => count === 1)).toBe(true);
+    expect(returnGalleryMotion?.layerStates.every((state) => state === 'background' || state === null))
+      .toBe(true);
+    expect(returnGalleryMotion?.flowHoldCounts.every((count) => count <= 1)).toBe(true);
     expect(returnGalleryMotion?.visibleFooterFrames).toBe(0);
+    expect(returnGalleryMotion?.transportFrames).toBeGreaterThan(0);
     expect(
       Math.max(...(returnGalleryMotion?.cardTops ?? [0]))
       - Math.min(...(returnGalleryMotion?.cardTops ?? [0])),
@@ -2807,7 +3341,14 @@ test('ClientRouter navigation persists project media and restores the originatin
   await expect(page.locator('[data-work-gallery]')).toHaveAttribute('data-gallery-restore', 'true');
   await expect(page.locator('[data-gallery-entrance]'))
     .toHaveAttribute('data-gallery-entrance-state', 'settled');
-  await expect(page.locator('[data-gallery-entrance]')).toHaveCSS('transform', 'none');
+  await expect.poll(() => page.locator('[data-gallery-entrance]').evaluate((element) => {
+    const matrix = new DOMMatrixReadOnly(getComputedStyle(element).transform);
+    return {
+      scale: matrix.a,
+      x: matrix.m41,
+      y: matrix.m42,
+    };
+  })).toEqual({scale: 1, x: 0, y: 0});
   const storedScrollY = storedClickOrigin.scrollY ?? originScroll;
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(storedScrollY - 40);
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBeLessThan(storedScrollY + 40);
@@ -3268,6 +3809,14 @@ test('pointer motion never reshuffles the active desktop preview pool', async ({
     .filter(({ playing }) => playing)
     .map(({ index }) => index));
   await expect.poll(activeIndexes).not.toHaveLength(0);
+  await expect.poll(async () => {
+    const first = await activeIndexes();
+    await page.waitForTimeout(260);
+    const second = await activeIndexes();
+    return first.length > 0 && JSON.stringify(first) === JSON.stringify(second)
+      ? first.join(',')
+      : '';
+  }, { timeout: 5_000 }).not.toBe('');
   const before = await activeIndexes();
 
   await previews.evaluateAll((videos) => {

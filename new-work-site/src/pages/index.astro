@@ -51,10 +51,47 @@ const preloadImageSizes = preloadEntry
   preloadMobileImage={preloadEntry?.photo ? undefined : preloadEntry?.work.cover.mobilePoster}
   preloadImageSizes={preloadImageSizes}
 >
+  <script is:inline data-astro-rerun>
+    (() => {
+      try {
+        if (sessionStorage.getItem('new-work:work-navigation-entry') === 'true') {
+          document.documentElement.dataset.workNavigationTransition = 'true';
+          history.scrollRestoration = 'manual';
+          window.scrollTo({top: 0, left: 0, behavior: 'auto'});
+        }
+      } catch {
+        // Storage may be unavailable in hardened browsing contexts; the
+        // component script will fall back to the normal first-load state.
+      }
+
+      const rangeStartHue = 0;
+      const rangeEndHue = -240;
+      const chroma = 71;
+      const seed = Math.random();
+      const bounceProgress = 1 - Math.abs(seed * 2 - 1);
+      const hue = rangeStartHue + (rangeEndHue - rangeStartHue) * bounceProgress;
+      const normalizedHue = ((hue % 360) + 360) % 360;
+      const secondary = Math.round(chroma * (1 - Math.abs((normalizedHue / 60) % 2 - 1)));
+      const section = Math.floor(normalizedHue / 60) % 6;
+      const channels = [
+        [chroma, secondary, 0],
+        [secondary, chroma, 0],
+        [0, chroma, secondary],
+        [0, secondary, chroma],
+        [secondary, 0, chroma],
+        [chroma, 0, secondary],
+      ][section] || [chroma, secondary, 0];
+      const color = '#' + channels
+        .map((channel) => channel.toString(16).padStart(2, '0'))
+        .join('');
+
+      window.__newWorkLogoBackgroundSeed = seed;
+      document.documentElement.style.setProperty('--logo-hero-background', color);
+    })();
+  </script>
   <div class="logo-work-page" data-logo-work-page data-handoff="false" data-logo-page-ready="false">
     <div
       class="logo-work-page__hero"
-      style="--logo-hero-background:#470000"
       data-logo-work-hero
       data-faded="false"
     >
@@ -66,7 +103,15 @@ const preloadImageSizes = preloadEntry
         <LogoIntro siteName={settings.workIntroName} projects={homeProjects} />
       </div>
       <div id="work-gallery" class="logo-work-page__gallery-anchor" aria-hidden="true"></div>
-      <ProjectGrid entries={galleryEntries} mode={mode} />
+      <div
+        class="route-gallery-layer"
+        data-route-gallery-layer
+        transition:persist="new-work-gallery-scene"
+      >
+        <div class="route-gallery-layer__content" data-route-gallery-content>
+          <ProjectGrid entries={galleryEntries} mode={mode} />
+        </div>
+      </div>
       <GalleryBackdropCapture />
       <Manifesto text={settings.manifesto} />
       <NotesStrip notes={notes} mode={mode} />
@@ -124,9 +169,14 @@ const preloadImageSizes = preloadEntry
   }
 
   .logo-work-page[data-handoff='true'] .logo-work-page__content,
-  .logo-work-page:has([data-work-gallery][data-gallery-restore='true']) .logo-work-page__content {
+  .logo-work-page:has([data-work-gallery][data-gallery-restore='true']) .logo-work-page__content,
+  :global(html[data-work-navigation-transition='true']) .logo-work-page__content {
     opacity: 1;
     pointer-events: auto;
+  }
+
+  :global(html[data-work-navigation-transition='true']) .logo-work-page__hero {
+    opacity: 0;
   }
 
   :global(body.home-page .site-header) {
@@ -139,10 +189,15 @@ const preloadImageSizes = preloadEntry
   }
 
   :global(body.home-page[data-logo-header-visible='true'] .site-header),
+  :global(html[data-work-navigation-transition='true'] body.home-page .site-header),
   :global(body.home-page:has([data-work-gallery][data-gallery-restore='true']) .site-header) {
     opacity: 1;
     pointer-events: auto;
     transform: translateY(0);
+  }
+
+  :global(html[data-work-navigation-transition='true'] body.home-page .site-header) {
+    transition: none;
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -161,11 +216,55 @@ const preloadImageSizes = preloadEntry
 </style>
 
 <script>
-  import {readStorageValue, writeStorageValue} from '../lib/browser-storage';
+  import {
+    readStorageValue,
+    removeStorageValue,
+    writeStorageValue,
+  } from '../lib/browser-storage';
+
+  const WORK_NAVIGATION_ENTRY_KEY = 'new-work:work-navigation-entry';
+  const WORK_ENTRY_SCROLL_SETTLE_MS = 500;
+
+  const scrollWorkEntryToTop = (): void => {
+    window.scrollTo({top: 0, left: 0, behavior: 'auto'});
+  };
+
+  const settleWorkEntrySurface = (page: HTMLElement): void => {
+    page.dataset.workEntryAtTop = 'true';
+    const gallery = page.querySelector<HTMLElement>('[data-work-gallery]');
+    const entrance = gallery?.querySelector<HTMLElement>('[data-gallery-entrance]');
+    if (gallery) gallery.dataset.galleryEntrancePlayed = 'true';
+    if (entrance) {
+      entrance.dataset.galleryEntranceState = 'settled';
+      entrance.style.removeProperty('transform');
+      entrance.style.removeProperty('will-change');
+    }
+    scrollWorkEntryToTop();
+  };
+
+  const finalizeWorkEntryAtTop = (page: HTMLElement): void => {
+    settleWorkEntrySurface(page);
+    const startedAt = performance.now();
+    let settleFrame = 0;
+    const keepSettled = (): void => {
+      if (!page.isConnected || page.dataset.workEntryAtTop !== 'true') return;
+      settleWorkEntrySurface(page);
+      if (performance.now() - startedAt < WORK_ENTRY_SCROLL_SETTLE_MS) {
+        settleFrame = window.requestAnimationFrame(keepSettled);
+        return;
+      }
+      if (settleFrame) window.cancelAnimationFrame(settleFrame);
+      removeStorageValue('session', WORK_NAVIGATION_ENTRY_KEY);
+      delete document.documentElement.dataset.workNavigationTransition;
+      history.scrollRestoration = 'auto';
+    };
+    settleFrame = window.requestAnimationFrame(keepSettled);
+  };
 
   declare global {
     interface Window {
       __newWorkLogoPageCleanup?: () => void;
+      __newWorkLogoBackgroundSeed?: number;
     }
   }
 
@@ -178,7 +277,12 @@ const preloadImageSizes = preloadEntry
     // The component script and Astro's first page-load event can run back to
     // back. Keep the first color cycle instead of tearing it down and choosing
     // another one during the same paint sequence.
-    if (page.dataset.logoPageReady === 'true') return;
+    if (page.dataset.logoPageReady === 'true') {
+      if (page.dataset.workEntryAtTop === 'true') {
+        finalizeWorkEntryAtTop(page);
+      }
+      return;
+    }
     window.__newWorkLogoPageCleanup?.();
 
     const hero = page?.querySelector<HTMLElement>('[data-logo-work-hero]');
@@ -199,8 +303,9 @@ const preloadImageSizes = preloadEntry
     let galleryScrollFrame = 0;
     const backgroundCycleDuration = 60_000;
     const backgroundCycleStartedAt = performance.now();
-    // Hue zero resolves to the server-painted #470000 first frame. The cycle
-    // therefore begins from the color already on screen and moves gradually.
+    const backgroundSeed = Number.isFinite(window.__newWorkLogoBackgroundSeed)
+      ? window.__newWorkLogoBackgroundSeed as number
+      : Math.random();
     const backgroundStartHue = 0;
     const backgroundEndHue = -240;
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -210,8 +315,12 @@ const preloadImageSizes = preloadEntry
     const wheelMaximumHold = 900;
     const lockedKeys = new Set<string>();
     const openAtGallery = window.location.hash === '#work-gallery';
+    const openFromWorkNavigation = readStorageValue(
+      'session',
+      WORK_NAVIGATION_ENTRY_KEY,
+    ) === 'true';
     const restoreWorkOnLoad = (() => {
-      if (openAtGallery) return true;
+      if (openAtGallery || openFromWorkNavigation) return true;
       if (document.querySelector('[data-work-gallery][data-gallery-restore="true"]')) return true;
       return readStorageValue('session', 'new-work-restore-requested') === 'true';
     })();
@@ -250,22 +359,23 @@ const preloadImageSizes = preloadEntry
     };
 
     const revealGallery = () => {
+      document.querySelector<HTMLElement>('[data-work-gallery]')
+        ?.removeAttribute('data-gallery-restore');
       setHandoff(true);
       requestGalleryScroll();
     };
 
-    const returnToWorkTop = () => {
+    const enterWorkAtTop = () => {
       if (galleryScrollFrame) {
         window.cancelAnimationFrame(galleryScrollFrame);
         galleryScrollFrame = 0;
       }
       document.querySelector<HTMLElement>('[data-work-gallery]')
         ?.removeAttribute('data-gallery-restore');
-      setHandoff(false);
-      window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
-      window.requestAnimationFrame(() => {
-        window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
-      });
+      // Work navigation selects the post-splash state directly. Scroll is
+      // reset only to establish the page's real top, never to drive handoff.
+      setHandoff(true);
+      finalizeWorkEntryAtTop(page);
     };
 
     const automaticColor = (hue: number) => {
@@ -286,7 +396,9 @@ const preloadImageSizes = preloadEntry
 
     const animateBackground = (time: number) => {
       backgroundFrame = 0;
-      const phase = ((time - backgroundCycleStartedAt) / backgroundCycleDuration) % 1;
+      const phase = (
+        backgroundSeed + (time - backgroundCycleStartedAt) / backgroundCycleDuration
+      ) % 1;
       const bounceProgress = 1 - Math.abs(phase * 2 - 1);
       const hue = backgroundStartHue + (backgroundEndHue - backgroundStartHue) * bounceProgress;
       const color = automaticColor(hue);
@@ -434,7 +546,7 @@ const preloadImageSizes = preloadEntry
     window.addEventListener('keyup', handleKeyUp, { signal: controller.signal });
     window.addEventListener('click', handlePageClick, { signal: controller.signal });
     window.addEventListener('scroll', handleScrollFallback, { passive: true, signal: controller.signal });
-    window.addEventListener('new-work:work-navigation', returnToWorkTop, { signal: controller.signal });
+    window.addEventListener('new-work:work-navigation', enterWorkAtTop, { signal: controller.signal });
     window.addEventListener('hashchange', () => {
       if (window.location.hash === '#work-gallery') revealGallery();
     }, { signal: controller.signal });
@@ -442,7 +554,11 @@ const preloadImageSizes = preloadEntry
       .forEach((link) => link.addEventListener('click', revealGallery, { signal: controller.signal }));
     page.dataset.logoPageReady = 'true';
     startAutomaticBackground();
-    setHandoff(restoreWorkOnLoad);
+    if (openFromWorkNavigation) {
+      enterWorkAtTop();
+    } else {
+      setHandoff(restoreWorkOnLoad);
+    }
     if (openAtGallery) requestGalleryScroll();
 
     window.__newWorkLogoPageCleanup = () => {
@@ -452,6 +568,7 @@ const preloadImageSizes = preloadEntry
       if (galleryScrollFrame) window.cancelAnimationFrame(galleryScrollFrame);
       delete page.dataset.handoff;
       delete page.dataset.logoPageReady;
+      delete page.dataset.workEntryAtTop;
       delete document.body.dataset.logoHeaderVisible;
       content.removeAttribute('inert');
       content.removeAttribute('aria-hidden');

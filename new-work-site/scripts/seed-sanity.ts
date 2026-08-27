@@ -700,7 +700,6 @@ function createMapper(
       featuredOnHome: value.featuredOnHome === true,
       doNotPublishWithoutExplicitApproval:
         value.doNotPublishWithoutExplicitApproval === true,
-      rightsApprovalStatus: 'pending',
       seo: seo(value.seo ?? {noIndex: true}),
     })
   }
@@ -726,7 +725,6 @@ function createMapper(
       needsReview: true,
       doNotPublishWithoutExplicitApproval:
         value.doNotPublishWithoutExplicitApproval === true,
-      rightsApprovalStatus: 'pending',
       seo: seo(value.seo ?? {noIndex: true}),
     })
   }
