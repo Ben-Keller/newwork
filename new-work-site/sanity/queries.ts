@@ -341,7 +341,9 @@ export const SANITY_RELEASE_AUDIT_QUERY = defineQuery(/* groq */ `{
       "assetId": asset->_id,
       "assetType": asset->_type,
       "assetKind": asset->kind,
+      "assetSlug": asset->slug.current,
       "workId": asset->project->_id,
+      "workSlug": asset->project->slug.current,
       "workType": asset->project->_type
     }
   },

@@ -16,8 +16,14 @@ test.describe('CMS production build', () => {
       links.map((link) => link.getAttribute('href')).filter((href): href is string => Boolean(href)),
     )
     expect(hrefs.length).toBeGreaterThan(0)
+    expect(hrefs).toHaveLength(28)
     expect(new Set(hrefs).size).toBe(hrefs.length)
     expect(hrefs.every((href) => href.startsWith('/work/'))).toBe(true)
+    expect(hrefs).toContain('/work/mercury-an-unexpected-life/mercury-an-unexpected-life-gallery-preview-cut')
+    expect(hrefs).toContain('/work/olympics-toyota-in-due-time/olympics-toyota-in-due-time-gallery-preview-cut')
+    expect(hrefs).not.toContain('/work/fellow/fellow-still-webp')
+    expect(hrefs).not.toContain('/work/miss-jones-pancake/miss-jones-pancake-still-webp')
+    await expect(page.locator('[data-preview-video]')).toHaveCount(9)
 
     const sampledHrefs = [hrefs[0], hrefs[Math.floor(hrefs.length / 2)], hrefs.at(-1)]
       .filter((href): href is string => Boolean(href))

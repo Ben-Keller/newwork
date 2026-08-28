@@ -1,7 +1,7 @@
 // The committed gallery edit is the source of truth for every environment.
 // Keep removed items available in the wider content model and on their direct
 // project routes, but do not reintroduce them on the work index.
-export const excludedWorkGalleryItemIds: ReadonlySet<string> = new Set([
+export const excludedWorkGalleryItemIdList = [
   'michael-food-test-sandwich',
   'michael-ad-interior',
   'michael-nanu-black-pot',
@@ -15,4 +15,8 @@ export const excludedWorkGalleryItemIds: ReadonlySet<string> = new Set([
   'michael-aw59536-group',
   'michael-aw59665-double-exposure',
   'michael-native-stop-motion-still',
-] as const);
+] as const;
+
+export const excludedWorkGalleryItemIds: ReadonlySet<string> = new Set(
+  excludedWorkGalleryItemIdList,
+);

@@ -29,6 +29,8 @@
     "media:video": "node scripts/optimize-local-videos.mjs",
     "verify:media": "node scripts/verify-media-budgets.mjs",
     "sanity:audit": "tsx scripts/audit-sanity.ts",
+    "sanity:gallery:sync": "tsx scripts/sync-sanity-gallery.ts --apply",
+    "sanity:gallery:sync:dry-run": "tsx scripts/sync-sanity-gallery.ts --dry-run",
     "sanity:seed": "tsx scripts/seed-sanity.ts",
     "sanity:seed:dry-run": "tsx scripts/seed-sanity.ts --dry-run",
     "sanity:typegen": "npm --prefix ../studio-new-work run typegen"

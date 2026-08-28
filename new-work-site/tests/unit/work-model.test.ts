@@ -57,6 +57,30 @@ describe('unified Project asset doorways', () => {
     ]);
   });
 
+  it('applies removed front-gallery items to Sanity placements too', () => {
+    const work = {
+      ...michaelPhotoWork,
+      assets: [{
+        id: 'asset.excluded',
+        slug: 'michael-food-test-sandwich',
+        kind: 'image' as const,
+        poster: michaelPhotoWork.photos[0]!.image,
+      }],
+      photos: [],
+      defaultPhotoId: undefined,
+    };
+
+    expect(buildWorkGallery([work], [
+      {
+        _key: 'excluded',
+        workId: work.id,
+        assetId: 'asset.excluded',
+        cardSize: 'standard',
+        treatment: 'standard',
+      },
+    ])).toEqual([]);
+  });
+
   it('promotes the clicked photo and puts the rest of the shoot below it', () => {
     const selectedPhoto = michaelPhotoWork.photos[1]!;
     const selectedWork = selectWorkPhoto(michaelPhotoWork, selectedPhoto.id);

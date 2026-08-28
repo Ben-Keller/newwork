@@ -41,6 +41,22 @@ const michaelAssets = [
   ['michael-native-stop-motion-still', 'Native poolside products', 'assets/web-ready/images/michael/michael_native_stop_motion-poster.webp', 'Two Native deodorant packages arranged beside a blue tiled swimming pool.'],
 ] as const
 
+const excludedFrontGalleryItemIds = new Set([
+  'michael-food-test-sandwich',
+  'michael-ad-interior',
+  'michael-nanu-black-pot',
+  'fellow',
+  'michael-cradlewise-family',
+  'michael-native-haircare-cupcakes',
+  'michael-aw50519-court-bw',
+  'miss-jones-pancake',
+  'michael-molekule-bath',
+  'michael-aw51026-court-portrait',
+  'michael-aw59536-group',
+  'michael-aw59665-double-exposure',
+  'michael-native-stop-motion-still',
+])
+
 function reference(_ref: string, _key?: string): Reference {
   return {_type: 'reference', _ref, ...(_key ? {_key} : {})}
 }
@@ -95,6 +111,23 @@ function mediaProjectId(media: DocumentValue): string | undefined {
     throw new Error(`${media._id} belongs to multiple legacy Works. Assign one Project before migration.`)
   }
   return legacy[0]
+}
+
+function documentSlug(document: RecordValue | undefined): string | undefined {
+  const slug = document?.slug
+  return slug && typeof slug === 'object' && 'current' in slug && typeof slug.current === 'string'
+    ? slug.current
+    : undefined
+}
+
+function isExcludedGalleryAsset(workSlug?: string, assetSlug?: string): boolean {
+  if (workSlug && excludedFrontGalleryItemIds.has(workSlug)) return true
+  if (assetSlug && excludedFrontGalleryItemIds.has(assetSlug)) return true
+  return Boolean(workSlug && assetSlug && excludedFrontGalleryItemIds.has(`${workSlug}--${assetSlug}`))
+}
+
+function isProjectPlacement(placement: RecordValue): boolean {
+  return typeof placement._key === 'string' && /^project-\d+$/u.test(placement._key)
 }
 
 async function main() {
@@ -260,6 +293,11 @@ async function main() {
   }).commit()
 
   const allMedia = [...migratedExisting, ...michaelMedia]
+  const mediaById = new Map(allMedia.map((media) => [media._id, media]))
+  const workSlugById = new Map([...works, michaelWork].filter(Boolean).map((work) => [
+    work!._id,
+    documentSlug(work),
+  ]))
   const mediaByProject = new Map<string, DocumentValue[]>()
   for (const media of allMedia) {
     const projectId = mediaProjectId(media)
@@ -271,6 +309,11 @@ async function main() {
   for (const list of mediaByProject.values()) {
     list.sort((left, right) => Number(left.projectOrder || 0) - Number(right.projectOrder || 0))
   }
+  const videoByProject = new Map<string, DocumentValue>()
+  for (const [workId, media] of mediaByProject) {
+    const video = media.find((item) => item.kind === 'video')
+    if (video) videoByProject.set(workId, video)
+  }
   if (!workPage || !Array.isArray(workPage.gallery)) throw new Error('The published workPage gallery is missing.')
   const michaelIds = new Set(michaelMedia.map((media) => media._id))
   const existingPlacements = workPage.gallery.flatMap((raw) => {
@@ -278,9 +321,11 @@ async function main() {
     const placement = raw as RecordValue
     const currentAssetId = referenceId(placement.asset)
     if (currentAssetId && michaelIds.has(currentAssetId)) return []
+    const currentAsset = currentAssetId ? mediaById.get(currentAssetId) : undefined
     let assetId = currentAssetId
+    let workId = currentAsset ? mediaProjectId(currentAsset) : undefined
     if (!assetId) {
-      const workId = referenceId(placement.work) || referenceId(placement.project)
+      workId = referenceId(placement.work) || referenceId(placement.project)
       const candidates = workId ? mediaByProject.get(workId) || [] : []
       const coverAssetId = workId ? coverAssetByWork.get(workId) : undefined
       const coverMatch = coverAssetId
@@ -293,6 +338,13 @@ async function main() {
       assetId = coverMatch?._id || candidates[0]?._id
     }
     if (!assetId) throw new Error(`Gallery placement ${String(placement._key || 'unknown')} has no Project Asset.`)
+    const selectedAsset = mediaById.get(assetId)
+    workId = workId || (selectedAsset ? mediaProjectId(selectedAsset) : undefined)
+    const workSlug = workId ? workSlugById.get(workId) : undefined
+    const asset = mediaById.get(assetId)
+    if (isExcludedGalleryAsset(workSlug, documentSlug(asset))) return []
+    const preferredVideo = workId && isProjectPlacement(placement) ? videoByProject.get(workId) : undefined
+    if (preferredVideo) assetId = preferredVideo._id
     return [{
       _key: String(placement._key || `asset-${assetId}`),
       _type: 'workPlacement',
@@ -307,7 +359,10 @@ async function main() {
     asset: reference(media._id),
     cardSize: 'standard',
     treatment: 'standard',
-  }))
+  })).filter((placement, index) => {
+    const sourceKey = michaelAssets[index]?.[0]
+    return !isExcludedGalleryAsset('michael-selected-photography', sourceKey)
+  })
   const gallery: RecordValue[] = []
   const length = Math.max(existingPlacements.length, michaelPlacements.length)
   for (let index = 0; index < length; index += 1) {

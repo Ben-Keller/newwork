@@ -1,4 +1,5 @@
 import {isNonEmptyString, isRecord, type UnknownRecord} from '../../../shared/content-policy';
+import {excludedWorkGalleryItemIds} from '../../content/local/gallery-curation';
 import type {
   ProjectView,
   WorkGalleryEntryView,
@@ -51,6 +52,28 @@ export function workGalleryEntryId(work: ProjectView, assetOrPhotoId?: string): 
   return assetOrPhotoId ? `${work.slug}--${assetOrPhotoId}` : work.slug;
 }
 
+export function isExcludedWorkGalleryItem(
+  workSlug?: string,
+  assetOrPhotoId?: string,
+): boolean {
+  if (workSlug && excludedWorkGalleryItemIds.has(workSlug)) return true;
+  if (assetOrPhotoId && excludedWorkGalleryItemIds.has(assetOrPhotoId)) return true;
+  return Boolean(
+    workSlug
+    && assetOrPhotoId
+    && excludedWorkGalleryItemIds.has(`${workSlug}--${assetOrPhotoId}`),
+  );
+}
+
+export function isExcludedWorkGalleryEntry(entry: WorkGalleryEntryView): boolean {
+  const doorwayId = entry.asset?.slug || entry.photo?.id;
+  return isExcludedWorkGalleryItem(entry.work.slug, doorwayId);
+}
+
+export function filterWorkGalleryEntries(entries: WorkGalleryEntryView[]): WorkGalleryEntryView[] {
+  return entries.filter((entry) => !isExcludedWorkGalleryEntry(entry));
+}
+
 export function buildWorkGallery(
   projects: ProjectView[],
   placements?: WorkGalleryPlacementView[],
@@ -88,7 +111,7 @@ export function buildWorkGallery(
   };
 
   if (placements?.length) {
-    return placements.flatMap((placement) => {
+    return filterWorkGalleryEntries(placements.flatMap((placement) => {
       const work = byId.get(placement.workId);
       return work ? [buildEntry(
         work,
@@ -96,9 +119,9 @@ export function buildWorkGallery(
         placement.cardSize,
         placement.treatment,
       )] : [];
-    });
+    }));
   }
-  return sortProjects(projects).map((work) => buildEntry(work));
+  return filterWorkGalleryEntries(sortProjects(projects).map((work) => buildEntry(work)));
 }
 
 export function buildPrototypeWorkGallery(

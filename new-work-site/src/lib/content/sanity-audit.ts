@@ -1,4 +1,5 @@
 import {isNonEmptyString, isRecord, type UnknownRecord} from '../../../shared/content-policy';
+import {isExcludedWorkGalleryItem} from './work-gallery';
 
 const SINGLETON_IDS = [
   'siteSettings',
@@ -31,6 +32,7 @@ export interface SanityReleaseAuditResult {
   warnings: string[];
   summary: {
     galleryPlacements: number;
+    galleryVideoPlacements: number;
     legacyProjects: number;
     publicNotes: number;
     publicWorks: number;
@@ -78,7 +80,7 @@ export function auditPublishedSanity(
     return {
       errors: ['The Sanity release-audit query did not return an object.'],
       warnings,
-      summary: {galleryPlacements: 0, legacyProjects: 0, publicNotes: 0, publicWorks: 0, works: 0},
+      summary: {galleryPlacements: 0, galleryVideoPlacements: 0, legacyProjects: 0, publicNotes: 0, publicWorks: 0, works: 0},
     };
   }
 
@@ -136,6 +138,7 @@ export function auditPublishedSanity(
   const gallery = records(workPage.gallery);
   if (!gallery.length) errors.push('The Work-page gallery has no published placements.');
   const galleryAssetIds: string[] = [];
+  let galleryVideoPlacements = 0;
   for (const [index, placement] of gallery.entries()) {
     const placementLabel = isNonEmptyString(placement._key) ? placement._key : `position ${index + 1}`;
     if (!isNonEmptyString(placement.assetId) || placement.assetType !== 'mediaItem') {
@@ -144,6 +147,12 @@ export function auditPublishedSanity(
       errors.push(`Gallery placement ${placementLabel} must use a visual image or video Asset.`);
     } else {
       galleryAssetIds.push(placement.assetId);
+      if (placement.assetKind === 'video') galleryVideoPlacements += 1;
+    }
+    const workSlug = isNonEmptyString(placement.workSlug) ? placement.workSlug : undefined;
+    const assetSlug = isNonEmptyString(placement.assetSlug) ? placement.assetSlug : undefined;
+    if (isExcludedWorkGalleryItem(workSlug, assetSlug)) {
+      errors.push(`Gallery placement ${placementLabel} is still publishing a removed front-gallery item.`);
     }
     if (!isNonEmptyString(placement.workId) || placement.workType !== 'work') {
       errors.push(`Gallery Asset ${placementLabel} must link to a current Project.`);
@@ -156,6 +165,24 @@ export function auditPublishedSanity(
   const duplicatePlacements = duplicateValues(galleryAssetIds);
   if (duplicatePlacements.length) {
     errors.push(`The Work-page gallery repeats Assets: ${duplicatePlacements.join(', ')}.`);
+  }
+  const publicVideoAssets = works.flatMap((work) => (
+    publicWorkIds.has(String(work._id))
+      ? records(work.assets).filter((asset) => (
+          asset.kind === 'video'
+          && asset.hasMedia === true
+          && asset.hasAccessibilityText === true
+        ))
+      : []
+  ));
+  if (publicVideoAssets.length > 0 && galleryVideoPlacements === 0) {
+    const examples = publicVideoAssets
+      .flatMap((asset) => isNonEmptyString(asset.slug) ? [asset.slug] : [])
+      .slice(0, 5)
+      .join(', ');
+    errors.push(
+      `The Work-page gallery has zero video placements even though public video Assets exist${examples ? ` (${examples})` : ''}.`,
+    );
   }
 
   const notes = records(input.notes);
@@ -185,6 +212,7 @@ export function auditPublishedSanity(
     warnings,
     summary: {
       galleryPlacements: gallery.length,
+      galleryVideoPlacements,
       legacyProjects,
       publicNotes: publicNoteIds.size,
       publicWorks: publicWorkIds.size,

@@ -1,6 +1,5 @@
 ---
 import ProjectCard from './ProjectCard.astro';
-import { excludedWorkGalleryItemIds } from '../content/local/gallery-curation';
 import type { ContentMode, WorkGalleryEntryView } from '../lib/types';
 
 interface Props {
@@ -12,14 +11,7 @@ const { entries, mode = 'prototype' } = Astro.props;
 // Temporary editorial tooling remains implemented, but is not rendered in the
 // review UI. Switch this flag back on when another curation pass is needed.
 const galleryEditingEnabled = false;
-const galleryEntries = entries.filter((entry) => (
-  mode === 'production'
-  || (
-    !excludedWorkGalleryItemIds.has(entry.id)
-    && !excludedWorkGalleryItemIds.has(entry.photo?.id || '')
-    && !excludedWorkGalleryItemIds.has(entry.work.slug)
-  )
-));
+const galleryEntries = entries;
 const isWideFeature = (entry: WorkGalleryEntryView, index: number) =>
   entry.work.cover.cardRatio === 'wideFeature' && index >= 8;
 const assignColumns = (columnCount: number) => {
