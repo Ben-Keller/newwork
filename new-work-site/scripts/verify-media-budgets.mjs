@@ -6,6 +6,7 @@ const mediaRoot = path.resolve('public/media');
 const limits = {
   image: 1 * 1024 * 1024,
   preview: 2.5 * 1024 * 1024,
+  reelAtlas: 450 * 1024,
 };
 
 async function filesWithin(directory) {
@@ -22,6 +23,9 @@ const files = await filesWithin(mediaRoot);
 for (const file of files) {
   const relative = path.relative(mediaRoot, file);
   const fileStat = await stat(file);
+  if (relative === 'atlas-grid.webp' && fileStat.size > limits.reelAtlas) {
+    failures.push(`${relative} exceeds the 450 KiB About-reel atlas budget`);
+  }
   if (/^images\//u.test(relative) && /\.webp$/iu.test(file) && !/\.w\d+\.webp$/iu.test(file)) {
     if (fileStat.size > limits.image) failures.push(`${relative} exceeds the 1 MiB image-source budget`);
   }

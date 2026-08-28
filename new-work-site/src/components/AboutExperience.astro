@@ -1,5 +1,6 @@
 ---
 import { reducedMotionFeaturedStills } from '../lib/reel/reel-assets';
+import { buildResponsiveAvifSrcset, buildResponsiveSrcset } from '../lib/responsive-images';
 import type { AboutPageView } from '../lib/types';
 
 interface Props {
@@ -12,6 +13,21 @@ const { assetBase, copy, ctaHref } = Astro.props;
 const normalizedAssetBase = assetBase.endsWith('/') ? assetBase : `${assetBase}/`;
 const assetUrl = (path: string) => `${normalizedAssetBase}${path.replace(/^\/+/, '')}`;
 const openingPlaceholderFrames = Array.from({length: 12});
+const fallbackImageSizes = '(max-width: 720px) calc(100vw - 44px), 58vw';
+const fallbackAssets = reducedMotionFeaturedStills.map((asset) => {
+  const image = {
+    src: assetUrl(asset.poster),
+    width: asset.width,
+    height: asset.height,
+    alt: asset.alt,
+  };
+  return {
+    ...asset,
+    image,
+    avifSrcset: buildResponsiveAvifSrcset(image),
+    srcset: buildResponsiveSrcset(image),
+  };
+});
 
 const stages = [
   {
@@ -148,15 +164,30 @@ const stages = [
       <span>{copy.fallbackDescription}</span>
     </div>
     <div class="reel-fallback-grid">
-      {reducedMotionFeaturedStills.map((asset, index) => (
+      {fallbackAssets.map((asset, index) => (
         <figure class:list={['reel-fallback-card', `reel-card-${index + 1}`]}>
           <div class="reel-fallback-image">
-            <img
-              src={assetUrl(asset.poster)}
-              alt={asset.alt}
-              loading="lazy"
-              data-reel-fallback-asset
-            />
+            <picture>
+              {asset.avifSrcset ? (
+                <source
+                  type="image/avif"
+                  srcset={asset.avifSrcset}
+                  sizes={fallbackImageSizes}
+                />
+              ) : null}
+              <img
+                src={asset.image.src}
+                srcset={asset.srcset}
+                sizes={fallbackImageSizes}
+                width={asset.image.width}
+                height={asset.image.height}
+                alt={asset.image.alt}
+                loading="lazy"
+                decoding="async"
+                fetchpriority="auto"
+                data-reel-fallback-asset
+              />
+            </picture>
           </div>
           <figcaption>
             <span>Lorem ipsum</span>

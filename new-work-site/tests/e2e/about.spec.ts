@@ -241,12 +241,47 @@ test('initializes one reel renderer and preloads its critical imagery', async ({
   await expect(page.locator('link[data-reel-preload="feature"]')).toHaveCount(1);
 });
 
+test('loads reel videos progressively as their scenes approach', async ({page}, testInfo) => {
+  test.setTimeout(60_000);
+  test.skip(testInfo.project.name !== 'desktop-chromium', 'The enhanced reel runs on desktop Chromium.');
+  await page.emulateMedia({reducedMotion: 'no-preference'});
+  const requestedVideos = new Set<string>();
+  page.on('request', (request) => {
+    const url = new URL(request.url());
+    if (url.pathname.includes('/media/video-previews/')) requestedVideos.add(url.pathname);
+  });
+
+  await page.goto('/about');
+  const about = page.locator('[data-about-experience]');
+  await expect.poll(() => about.getAttribute('data-mode'), {timeout: 30_000}).toBe('enhanced');
+  await expect(about).toHaveAttribute('data-reel-scroll-ready', 'true', {timeout: 10_000});
+  await expect.poll(() => requestedVideos.size).toBe(1);
+  expect([...requestedVideos][0]).toContain('adobe-what-whack-wears');
+
+  await about.evaluate((element) => {
+    const scrollRange = (element as HTMLElement).offsetHeight - window.innerHeight;
+    window.scrollTo({top: scrollRange * 0.45, behavior: 'instant'});
+  });
+  await expect.poll(() => requestedVideos.size).toBe(4);
+  expect([...requestedVideos].some((path) => path.includes('olympics-toyota'))).toBe(true);
+  expect([...requestedVideos].some((path) => path.includes('tour-de-france'))).toBe(false);
+  expect([...requestedVideos].some((path) => path.includes('michael_brava'))).toBe(false);
+
+  await about.evaluate((element) => {
+    window.scrollTo({
+      top: (element as HTMLElement).offsetHeight - window.innerHeight,
+      behavior: 'instant',
+    });
+  });
+  await expect.poll(() => requestedVideos.size).toBe(6);
+});
+
 test('fallback About assets fade in when each image finishes loading', async ({page}) => {
   let releaseImage: (() => void) | undefined;
   const imageGate = new Promise<void>((resolve) => {
     releaseImage = resolve;
   });
-  await page.route('**/media/images/anjali/anjali-adobe-portrait.webp', async (route) => {
+  await page.route('**/media/images/anjali/anjali-adobe-portrait*', async (route) => {
     await imageGate;
     await route.continue();
   });
@@ -334,6 +369,13 @@ test('reduced motion receives the complete still-image About page', async ({page
   await expect(about.locator('.reel-motion-stage')).toBeHidden();
   await expect(about.locator('.reel-static-fallback')).toBeVisible();
   await expect(about.locator('.reel-fallback-card')).toHaveCount(6);
+  const firstImage = about.locator('[data-reel-fallback-asset]').first();
+  await expect(firstImage).toHaveAttribute('srcset', /anjali-adobe-portrait\.w320\.webp 320w/u);
+  await expect(firstImage).toHaveAttribute('sizes', /58vw/u);
+  await expect(firstImage).toHaveAttribute('width', '750');
+  await expect(firstImage).toHaveAttribute('height', '626');
+  await expect(about.locator('.reel-fallback-image source[type="image/avif"]').first())
+    .toHaveAttribute('srcset', /anjali-adobe-portrait\.w320\.avif 320w/u);
   await expect(about.locator('canvas')).toHaveCount(0);
   await expect(page.getByRole('heading', {
     level: 1,

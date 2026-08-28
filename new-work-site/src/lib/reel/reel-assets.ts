@@ -13,6 +13,8 @@ export type ReelAsset = Readonly<{
 
 export type ReelStillAsset = Omit<ReelAsset, "video"> & {
   readonly video?: never;
+  readonly width: number;
+  readonly height: number;
 };
 
 /**
@@ -291,6 +293,8 @@ export const reducedMotionFeaturedStills = [
     alt: "A performer in a reflective patterned outfit poses against white.",
     palette: "#FA6B83",
     aspectRatio: 750 / 626,
+    width: 750,
+    height: 626,
   },
   {
     id: "reduced-red-suit",
@@ -301,6 +305,8 @@ export const reducedMotionFeaturedStills = [
     alt: "A woman in a vivid red suit sits outdoors among plants and brickwork.",
     palette: "#DC3528",
     aspectRatio: 2083 / 1667,
+    width: 2083,
+    height: 1667,
   },
   {
     id: "reduced-rainbow-pavement",
@@ -311,6 +317,8 @@ export const reducedMotionFeaturedStills = [
     alt: "A lone figure stands amid broad stripes of brightly colored pavement.",
     palette: "#E85D55",
     aspectRatio: 2200 / 1466,
+    width: 2200,
+    height: 1466,
   },
   {
     id: "reduced-mercury-josh-fabian",
@@ -321,6 +329,8 @@ export const reducedMotionFeaturedStills = [
     alt: "A man sits on a leather sofa under deep blue and red light.",
     palette: "#126F82",
     aspectRatio: 1240 / 698,
+    width: 1240,
+    height: 698,
   },
   {
     id: "reduced-toyota-olympics",
@@ -331,6 +341,8 @@ export const reducedMotionFeaturedStills = [
     alt: "Two fencers face each other in a dark training hall.",
     palette: "#667B89",
     aspectRatio: 1240 / 698,
+    width: 1240,
+    height: 698,
   },
   {
     id: "reduced-tour-de-france",
@@ -341,6 +353,7 @@ export const reducedMotionFeaturedStills = [
     alt: "A cyclist loads a bicycle into a pickup truck in a forest clearing.",
     palette: "#697F55",
     aspectRatio: 1240 / 698,
+    width: 1240,
+    height: 698,
   },
 ] as const satisfies readonly ReelStillAsset[];
-

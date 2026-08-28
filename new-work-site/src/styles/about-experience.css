@@ -517,10 +517,14 @@ html[data-about-reel-scroll-locked="true"] body {
   aspect-ratio: 16 / 10;
 }
 
+.reel-fallback-image picture,
 .reel-fallback-image img {
   display: block;
   width: 100%;
   height: 100%;
+}
+
+.reel-fallback-image img {
   object-fit: cover;
   transition:
     opacity 650ms cubic-bezier(.33, 0, .2, 1),

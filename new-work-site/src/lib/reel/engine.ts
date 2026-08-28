@@ -75,6 +75,7 @@ type VideoSpec = {
   atlasIndex: number;
   src: string;
   sourceAspect: number;
+  loadAt: number;
 };
 
 type VideoRecord = {
@@ -84,6 +85,7 @@ type VideoRecord = {
   mesh: THREE.Mesh;
   material: TypedShaderMaterial<MediaUniforms>;
   ready: boolean;
+  loadStarted: boolean;
   fadeProgress: number;
   loadedData: () => void;
   error: () => void;
@@ -110,6 +112,7 @@ const VIDEO_SPECS: VideoSpec[] = [
     atlasIndex: 0,
     src: "/media/video-previews/anjali/adobe-what-whack-wears-gallery-cut-08s.mp4",
     sourceAspect: 16 / 9,
+    loadAt: 0,
   },
   {
     id: "humu",
@@ -117,6 +120,7 @@ const VIDEO_SPECS: VideoSpec[] = [
     atlasIndex: 40,
     src: "/media/video-previews/oliver/humu-meet-holly/gallery-cut-08s.mp4",
     sourceAspect: 16 / 9,
+    loadAt: 0.18,
   },
   {
     id: "mercury-josh",
@@ -124,6 +128,7 @@ const VIDEO_SPECS: VideoSpec[] = [
     atlasIndex: 49,
     src: "/media/video-previews/oliver/mercury-josh-fabian/gallery-cut-08s.mp4",
     sourceAspect: 16 / 9,
+    loadAt: 0.34,
   },
   {
     id: "olympics",
@@ -131,6 +136,7 @@ const VIDEO_SPECS: VideoSpec[] = [
     atlasIndex: 56,
     src: "/media/video-previews/oliver/olympics-toyota-alex-massailas/gallery-cut-08s.mp4",
     sourceAspect: 16 / 9,
+    loadAt: 0.52,
   },
   {
     id: "tour",
@@ -138,6 +144,7 @@ const VIDEO_SPECS: VideoSpec[] = [
     atlasIndex: 61,
     src: "/media/video-previews/oliver/tour-de-france/gallery-cut-08s.mp4",
     sourceAspect: 16 / 9,
+    loadAt: 0.66,
   },
   {
     id: "brava",
@@ -145,8 +152,11 @@ const VIDEO_SPECS: VideoSpec[] = [
     atlasIndex: 5,
     src: "/media/video-previews/michael/michael_brava_clip.mp4",
     sourceAspect: 1,
+    loadAt: 0.78,
   },
 ];
+
+const VIDEO_LOAD_LOOKAHEAD = 0.12;
 
 const smoother = (edge0: number, edge1: number, value: number) => {
   const t = Math.min(1, Math.max(0, (value - edge0) / (edge1 - edge0)));
@@ -466,6 +476,7 @@ export async function createExperience(
       mesh,
       material,
       ready: false,
+      loadStarted: false,
       fadeProgress: 0,
       loadedData: () => undefined,
       error: () => undefined,
@@ -492,11 +503,12 @@ export async function createExperience(
   }
 
   let destroyed = false;
-  let videoLoadsStarted = false;
-  const startVideoLoads = () => {
-    if (videoLoadsStarted || destroyed) return;
-    videoLoadsStarted = true;
+  const startVideoLoads = (progress: number) => {
+    if (destroyed) return;
+    const loadThrough = Math.min(1, progress + VIDEO_LOAD_LOOKAHEAD);
     for (const record of videoRecords) {
+      if (record.loadStarted || record.spec.loadAt > loadThrough) continue;
+      record.loadStarted = true;
       record.video.src = assetUrl(record.spec.src);
       record.video.load();
     }
@@ -851,7 +863,7 @@ export async function createExperience(
   // The atlas already supplies the opening frames. Let the first WebGL scene
   // become interactive before video networking and decoding begin, then
   // progressively replace those stills as each clip becomes ready.
-  startVideoLoads();
+  startVideoLoads(0);
 
   const scrollTrigger = ScrollTrigger.create({
     trigger: options.scrollRoot,
@@ -860,11 +872,13 @@ export async function createExperience(
     invalidateOnRefresh: true,
     onUpdate: (self) => {
       targetProgress = self.progress;
+      startVideoLoads(self.progress);
       startLoop();
     },
   });
   ScrollTrigger.refresh();
   targetProgress = scrollTrigger.progress;
+  startVideoLoads(targetProgress);
   displayProgress = targetProgress;
   updateFeature(displayProgress);
   options.onProgress(displayProgress);
@@ -875,6 +889,7 @@ export async function createExperience(
     refresh: () => {
       ScrollTrigger.refresh();
       targetProgress = scrollTrigger.progress;
+      startVideoLoads(targetProgress);
       startLoop();
     },
     destroy: () => {
