@@ -34,7 +34,10 @@ const initializeGalleryEntrance = (gallery: HTMLElement): MotionCleanup => {
   if (!entrance) return () => undefined;
 
   if (
-    gallery.dataset.galleryRestore === 'true'
+    // The splash handoff owns the home entrance. A second scale tween
+    // would keep changing card positions after its column rise has landed.
+    gallery.closest('[data-logo-work-page]')
+    || gallery.dataset.galleryRestore === 'true'
     || gallery.dataset.galleryEntrancePlayed === 'true'
   ) {
     settleGalleryEntrance(gallery);

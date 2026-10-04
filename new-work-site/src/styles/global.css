@@ -176,6 +176,11 @@ html[data-work-project-transition="to-project"] .project-overlay__panel {
     transition: transform 640ms cubic-bezier(.22, 1, .36, 1);
     will-change: transform;
   }
+  /* Home cards rise into their final geometry; never zoom that geometry
+     during or after the splash handoff. */
+  [data-logo-work-page] .project-grid-stage {
+    transform: translate3d(var(--gallery-pointer-x, 0px), 0, 0);
+  }
   .project-grid-stage[data-gallery-entrance-state="settled"],
   .project-grid-stage[data-gallery-entrance-state="static"] {
     transform: translate3d(var(--gallery-pointer-x, 0px), 0, 0);
