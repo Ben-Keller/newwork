@@ -21,7 +21,7 @@
     "test:e2e:preview": "pnpm build && PLAYWRIGHT_PREVIEW_SERVER=1 playwright test",
     "test:all": "pnpm typecheck && pnpm lint && pnpm test:coverage && pnpm build && pnpm verify:dist && pnpm test:e2e:preview",
     "qa:capture": "node scripts/capture-qa.mjs",
-    "build": "pnpm media:reel && pnpm media:responsive && pnpm verify:media && pnpm content:attribution && astro build",
+    "build": "pnpm brand:social && pnpm media:reel && pnpm media:responsive && pnpm verify:media && pnpm content:attribution && astro build",
     "preview": "astro preview",
     "content:attribution": "node scripts/generate-attribution.mjs",
     "verify:dist": "node scripts/verify-dist.mjs",

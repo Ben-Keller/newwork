@@ -29,6 +29,8 @@ export function references(text) {
   return [...new Set(values.filter((value) => !/^(?:data:|#|%23)/iu.test(value) && !value.includes('${')))];
 }
 
-export function redirectHtml(destination, title = 'New Work') {
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><meta name="robots" content="noindex"><title>${title}</title><link rel="canonical" href="${destination}"><meta http-equiv="refresh" content="0;url=${destination}"><script>location.replace(${JSON.stringify(destination)} + location.search + location.hash)</script></head><body><a href="${destination}">Continue to ${title}</a></body></html>\n`;
+export function redirectHtml(destination, title = 'New Work', share = {}) {
+  const escape = (value) => value.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;');
+  const social = share.image ? `<meta property="og:type" content="website"><meta property="og:title" content="${escape(title)}"><meta property="og:url" content="${escape(share.url)}"><meta property="og:image" content="${escape(share.image)}"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:alt" content="New Work Agency"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${escape(title)}"><meta name="twitter:image" content="${escape(share.image)}"><meta name="twitter:image:alt" content="New Work Agency">` : '';
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><meta name="robots" content="noindex"><title>${title}</title><link rel="canonical" href="${destination}">${social}<meta http-equiv="refresh" content="0;url=${destination}"><script>location.replace(${JSON.stringify(destination)} + location.search + location.hash)</script></head><body><a href="${destination}">Continue to ${title}</a></body></html>\n`;
 }

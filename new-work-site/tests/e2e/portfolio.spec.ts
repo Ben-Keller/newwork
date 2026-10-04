@@ -1715,7 +1715,7 @@ test('prototype SEO blocks crawling, omits its sitemap, and uses only the confir
   expect(canonicalUrl.search).toBe('');
   expect(canonicalUrl.hash).toBe('');
   await expect(page.locator('meta[property="og:image"]'))
-    .toHaveAttribute('content', /\/media\/brand\/social-share\.png$/u);
+    .toHaveAttribute('content', /\/media\/brand\/social-share-v2\.png$/u);
 
   await page.goto('/404');
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex, nofollow');

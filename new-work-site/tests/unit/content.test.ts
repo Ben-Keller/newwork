@@ -164,7 +164,7 @@ describe('site settings content', () => {
     });
     expect(settings.compactMark).toEqual(settings.wordmark);
     expect(settings.defaultSeo.shareImage).toEqual(expect.objectContaining({
-      src: '/media/brand/social-share.png',
+      src: '/media/brand/social-share-v2.png',
       width: 1200,
       height: 630,
     }));

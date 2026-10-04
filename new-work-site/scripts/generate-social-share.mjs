@@ -5,17 +5,17 @@ import sharp from 'sharp';
 
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 const siteDirectory = path.resolve(scriptDirectory, '..');
-const logoPath = path.join(siteDirectory, 'public/media/brand/new-black.svg');
+const logoPath = path.join(siteDirectory, 'public/media/brand/social-wordmark.svg');
 const outputPaths = [
-  path.join(siteDirectory, 'public/media/brand/social-share.png'),
-  path.join(siteDirectory, '../assets/web-ready/brand/social-share.png'),
+  path.join(siteDirectory, 'public/media/brand/social-share-v2.png'),
+  path.join(siteDirectory, '../assets/web-ready/brand/social-share-v2.png'),
 ];
 
-// Keep the complete 2:1 mark within the centered 630px-safe area. Platforms
+// Keep the current outlined/solid wordmark within the centered safe area. Platforms
 // may show the full 1200x630 card or crop it to a square thumbnail; both retain
 // the same undistorted artwork and generous breathing room.
 const logo = await sharp(logoPath)
-  .resize({ width: 520, height: 280, fit: 'inside', withoutEnlargement: true })
+  .resize({ width: 520, height: 420, fit: 'inside', withoutEnlargement: true })
   .png()
   .toBuffer();
 

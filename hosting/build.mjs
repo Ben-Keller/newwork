@@ -66,7 +66,12 @@ if (config.includeV1) {
   }
 }
 
-await writeFile(path.join(output, 'index.html'), redirectHtml(`${prefix}/${config.defaultVersion}/`));
+const defaultHome = await readFile(path.join(output, config.defaultVersion, 'index.html'), 'utf8');
+const shareImage = defaultHome.match(/<meta property="og:image" content="([^"]+)"/u)?.[1]?.replaceAll('&amp;', '&');
+await writeFile(path.join(output, 'index.html'), redirectHtml(`${prefix}/${config.defaultVersion}/`, 'New Work Agency', {
+  image: shareImage,
+  url: `${site}${prefix}/${config.defaultVersion}/`,
+}));
 await writeFile(path.join(output, '.nojekyll'), '');
 await writeFile(path.join(output, '404.html'), `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><meta name="robots" content="noindex"><title>Page not found — New Work</title></head><body><h1>Page not found</h1><p><a href="${prefix}/v2/">Visit New Work</a>${config.includeV1 ? ` · <a href="${prefix}/v1/">Visit V1</a>` : ''}</p></body></html>\n`);
 console.log(`Pages artifact ready: ${output} (${versions.join(', ')}; root opens ${config.defaultVersion}).`);
