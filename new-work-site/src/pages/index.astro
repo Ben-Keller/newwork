@@ -299,6 +299,7 @@ const preloadImageSizes = preloadEntry
 </style>
 
 <script>
+  import { COLUMN_SCROLL_RESPONSES, COMPACT_COLUMN_SCROLL_RESPONSES } from '../lib/motion/column-filter';
   import {
     readStorageValue,
     removeStorageValue,
@@ -460,6 +461,33 @@ const preloadImageSizes = preloadEntry
     };
 
     let mediaAnimation: Animation | null = null;
+    let columnEntranceAnimations: Animation[] = [];
+    const clearColumnEntrance = (): void => {
+      columnEntranceAnimations.forEach((animation) => animation.cancel());
+      columnEntranceAnimations = [];
+    };
+
+    const animateColumnEntrance = (): void => {
+      const desktop = window.matchMedia('(min-width: 1200px)').matches;
+      const responses = desktop ? COLUMN_SCROLL_RESPONSES : COMPACT_COLUMN_SCROLL_RESPONSES;
+      const fastest = Math.max(...responses);
+      const slowest = Math.min(...responses);
+      const distance = Math.min(window.innerHeight * .28, 260);
+      body?.querySelectorAll<HTMLElement>('[data-motion-column]').forEach((card) => {
+        const lane = Number(card.dataset[desktop ? 'desktopColumn' : 'tabletColumn']) - 1;
+        const response = responses[lane];
+        if (response === undefined) return;
+        const lag = distance * (fastest - response) / (fastest - slowest);
+        // Individual translate composes with the scroll filter's transform.
+        // Slower lanes trail during the rise, then settle into their layout.
+        const animation = card.animate([
+          {translate: '0 0', offset: 0, easing: 'cubic-bezier(.22, 1, .36, 1)'},
+          {translate: `0 ${lag}px`, offset: .28, easing: 'cubic-bezier(.22, 1, .36, 1)'},
+          {translate: '0 0', offset: 1},
+        ], {duration: titleMoveDuration, fill: 'backwards'});
+        columnEntranceAnimations.push(animation);
+      });
+    };
 
     const applyTitleState = (active: boolean, animate: boolean): void => {
       if (!titleIntro || !titleStage) return;
@@ -467,6 +495,7 @@ const preloadImageSizes = preloadEntry
       titleSettleTimer = 0;
       titleAnimation?.cancel();
       mediaAnimation?.cancel();
+      clearColumnEntrance();
       titleAnimation = null;
       mediaAnimation = null;
       titleStage.style.transition = 'none';
@@ -496,6 +525,7 @@ const preloadImageSizes = preloadEntry
         {duration: titleMoveDuration, delay: 0,
          easing: 'cubic-bezier(.22, 1, .36, 1)', fill: 'backwards'},
       );
+      if (active) animateColumnEntrance();
       if (body) {
         mediaAnimation = body.animate(
           [{transform: active ? hiddenMedia : 'none', opacity: 1},
@@ -523,6 +553,7 @@ const preloadImageSizes = preloadEntry
       titleSettleTimer = 0;
       titleAnimation?.cancel();
       mediaAnimation?.cancel();
+      clearColumnEntrance();
       titleAnimation = null;
       mediaAnimation = null;
       body?.style.removeProperty('transform');
