@@ -1,5 +1,6 @@
 ---
 import { withBase, withoutBase } from '../lib/base-path';
+import NavigationLabel from './NavigationLabel.astro';
 
 export interface NavItem {
   href: string;
@@ -17,7 +18,6 @@ export interface Props {
 const {
   items = [
     { href: withBase('/'), label: 'Work', match: 'section' },
-    { href: withBase('/about'), label: 'About', match: 'section' },
     { href: withBase('/contact'), label: 'Contact', match: 'section' },
   ],
   currentPath = withoutBase(Astro.url.pathname),
@@ -32,6 +32,7 @@ const normalizePath = (path: string): string => {
 };
 
 const activePath = normalizePath(withoutBase(currentPath));
+
 const isExactPage = (item: NavItem): boolean => activePath === normalizePath(withoutBase(item.href));
 const isCurrent = (item: NavItem): boolean => {
   const href = normalizePath(withoutBase(item.href));
@@ -54,13 +55,82 @@ const isCurrent = (item: NavItem): boolean => {
           <a
             class:list={['desktop-nav__link', { 'is-current': isCurrent(item) }]}
             href={item.href}
+            aria-label={item.label}
             aria-current={isExactPage(item) ? 'page' : undefined}
             data-work-navigation={normalizePath(withoutBase(item.href)) === '/' ? '' : undefined}
+            data-nav-link
           >
-            {item.label}
+            <NavigationLabel label={item.label} />
           </a>
         </li>
       ))
     }
   </ul>
+  <!-- Viewfinder brackets: one marker that frames the current tab and springs
+       to whichever tab is pointed at or focused; positioned from script. -->
+  <span class="nav-marker" data-nav-marker aria-hidden="true"><i></i><i></i><i></i><i></i></span>
 </nav>
+
+<script>
+  let disposeNav = (): void => undefined;
+
+  const setupNav = (): void => {
+    disposeNav();
+    const nav = document.querySelector<HTMLElement>('[data-desktop-nav]');
+    const marker = nav?.querySelector<HTMLElement>('[data-nav-marker]');
+    if (!nav || !marker) return;
+    const controller = new AbortController();
+    const { signal } = controller;
+    const links = Array.from(nav.querySelectorAll<HTMLAnchorElement>('[data-nav-link]'));
+
+    let lastLeft: number | null = null;
+    let pointed: HTMLAnchorElement | null = null;
+
+    const place = (instant = false): void => {
+      const link = pointed ?? links.find((candidate) => candidate.classList.contains('is-current')) ?? null;
+      const label = link?.querySelector<HTMLElement>('.nav-label');
+      if (!link || !label || !nav.offsetWidth) {
+        marker.dataset.visible = 'false';
+        return;
+      }
+      const navBox = nav.getBoundingClientRect();
+      const box = label.getBoundingClientRect();
+      const left = box.left - navBox.left;
+      const right = navBox.right - box.right;
+      marker.dataset.instant = String(instant || lastLeft === null);
+      marker.style.setProperty('--marker-left', `${left.toFixed(1)}px`);
+      marker.style.setProperty('--marker-right', `${right.toFixed(1)}px`);
+      marker.style.setProperty('--marker-top', `${(box.top - navBox.top).toFixed(1)}px`);
+      marker.style.setProperty('--marker-height', `${box.height.toFixed(1)}px`);
+      marker.dataset.visible = 'true';
+      marker.dataset.pointed = String(Boolean(pointed));
+      lastLeft = left;
+      if (marker.dataset.instant === 'true') {
+        window.requestAnimationFrame(() => { marker.dataset.instant = 'false'; });
+      }
+    };
+
+    links.forEach((link) => {
+      link.addEventListener('pointerenter', () => { pointed = link; place(); }, { signal });
+      link.addEventListener('focus', () => {
+        if (!link.matches(':focus-visible')) return;
+        pointed = link;
+        place();
+      }, { signal });
+      link.addEventListener('blur', () => { if (pointed === link) { pointed = null; place(); } }, { signal });
+    });
+    nav.addEventListener('pointerleave', () => { pointed = null; place(); }, { signal });
+    window.addEventListener('resize', () => place(true), { passive: true, signal });
+    void document.fonts?.ready.then(() => place(true)).catch(() => undefined);
+    place(true);
+
+    disposeNav = () => {
+      controller.abort();
+      disposeNav = () => undefined;
+    };
+  };
+
+  setupNav();
+  document.addEventListener('astro:page-load', setupNav);
+  document.addEventListener('astro:before-swap', () => disposeNav());
+</script>

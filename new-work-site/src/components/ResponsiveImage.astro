@@ -29,6 +29,9 @@ const srcset = buildResponsiveSrcset(image);
 const avifSrcset = buildResponsiveAvifSrcset(image);
 const mobileSrcset = mobileImage ? buildResponsiveSrcset(mobileImage) || mobileImage.src : undefined;
 const mobileAvifSrcset = mobileImage ? buildResponsiveAvifSrcset(mobileImage) : undefined;
+// The gallery sits behind the splash. Start every tile's responsive image
+// request from the HTML, without waiting for scrolling or client-side setup.
+const loadImmediately = eager || galleryPreload;
 ---
 
 <div class:list={['responsive-image', className]} data-media-frame>
@@ -44,14 +47,13 @@ const mobileAvifSrcset = mobileImage ? buildResponsiveAvifSrcset(mobileImage) : 
         width={image.width}
         height={image.height}
         alt={image.alt}
-        loading={eager ? 'eager' : 'lazy'}
+        loading={loadImmediately ? 'eager' : 'lazy'}
         decoding="async"
         fetchpriority={priority ? 'high' : 'auto'}
         style={`--image-position:${image.objectPosition || '50% 50%'};--image-mobile-position:${mobileImage?.objectPosition || image.objectPosition || '50% 50%'}`}
         data-error-managed
         data-first-gallery-poster={eager || undefined}
         data-gallery-image={galleryPreload || undefined}
-        data-gallery-preload={galleryPreload && !eager || undefined}
         data-project-poster={projectPoster || undefined}
       />
     </picture>
@@ -60,18 +62,6 @@ const mobileAvifSrcset = mobileImage ? buildResponsiveAvifSrcset(mobileImage) : 
 </div>
 
 <script>
-  let galleryPreloadObserver: IntersectionObserver | undefined;
-  let galleryPreloadDistance = 0;
-
-  const warmGalleryImage = (image: HTMLImageElement) => {
-    image.loading = 'eager';
-    image.fetchPriority = 'auto';
-    image.dataset.galleryPreloaded = 'true';
-    // Changing the loading hint alone is not guaranteed to start a deferred
-    // request. decode() explicitly fetches and prepares the chosen candidate.
-    void image.decode().catch(() => undefined);
-  };
-
   const settleGalleryImage = async (image: HTMLImageElement) => {
     if (image.dataset.galleryImageReady === 'true') return;
     try {
@@ -100,37 +90,6 @@ const mobileAvifSrcset = mobileImage ? buildResponsiveAvifSrcset(mobileImage) : 
     });
   };
 
-  const setupGalleryPreloading = () => {
-    const saveData = Boolean((navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData);
-    if (saveData || !('IntersectionObserver' in window)) return;
-
-    const nextDistance = Math.max(720, Math.round(window.innerHeight * 1.5));
-    if (galleryPreloadObserver && galleryPreloadDistance !== nextDistance) {
-      galleryPreloadObserver.disconnect();
-      galleryPreloadObserver = undefined;
-    }
-    galleryPreloadDistance = nextDistance;
-
-    galleryPreloadObserver ||= new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (!entry.isIntersecting) return;
-        const image = entry.target as HTMLImageElement;
-        warmGalleryImage(image);
-        galleryPreloadObserver?.unobserve(image);
-      });
-    }, {
-      rootMargin: `${galleryPreloadDistance}px 0px ${galleryPreloadDistance}px 0px`,
-      threshold: 0,
-    });
-
-    document.querySelectorAll<HTMLImageElement>(
-      'img[data-gallery-preload]:not([data-gallery-preload-ready])',
-    ).forEach((image) => {
-      image.dataset.galleryPreloadReady = 'true';
-      galleryPreloadObserver?.observe(image);
-    });
-  };
-
   const setupImageErrors = () => {
     document.querySelectorAll<HTMLImageElement>('img[data-error-managed]:not([data-error-ready])').forEach((image) => {
       image.dataset.errorReady = 'true';
@@ -146,16 +105,8 @@ const mobileAvifSrcset = mobileImage ? buildResponsiveAvifSrcset(mobileImage) : 
   };
   setupImageErrors();
   setupGalleryImageReadiness();
-  setupGalleryPreloading();
   document.addEventListener('astro:page-load', () => {
     setupImageErrors();
     setupGalleryImageReadiness();
-    setupGalleryPreloading();
-  });
-  window.addEventListener('resize', setupGalleryPreloading, { passive: true });
-  document.addEventListener('astro:before-swap', () => {
-    galleryPreloadObserver?.disconnect();
-    galleryPreloadObserver = undefined;
-    galleryPreloadDistance = 0;
   });
 </script>

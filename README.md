@@ -4,6 +4,9 @@ This archive is the implementation handoff for a complete New Work portfolio web
 
 The current GitHub, Sanity Studio, webhook, local content, and no-merge release process is documented in [`DEPLOYMENT.md`](DEPLOYMENT.md).
 
+For the isolated `/v1` archive and active `/v2` GitHub Pages release, use the
+[versioned hosting guide](hosting/README.md). The main address opens V2.
+
 ## Start here
 
 1. Give the repository-building agent the entire unzipped folder.

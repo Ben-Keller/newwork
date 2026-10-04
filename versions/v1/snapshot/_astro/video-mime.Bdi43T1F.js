@@ -1,0 +1,1 @@
+function e(e,t){return{sourceUrl:t&&e.mobileSrc||e.desktopSrc||e.src,sourceType:t&&e.mobileType||e.desktopType||e.type}}export{e as t};

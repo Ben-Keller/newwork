@@ -2,6 +2,7 @@
 import ResponsiveImage from './ResponsiveImage.astro';
 import { inferVideoMimeType } from './media/video-mime';
 import { withBase } from '../lib/base-path';
+import { splashRendition } from '../lib/media/splash-renditions';
 import type { ImageView, ProjectView } from '../lib/types';
 import legacyTitleWordmark from '../assets/brand/new-work-letters.svg?raw';
 import legacyTitleManifest from '../assets/brand/new-work-letter-manifest.json';
@@ -88,9 +89,17 @@ const typeLetterAssignments = [
 ] as const;
 const typeLetterProjects = typeLetterAssignments.map(({ slug }) =>
   projects.find((project) => project.slug === slug));
-const typeWords = ['new', 'work'].map((word, wordIndex) => ({
+// Review round 2: the title text follows Logo 01 ("headline"), which closes
+// on a full stop. `word` stays the line's stable key; `text` is what is set.
+// Punctuation is typeset like the letters but carries no media or hover.
+const typeWords = [
+  { word: 'new', text: 'new' },
+  { word: 'work', text: 'work.' },
+].map(({ word, text }, wordIndex) => ({
   word,
-  letters: [...word].map((glyph, letterIndex) => {
+  text,
+  marks: [...text].filter((glyph) => !/\p{L}/u.test(glyph)),
+  letters: [...text].filter((glyph) => /\p{L}/u.test(glyph)).map((glyph, letterIndex) => {
     const index = (wordIndex === 0 ? 0 : 3) + letterIndex;
     const primary = typeLetterProjects[index] || mediaProjects[(index + 1) % Math.max(1, mediaProjects.length)];
     const alternate = typeLetterProjects[(index + 3) % typeLetterProjects.length] || primary;
@@ -108,6 +117,21 @@ const typeWords = ['new', 'work'].map((word, wordIndex) => ({
     };
   }),
 }));
+// The splash state fills the same letters with one project's media, the way
+// the separate splash lockup used to. These are sources for the canvas that
+// paints through the glyphs; they are never painted directly.
+const splashProject = typeLetterProjects.find((project) => project?.cover.previewVideo)
+  || mediaProjects.find((project) => project.cover.previewVideo)
+  || mediaProjects[0];
+// The splash paints at several times a gallery tile's size, so a full-HD cut
+// of the same frames is preferred when one exists (see splash-renditions).
+const splashHd = splashRendition(splashProject?.cover.previewVideo);
+const splashVideoSource = splashHd?.video ?? splashProject?.cover.previewVideo;
+const splashPoster = splashHd?.poster
+  || splashProject?.cover.previewPosterOverride?.src
+  || splashProject?.cover.poster.src;
+const splashVideoMime = splashVideoSource ? inferVideoMimeType(splashVideoSource) : undefined;
+
 const decorative = (image: ImageView): ImageView => ({ ...image, alt: '' });
 const titleAssetRoot = titleKit.assetRoot;
 const titleManifest = titleKit.manifest;
@@ -159,33 +183,52 @@ const titleWordmarkMarkup = titleKit.wordmark
   class:list={['logo-intro', className]}
   style={introStyle}
   data-logo-intro
+  data-logo-mask-experience
+  data-logo-reveal="2"
+  data-logo-reveal-ready="false"
+  data-logo-reveal-phase="background"
+  data-title-state="splash"
+  data-title-motion="settled"
+  aria-label="New Work logo media study"
   data-state="pending"
   data-duration={boundedDuration}
   data-session-key={sessionKey}
   data-title-layout={usesTypeTitle ? 'stacked' : 'single-line'}
-  data-title-source={usesTypeTitle ? 'pp-neue-montreal' : titleKit.source}
+  data-title-source={usesTypeTitle ? 'helvetica-now-display' : titleKit.source}
   data-title-treatment={ACTIVE_TITLE_TREATMENT}
   data-entrance-enabled={TITLE_ENTRANCE_ENABLED ? 'true' : 'false'}
 >
   {usesTypeTitle ? (
     <div class="logo-intro__type-lockup" data-type-lockup>
-      <div class="logo-intro__type-title" data-type-title aria-hidden="true">
-        {typeWords.map(({ word, letters }, wordIndex) => (
+      <!-- One title. The wrapper carries the placement that puts it on the
+           splash box; the stage inside carries the entrance reveal, so the two
+           transforms never fight over the same property. -->
+      <div class="logo-intro__stage-morph" data-logo-stage-morph>
+      <div class="logo-intro__stage-type" data-logo-stage>
+      <div class="logo-intro__type-title" data-type-title data-title-measure aria-hidden="true">
+        {typeWords.map(({ word, text, letters, marks }, wordIndex) => (
           <span
             class:list={[
               'logo-intro__type-line',
               wordIndex === 0 ? 'logo-intro__type-line--outline' : 'logo-intro__type-line--solid',
             ]}
             data-type-title-line={word}
+            data-type-title-text={text}
           >
             {wordIndex === 0 ? (
               <span class="logo-intro__mobile-outline-word" aria-hidden="true">new</span>
             ) : null}
+            <span
+              class="logo-intro__type-letter-baseline"
+              data-type-line-baseline
+              aria-hidden="true"
+            ></span>
             {letters.map(({ glyph, index, position, poster, style, videoMime, videoSource }) => (
               <span
                 class="logo-intro__type-letter"
                 data-type-letter={index}
                 data-glyph={glyph}
+                data-type-letter-poster={poster}
                 style={style}
               >
                 <span class="logo-intro__type-letter-rest">
@@ -213,8 +256,26 @@ const titleWordmarkMarkup = titleKit.wordmark
                 <span class="logo-intro__type-letter-hit" data-type-letter-hit aria-hidden="true"></span>
               </span>
             ))}
+            {marks.map((glyph) => (
+              <span class="logo-intro__type-letter logo-intro__type-letter--mark" data-glyph={glyph}>
+                <span class="logo-intro__type-letter-rest">{glyph}</span>
+              </span>
+            ))}
           </span>
         ))}
+      </div>
+      <canvas class="logo-intro__splash-canvas" data-splash-canvas aria-hidden="true"></canvas>
+      {splashPoster ? (
+        <div class="logo-intro__splash-media" data-single-layer data-asset-index="0" data-active="true">
+          <img src={splashPoster} alt="" loading="eager" decoding="async" data-splash-image />
+          {splashVideoSource ? (
+            <video muted loop playsinline preload="none" poster={splashPoster} data-logo-video data-splash-video>
+              <source data-src={splashVideoSource} type={splashVideoMime} />
+            </video>
+          ) : null}
+        </div>
+      ) : null}
+      </div>
       </div>
       {descriptor ? <p class="logo-intro__descriptor" data-logo-descriptor>{descriptor}</p> : null}
     </div>
@@ -317,7 +378,14 @@ const titleWordmarkMarkup = titleKit.wordmark
   {descriptor ? <p class="logo-intro__descriptor" data-logo-descriptor>{descriptor}</p> : null}
   </>
   )}
-  <noscript><style>.logo-intro__media{display:none!important}</style></noscript>
+  <noscript><style>
+    .logo-intro__media{display:none!important}
+    /* Without script there is no splash to come out of: the title is simply
+       the title, at rest, in its own place. */
+    .logo-intro__stage-type{opacity:1!important;animation:none!important}
+    .logo-intro__splash-canvas,.logo-intro__splash-media{display:none!important}
+    .logo-intro__descriptor{opacity:1!important}
+  </style></noscript>
 </section>
 
 <script>
@@ -352,6 +420,9 @@ const titleWordmarkMarkup = titleKit.wordmark
     const intros = document.querySelectorAll<HTMLElement>('[data-logo-intro]:not([data-intro-ready])');
 
     intros.forEach((intro) => {
+      // A home page being held behind a project route is scenery, not a live
+      // title: it must not claim readiness or start playing media.
+      if (intro.closest('[data-gallery-layer-state="background"]')) return;
       intro.dataset.introReady = 'true';
       const duration = Number.parseInt(intro.dataset.duration ?? '5000', 10);
       const boundedDuration = Number.isFinite(duration) ? Math.min(5_200, Math.max(4_800, duration)) : 5_000;
@@ -366,7 +437,316 @@ const titleWordmarkMarkup = titleKit.wordmark
         const letters = [...intro.querySelectorAll<HTMLElement>('[data-type-letter]')];
         const lines = [...intro.querySelectorAll<HTMLElement>('[data-type-title-line]')];
         let activeLetter: HTMLElement | null = null;
+        let activeSplashPoster: HTMLImageElement | null = null;
+        const splashHoverPosters = new Map<HTMLElement, HTMLImageElement>();
         let renderFrame = 0;
+
+        // --- Splash fill ----------------------------------------------------
+        // On the splash this one title is filled with a project's media, the
+        // way the separate splash lockup used to be. The letters are painted
+        // from a single source across the whole lockup rather than per letter,
+        // so the image reads as one picture seen through the word.
+        const title = intro.querySelector<HTMLElement>('[data-type-title]');
+        const splashCanvas = intro.querySelector<HTMLCanvasElement>('[data-splash-canvas]');
+        const splashVideo = intro.querySelector<HTMLVideoElement>('[data-splash-video]');
+        const splashImage = intro.querySelector<HTMLImageElement>('[data-splash-image]');
+        let splashFrame = 0;
+        let splashRetry = 0;
+
+        const titleGeometry = () => {
+          if (!title) return null;
+          const rect = title.getBoundingClientRect();
+          const styles = getComputedStyle(title);
+          // offsetWidth/offsetHeight round to whole pixels. At splash scale
+          // that rounding gave each hovered letter a different coordinate grid.
+          const width = Number.parseFloat(styles.width);
+          const height = Number.parseFloat(styles.height);
+          if (!width || !height) return null;
+          return { rect, styles, width, height, scale: rect.width / width || 1 };
+        };
+
+        const hitMeasureContext = document.createElement('canvas').getContext('2d');
+        const updateLetterHitBounds = (): void => {
+          const geometry = titleGeometry();
+          if (!geometry || !hitMeasureContext || routeSignal.aborted) return;
+          letters.forEach((letter) => {
+            const hit = letter.querySelector<HTMLElement>('[data-type-letter-hit]');
+            const glyph = letter.querySelector<HTMLElement>('[data-type-letter-glyph]');
+            const marker = letter.querySelector<HTMLElement>('[data-type-letter-baseline]');
+            if (!hit || !glyph || !marker || !letter.getClientRects().length) return;
+            const styles = getComputedStyle(glyph);
+            hitMeasureContext.font = `${styles.fontWeight} ${styles.fontSize} ${styles.fontFamily}`;
+            const metrics = hitMeasureContext.measureText(letter.dataset.glyph || '');
+            const box = letter.getBoundingClientRect();
+            const baseline = (marker.getBoundingClientRect().top - box.top) / geometry.scale;
+            hit.style.top = `${baseline - metrics.actualBoundingBoxAscent}px`;
+            hit.style.bottom = `${box.height / geometry.scale - baseline - metrics.actualBoundingBoxDescent}px`;
+          });
+        };
+
+        const splashSource = (): HTMLVideoElement | HTMLImageElement | null => {
+          const hoverVideo = activeLetter?.querySelector<HTMLVideoElement>('[data-type-letter-video]');
+          if (hoverVideo && hoverVideo.readyState >= 2 && hoverVideo.videoWidth) return hoverVideo;
+          if (activeSplashPoster?.complete && activeSplashPoster.naturalWidth) return activeSplashPoster;
+          if (splashVideo && splashVideo.readyState >= 2 && splashVideo.videoWidth) return splashVideo;
+          if (splashImage?.complete && splashImage.naturalWidth) return splashImage;
+          return null;
+        };
+
+        const stopSplashFill = (): void => {
+          if (splashFrame) window.cancelAnimationFrame(splashFrame);
+          if (splashRetry) window.clearTimeout(splashRetry);
+          splashFrame = 0;
+          splashRetry = 0;
+          splashVideo?.pause();
+          splashCanvas?.removeAttribute('data-media-ready');
+        };
+
+        const paintSplashFill = (): void => {
+          splashFrame = 0;
+          if (routeSignal.aborted || reducedMotion || saveData
+            || !splashCanvas || !title || intro.dataset.titleState === 'home') return;
+          const source = splashSource();
+          const geometry = titleGeometry();
+          const localWidth = geometry?.width ?? 0;
+          const localHeight = geometry?.height ?? 0;
+          if (!source || !localWidth || !localHeight) {
+            if (!splashRetry) {
+              splashRetry = window.setTimeout(() => {
+                splashRetry = 0;
+                paintSplashFill();
+              }, 120);
+            }
+            return;
+          }
+
+          // The title is scaled while it sits on the splash, but this canvas is
+          // scaled with it. Everything below is therefore in the title's own
+          // unscaled pixels, with the on-screen scale folded into the backing
+          // store only, so the letters stay sharp at splash size.
+          // The splash scale alone is about 2x, so on a 2x display the store
+          // needs about 4x; a fixed cap of 3 left the letters soft there. The
+          // store is instead bounded by area (one 4K frame), which keeps the
+          // per-frame video composite affordable on large screens.
+          if (!geometry) return;
+          const { rect, styles: titleStyles, scale: onScreenScale } = geometry;
+          const idealScale = (window.devicePixelRatio || 1) * onScreenScale;
+          const maxScale = Math.sqrt(8_294_400 / (localWidth * localHeight));
+          const paintScale = Math.max(1, Math.min(idealScale, maxScale));
+          const pixelWidth = Math.round(localWidth * paintScale);
+          const pixelHeight = Math.round(localHeight * paintScale);
+          if (splashCanvas.width !== pixelWidth || splashCanvas.height !== pixelHeight) {
+            splashCanvas.width = pixelWidth;
+            splashCanvas.height = pixelHeight;
+          }
+          const context = splashCanvas.getContext('2d');
+          if (!context) return;
+          context.setTransform(pixelWidth / localWidth, 0, 0, pixelHeight / localHeight, 0, 0);
+          context.clearRect(0, 0, localWidth, localHeight);
+
+          // The word is laid down first and the picture is then taken into it
+          // in one composite. Cutting the picture to each line in turn would
+          // not work: successive `destination-in` passes intersect, and two
+          // lines of a stacked lockup barely overlap, so the second pass would
+          // erase the first.
+          context.globalCompositeOperation = 'source-over';
+          context.textBaseline = 'alphabetic';
+          context.fillStyle = '#fff';
+          context.font = `${titleStyles.fontWeight} ${titleStyles.fontSize} ${titleStyles.fontFamily}`;
+          if ('letterSpacing' in context) context.letterSpacing = titleStyles.letterSpacing;
+          // Each line is drawn whole, at the box and the real inline baseline
+          // the browser laid out, so the painted word sits exactly on the
+          // typeset one rather than on canvas font metrics — and so this still
+          // holds in the phone layout, where the first line is one painted word
+          // rather than separate letters.
+          lines.forEach((line) => {
+            const word = line.dataset.typeTitleText ?? line.dataset.typeTitleLine;
+            const baselineMarker = line.querySelector<HTMLElement>('[data-type-line-baseline]');
+            if (!word || !baselineMarker) return;
+            const baseline = (baselineMarker.getBoundingClientRect().top - rect.top) / onScreenScale;
+            // Paint each glyph where its letter box actually sits. The letters
+            // are separate boxes, so the browser applies no kerning between
+            // them; painting the line as one kerned word left the fill a few
+            // pixels off the hover canvases, which paint from these boxes.
+            const glyphs = Array.from(line.querySelectorAll<HTMLElement>('.logo-intro__type-letter'))
+              .filter((glyph) => glyph.getClientRects().length > 0);
+            if (glyphs.length) {
+              if ('fontKerning' in context) context.fontKerning = 'none';
+              glyphs.forEach((glyph) => {
+                context.fillText(
+                  glyph.dataset.glyph ?? '',
+                  (glyph.getBoundingClientRect().left - rect.left) / onScreenScale,
+                  baseline,
+                );
+              });
+              return;
+            }
+            // The phone layout sets the first line as one word, which the
+            // browser does kern, so it is painted the same way.
+            if ('fontKerning' in context) context.fontKerning = 'normal';
+            context.fillText(word, (line.getBoundingClientRect().left - rect.left) / onScreenScale, baseline);
+          });
+
+          const mediaWidth = source instanceof HTMLVideoElement ? source.videoWidth : source.naturalWidth;
+          const mediaHeight = source instanceof HTMLVideoElement ? source.videoHeight : source.naturalHeight;
+          const cover = Math.max(localWidth / mediaWidth, localHeight / mediaHeight);
+          const drawWidth = mediaWidth * cover;
+          const drawHeight = mediaHeight * cover;
+          context.globalCompositeOperation = 'source-in';
+          context.drawImage(
+            source,
+            (localWidth - drawWidth) / 2,
+            (localHeight - drawHeight) / 2,
+            drawWidth,
+            drawHeight,
+          );
+          context.globalCompositeOperation = 'source-over';
+          splashCanvas.dataset.mediaReady = 'true';
+
+          if (source instanceof HTMLVideoElement && !source.paused) {
+            splashFrame = window.requestAnimationFrame(paintSplashFill);
+          }
+        };
+
+        const startSplashFill = (): void => {
+          // The entrance and the state observer can both ask for the fill in
+          // the same frame; only one paint loop may be running.
+          if (splashFrame) window.cancelAnimationFrame(splashFrame);
+          splashFrame = 0;
+          if (!splashCanvas || reducedMotion || saveData) {
+            // Without motion the letters stay solid; the splash is then the
+            // title on the colour field.
+            return;
+          }
+          // Nothing to fill if this title is already at rest on the page.
+          if (intro.dataset.titleState === 'home') return;
+          const source = splashVideo?.querySelector<HTMLSourceElement>('source[data-src]');
+          if (splashVideo && source?.dataset.src && !source.src) {
+            source.src = source.dataset.src;
+            splashVideo.load();
+          }
+          try {
+            if (splashVideo) splashVideo.currentTime = 0;
+          } catch {
+            // A source that has not exposed metadata yet already begins at zero.
+          }
+          void splashVideo?.play().catch(() => undefined);
+          paintSplashFill();
+        };
+
+        // The poster almost always decodes before the video, so the first
+        // paint takes the still and, being a still, does not keep the loop
+        // running. Pick the loop up when the video actually starts.
+        const resumeSplashFill = (): void => {
+          if (routeSignal.aborted || intro.dataset.titleState === 'home' || splashFrame) return;
+          paintSplashFill();
+        };
+        splashVideo?.addEventListener('playing', resumeSplashFill, { signal: routeSignal });
+        splashVideo?.addEventListener('loadeddata', resumeSplashFill, { signal: routeSignal });
+        letters.forEach((letter) => {
+          const video = letter.querySelector<HTMLVideoElement>('[data-type-letter-video]');
+          video?.addEventListener('playing', resumeSplashFill, { signal: routeSignal });
+          video?.addEventListener('loadeddata', resumeSplashFill, { signal: routeSignal });
+        });
+
+        // Route lifecycle pauses every video while the tab is hidden and
+        // nothing restarts them, so a splash opened in the background (or
+        // left for another window) would stay on a frozen frame.
+        document.addEventListener('visibilitychange', () => {
+          if (document.hidden) stopActiveLetter();
+          if (document.hidden || intro.dataset.titleState === 'home' || reducedMotion || saveData) return;
+          if (!splashVideo?.querySelector('source[src]')) return;
+          void splashVideo.play().catch(() => undefined);
+        }, { signal: routeSignal });
+
+        // --- Entrance -------------------------------------------------------
+        const initialBackgroundHold = 240;
+        let revealFrame = 0;
+        let revealSettleFrame = 0;
+        let revealTimer = 0;
+
+        const playReveal = (backgroundHold = 0): void => {
+          if (revealFrame) window.cancelAnimationFrame(revealFrame);
+          if (revealSettleFrame) window.cancelAnimationFrame(revealSettleFrame);
+          if (revealTimer) window.clearTimeout(revealTimer);
+          intro.dataset.logoRevealReady = 'false';
+          intro.dataset.logoRevealPhase = backgroundHold > 0 ? 'background' : 'content';
+          // Begin fetching the media behind the hidden title so the colour
+          // owns first paint without the reveal waiting on the network.
+          startSplashFill();
+
+          const revealContent = (): void => {
+            revealTimer = 0;
+            intro.dataset.logoRevealPhase = 'content';
+            revealFrame = window.requestAnimationFrame(() => {
+              revealFrame = 0;
+              revealSettleFrame = window.requestAnimationFrame(() => {
+                revealSettleFrame = 0;
+                intro.dataset.logoRevealReady = 'true';
+              });
+            });
+          };
+
+          if (backgroundHold > 0) {
+            revealFrame = window.requestAnimationFrame(() => {
+              revealFrame = 0;
+              revealTimer = window.setTimeout(revealContent, backgroundHold);
+            });
+          } else {
+            revealContent();
+          }
+        };
+
+        playReveal(reducedMotion ? 0 : initialBackgroundHold);
+
+        // Once the entrance has played, drop its layer hint (see CSS) so the
+        // title is re-rastered at its splash scale rather than enlarged.
+        const revealStage = intro.querySelector<HTMLElement>('[data-logo-stage]');
+        const finishReveal = (event: AnimationEvent): void => {
+          if (event.target !== revealStage) return;
+          intro.dataset.logoRevealPhase = 'done';
+          updateLetterHitBounds();
+        };
+        revealStage?.addEventListener('animationend', finishReveal, { signal: routeSignal });
+        revealStage?.addEventListener('animationcancel', finishReveal, { signal: routeSignal });
+        if (reducedMotion) intro.dataset.logoRevealPhase = 'done';
+
+        const handleRevealRequest = (): void => {
+          stopActiveLetter();
+          playReveal();
+        };
+        window.addEventListener('new-work:logo-reveal', handleRevealRequest, { signal: routeSignal });
+
+        // The page controller flips this element between its two states. The
+        // fill follows the state rather than the other way round.
+        const titleStateObserver = new MutationObserver((mutations) => {
+          if (mutations.some((mutation) => mutation.attributeName === 'data-title-state')) {
+            stopActiveLetter();
+            if (intro.dataset.titleState === 'home') stopSplashFill();
+            else startSplashFill();
+          }
+          if (intro.dataset.titleMotion === 'settled') updateLetterHitBounds();
+        });
+        titleStateObserver.observe(intro, { attributeFilter: ['data-title-state', 'data-title-motion'] });
+        routeSignal.addEventListener('abort', () => {
+          titleStateObserver.disconnect();
+          stopSplashFill();
+          // Allow this title to initialize again if its page is brought back
+          // rather than re-rendered.
+          delete intro.dataset.introReady;
+          if (revealFrame) window.cancelAnimationFrame(revealFrame);
+          if (revealSettleFrame) window.cancelAnimationFrame(revealSettleFrame);
+          if (revealTimer) window.clearTimeout(revealTimer);
+        }, { once: true });
+
+        const repaintSplashFill = (): void => {
+          updateLetterHitBounds();
+          if (intro.dataset.titleState === 'home') return;
+          if (!splashFrame) paintSplashFill();
+        };
+        window.addEventListener('resize', repaintSplashFill, { passive: true, signal: routeSignal });
+        void document.fonts?.ready.then(repaintSplashFill).catch(() => undefined);
+        updateLetterHitBounds();
 
         const stopActiveLetter = (): void => {
           if (renderFrame) window.cancelAnimationFrame(renderFrame);
@@ -379,6 +759,8 @@ const titleWordmarkMarkup = titleKit.wordmark
           canvas?.removeAttribute('data-media-ready');
           activeLetter.removeAttribute('data-type-media-ready');
           activeLetter = null;
+          activeSplashPoster = null;
+          resumeSplashFill();
         };
 
         const renderLetterVideo = (letter: HTMLElement): void => {
@@ -387,52 +769,69 @@ const titleWordmarkMarkup = titleKit.wordmark
           const rest = letter.querySelector<HTMLElement>('.logo-intro__type-letter-rest');
           const glyphElement = letter.querySelector<HTMLElement>('[data-type-letter-glyph]');
           const baselineMarker = letter.querySelector<HTMLElement>('[data-type-letter-baseline]');
-          if (!canvas || !video || !rest || !glyphElement || !baselineMarker || activeLetter !== letter) return;
+          if (intro.dataset.titleState === 'splash'
+            || !canvas || !video || !rest || !glyphElement || !baselineMarker || activeLetter !== letter) return;
+          // Work in the letter's own (layout) pixels and fold the on-screen
+          // scale into the backing store only. At rest the scale is 1; on the
+          // splash the whole title is scaled up, and sizing the canvas from the
+          // on-screen box would scale it a second time.
           const rect = letter.getBoundingClientRect();
-          const scale = Math.min(window.devicePixelRatio || 1, 2);
-          const width = Math.max(1, Math.round(rect.width));
-          const height = Math.max(1, Math.round(rect.height));
+          const geometry = titleGeometry();
+          if (!geometry) return;
+          const onScreenScale = geometry.scale;
+          const scale = Math.min((window.devicePixelRatio || 1) * onScreenScale, 4);
+          const width = Math.max(1, rect.width / onScreenScale);
+          const height = Math.max(1, rect.height / onScreenScale);
           const styles = getComputedStyle(glyphElement);
           const letterSpacing = Number.parseFloat(styles.letterSpacing) || 0;
-          // The inline box includes the negative tracking used to overlap the
-          // title letters. Restore that trimmed advance only for the painted
-          // canvas so the glyph's right edge is not clipped.
-          const paintWidth = width + Math.max(0, -letterSpacing);
+          // The canvas overhangs the letter box on every side: the box is
+          // trimmed by the title's negative tracking, and some glyphs reach
+          // past it, so a canvas cut to the box clipped them (on the splash
+          // the shared fill then showed through at the cut). Its CSS size is
+          // set to exactly what is drawn, so nothing is stretched by rounding.
+          const pad = Math.ceil(height * .1);
+          const paintWidth = width + Math.max(0, -letterSpacing) + pad * 2;
+          const paintHeight = height + pad * 2;
           const pixelWidth = Math.round(paintWidth * scale);
-          const pixelHeight = Math.round(height * scale);
+          const pixelHeight = Math.round(paintHeight * scale);
+          canvas.style.left = `${-pad}px`;
+          canvas.style.top = `${-pad}px`;
           canvas.style.width = `${paintWidth}px`;
+          canvas.style.height = `${paintHeight}px`;
           if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
             canvas.width = pixelWidth;
             canvas.height = pixelHeight;
           }
           const context = canvas.getContext('2d');
           if (context && video.readyState >= 2 && video.videoWidth && video.videoHeight) {
-            context.setTransform(scale, 0, 0, scale, 0, 0);
-            context.clearRect(0, 0, paintWidth, height);
+            context.setTransform(pixelWidth / paintWidth, 0, 0, pixelHeight / paintHeight, 0, 0);
+            context.clearRect(0, 0, paintWidth, paintHeight);
             const [positionX = .5, positionY = .5] = (video.dataset.objectPosition || '.5,.5')
               .split(',')
               .map(Number);
-            const mediaScale = Math.max(paintWidth / video.videoWidth, height / video.videoHeight);
+            const mediaScale = Math.max(paintWidth / video.videoWidth, paintHeight / video.videoHeight);
             const mediaWidth = video.videoWidth * mediaScale;
             const mediaHeight = video.videoHeight * mediaScale;
             context.drawImage(
               video,
               (paintWidth - mediaWidth) * positionX,
-              (height - mediaHeight) * positionY,
+              (paintHeight - mediaHeight) * positionY,
               mediaWidth,
               mediaHeight,
             );
             context.globalCompositeOperation = 'destination-in';
             context.font = `${styles.fontWeight} ${styles.fontSize} ${styles.fontFamily}`;
+            context.fontKerning = 'none';
+            context.letterSpacing = styles.letterSpacing;
             context.textBaseline = 'alphabetic';
             context.fillStyle = '#fff';
             const glyph = letter.dataset.glyph || '';
             const markerRect = baselineMarker.getBoundingClientRect();
-            const baseline = markerRect.top - rect.top;
+            const baseline = (markerRect.top - rect.top) / onScreenScale;
             // Use the browser's real inline baseline instead of centering from
             // canvas font metrics. The latter differs substantially for the
             // very tight title line-height and shifts the media glyph upward.
-            context.fillText(glyph, 0, baseline);
+            context.fillText(glyph, pad, baseline + pad);
             context.globalCompositeOperation = 'source-over';
             canvas.dataset.mediaReady = 'true';
             letter.dataset.typeMediaReady = 'true';
@@ -447,19 +846,35 @@ const titleWordmarkMarkup = titleKit.wordmark
           letter.dataset.typeActive = 'true';
           const video = letter.querySelector<HTMLVideoElement>('[data-type-letter-video]');
           const source = video?.querySelector<HTMLSourceElement>('[data-type-letter-video-source]');
+          const onSplash = intro.dataset.titleState === 'splash';
+          if (onSplash && !reducedMotion && !saveData && letter.dataset.typeLetterPoster) {
+            let poster = splashHoverPosters.get(letter);
+            if (!poster) {
+              poster = new Image();
+              poster.decoding = 'async';
+              poster.addEventListener('load', resumeSplashFill, { once: true, signal: routeSignal });
+              poster.src = letter.dataset.typeLetterPoster;
+              splashHoverPosters.set(letter, poster);
+            }
+            activeSplashPoster = poster;
+          }
           if (!reducedMotion && !saveData && video && source?.dataset.src) {
             if (!source.hasAttribute('src')) {
               source.src = source.dataset.src;
               video.load();
             }
             void video.play().catch(() => undefined);
-            renderLetterVideo(letter);
+            // The splash has one picture across both words. Only the gallery
+            // uses independent letter masks; never layer those over the splash.
+            if (!onSplash) renderLetterVideo(letter);
           }
+          if (onSplash) resumeSplashFill();
         };
 
         lines.forEach((line) => {
           const lineLetters = letters.filter((letter) => letter.parentElement === line);
           line.addEventListener('pointermove', (event) => {
+            if (event.pointerType === 'touch') return;
             const nearest = lineLetters.reduce<HTMLElement | null>((closest, letter) => {
               const rect = letter.getBoundingClientRect();
               if (!closest) return letter;
@@ -470,10 +885,11 @@ const titleWordmarkMarkup = titleKit.wordmark
                 : closest;
             }, null);
             if (nearest) startLetter(nearest);
-          });
-          line.addEventListener('pointerleave', stopActiveLetter);
-          line.addEventListener('pointercancel', stopActiveLetter);
+          }, { signal: routeSignal });
+          line.addEventListener('pointerleave', stopActiveLetter, { signal: routeSignal });
+          line.addEventListener('pointercancel', stopActiveLetter, { signal: routeSignal });
         });
+        window.addEventListener('blur', stopActiveLetter, { signal: routeSignal });
         routeSignal.addEventListener('abort', stopActiveLetter, { once: true });
         markIntroSettled();
         settleIntro(intro);
@@ -535,22 +951,30 @@ const titleWordmarkMarkup = titleKit.wordmark
 
   initializeLogoIntros();
   document.addEventListener('astro:page-load', initializeLogoIntros);
+  document.addEventListener('new-work:gallery-layer-released', initializeLogoIntros);
 </script>
 
 <style>
   .logo-intro {
     position: relative;
-    /* The gallery intentionally rises behind the lower edge of the wordmark.
-       Keep the title's painted letters and their exact SVG hit areas above it. */
+    /* Review round 1: the gallery now rises OVER the lower edge of the
+       wordmark. This value orders the intro inside the title wrapper only;
+       the wrapper itself is what sits behind the gallery (see
+       .logo-work-page__title in index.astro). Letters the grid covers are no
+       longer hoverable, which is the intended trade for the overlap. */
     z-index: 5;
     isolation: isolate;
-    overflow: clip;
     max-width: 1800px;
     margin-inline: auto;
     padding: clamp(3.5rem, 9vh, 7rem) var(--page-gutter) clamp(.75rem, 1.8vw, 2rem);
     background: transparent;
     pointer-events: none;
   }
+
+  /* The per-letter artwork treatment still clips to its stage. The type
+     treatment must not: on the splash the title is scaled well past this
+     section's own box. */
+  .logo-intro[data-title-treatment="svg-kit"] { overflow: clip; }
 
   .logo-intro__stage {
     position: relative;
@@ -565,17 +989,85 @@ const titleWordmarkMarkup = titleKit.wordmark
     translate: 0 -10%;
   }
 
+  /* Placement: where the one title sits and how big it is. Set from the page
+     controller, which measures this box against the splash box. */
+  .logo-intro__stage-morph {
+    width: max-content;
+    max-width: min(100%, 1600px);
+    margin-inline: auto;
+    transform-origin: 0 0;
+  }
+
+  /* Layer hints only while something is moving. A standing will-change pins
+     the type's raster scale to whatever it was first painted at, and the
+     splash scales this title about 2x, so the letters would sit on screen as
+     an enlarged bitmap. Without the hint Chrome re-rasters at the final scale. */
+  .logo-intro[data-title-motion="moving"] .logo-intro__stage-morph {
+    will-change: transform;
+  }
+
+  /* Entrance: the reveal owns this element's own transform. */
+  .logo-intro__stage-type {
+    position: relative;
+    width: 100%;
+    opacity: 0;
+  }
+
+  .logo-intro:is([data-logo-reveal-phase="background"], [data-logo-reveal-phase="content"]) .logo-intro__stage-type {
+    will-change: clip-path, opacity, transform;
+  }
+
+  .logo-intro[data-logo-reveal-ready="true"] .logo-intro__stage-type { opacity: 1; }
+
+  .logo-intro__splash-canvas {
+    position: absolute;
+    z-index: 2;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    transition: opacity 620ms cubic-bezier(.22, 1, .36, 1);
+    pointer-events: none;
+  }
+
+  .logo-intro[data-title-state="splash"] .logo-intro__splash-canvas[data-media-ready="true"] {
+    opacity: 1;
+  }
+
+  /* While the media is in the letters the resting glyphs would double the
+     edges, exactly as they do behind an active hover letter. */
+  .logo-intro[data-title-state="splash"]
+    .logo-intro__stage-type:has(.logo-intro__splash-canvas[data-media-ready="true"])
+    :is(.logo-intro__type-letter-rest, .logo-intro__mobile-outline-word) {
+    opacity: 0;
+  }
+
+  .logo-intro__splash-media {
+    position: fixed;
+    width: 1px;
+    height: 1px;
+    inset: auto auto 0 0;
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+  }
+
   .logo-intro__type-title {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    width: min(100%, 1600px);
-    margin-inline: auto;
-    font-family: "New Work Sans", "PP Neue Montreal", "Helvetica Neue", Arial, sans-serif;
+    /* Hug the widest line. This element is the box the page controller
+       measures against the splash box, so it has to be the type's own box
+       rather than the column it sits in. */
+    width: max-content;
+    max-width: 100%;
+    font-family: var(--font-title);
     font-size: clamp(8rem, 20.5vw, 20rem);
-    font-weight: 700;
-    letter-spacing: -.082em;
-    line-height: .66;
+    font-weight: 900;
+    /* The V1 artwork font includes the client's tightly fitted advances.
+       Both title states share its measure throughout the scroll transition. */
+    letter-spacing: var(--title-tracking);
+    line-height: var(--title-leading);
     text-transform: lowercase;
   }
 
@@ -594,29 +1086,32 @@ const titleWordmarkMarkup = titleKit.wordmark
     pointer-events: none;
   }
 
-  .logo-intro__type-letter[data-glyph="w"] { --type-letter-hit-top: .176em; }
-  .logo-intro__type-letter[data-glyph="r"] { --type-letter-hit-top: .172em; }
-  .logo-intro__type-letter[data-glyph="k"] { --type-letter-hit-top: -.028em; }
-  .logo-intro__type-letter:is([data-glyph="e"], [data-glyph="o"]) {
-    --type-letter-hit-bottom: -.017em;
-  }
+  /* Both words remain interactive on the splash and in the gallery. */
 
   .logo-intro__type-letter-hit {
     position: absolute;
     z-index: 3;
-    inset-block: var(--type-letter-hit-top, .16em) var(--type-letter-hit-bottom, 0);
+    inset-block: 0;
     inset-inline: 0;
     cursor: crosshair;
     pointer-events: auto;
   }
 
-  [data-type-title-line="new"] [data-type-letter="2"] {
-    margin-inline-start: clamp(-7px, -.42vw, -4px);
+  /* The interim face needed a manual correction on the "ew" pair. Helvetica
+     Now Display Black kerns it correctly on its own, and a viewport-relative
+     nudge here would put the two titles' glyph positions out of step at some
+     widths, so the pair is left to the font. */
+
+  /* The phone outline word only shares the fade. Its display is owned by the
+     phone media query below; setting it here would show it on desktop too,
+     next to the per-letter line. */
+  .logo-intro__type-letter-rest,
+  .logo-intro__mobile-outline-word {
+    transition: opacity .62s cubic-bezier(.22, 1, .36, 1);
   }
 
   .logo-intro__type-letter-rest {
     display: block;
-    transition: opacity .42s cubic-bezier(.22, 1, .36, 1);
   }
 
   .logo-intro__type-letter-baseline {
@@ -640,6 +1135,12 @@ const titleWordmarkMarkup = titleKit.wordmark
     pointer-events: none;
   }
 
+  /* Gallery hover uses individual letter canvases. Splash hover is drawn once
+     through the whole title by the shared canvas, keeping both words continuous. */
+  .logo-intro__type-letter-canvas[data-media-ready="true"] {
+    z-index: 3;
+  }
+
   .logo-intro__type-letter-canvas[data-media-ready="true"] { opacity: 1; }
 
   .logo-intro__type-letter-video {
@@ -654,6 +1155,7 @@ const titleWordmarkMarkup = titleKit.wordmark
   .logo-intro__type-letter::before,
   .logo-intro__type-letter::after {
     position: absolute;
+    z-index: 3;
     inset: 0;
     content: attr(data-glyph);
     color: transparent;
@@ -664,10 +1166,7 @@ const titleWordmarkMarkup = titleKit.wordmark
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-stroke: 0 transparent;
-    transform: scale(.975) translateY(3%);
-    transition:
-      opacity .52s cubic-bezier(.22, 1, .36, 1),
-      transform .75s cubic-bezier(.22, 1, .36, 1);
+    transition: opacity .52s cubic-bezier(.22, 1, .36, 1);
     pointer-events: none;
   }
 
@@ -677,12 +1176,10 @@ const titleWordmarkMarkup = titleKit.wordmark
   .logo-intro__type-letter[data-type-active="true"] .logo-intro__type-letter-rest { opacity: 0; }
   .logo-intro__type-letter[data-type-active="true"]::before {
     opacity: 1;
-    transform: scale(1) translateY(0);
     animation: type-letter-drift 3.2s cubic-bezier(.37, 0, .18, 1) infinite alternate;
   }
   .logo-intro__type-letter[data-type-active="true"]::after {
     opacity: 1;
-    transform: scale(1) translateY(0);
     animation: type-letter-flip 3.2s cubic-bezier(.37, 0, .18, 1) infinite alternate;
   }
 
@@ -691,6 +1188,14 @@ const titleWordmarkMarkup = titleKit.wordmark
      the text-clipped stills with the canvas creates doubled glyph edges. */
   .logo-intro__type-letter[data-type-media-ready="true"]::before,
   .logo-intro__type-letter[data-type-media-ready="true"]::after {
+    opacity: 0 !important;
+    animation: none !important;
+    transition: none;
+  }
+
+  .logo-intro[data-title-state="splash"] .logo-intro__type-letter-canvas,
+  .logo-intro[data-title-state="splash"] .logo-intro__type-letter::before,
+  .logo-intro[data-title-state="splash"] .logo-intro__type-letter::after {
     opacity: 0 !important;
     animation: none !important;
     transition: none;
@@ -716,9 +1221,49 @@ const titleWordmarkMarkup = titleKit.wordmark
     color: var(--color-ink, #101010);
   }
 
+  /* Animation 2 is the entrance on every visit to the splash. */
+  .logo-intro[data-logo-reveal="2"][data-logo-reveal-ready="true"] .logo-intro__stage-type {
+    animation: logo-reveal-diagonal 1100ms cubic-bezier(.2, .8, .2, 1) both;
+  }
+
+  /* Once the title has left the splash it is page furniture, not an entrance.
+     Holding a finished animation here would also pin its transform. */
+  .logo-intro[data-title-state="home"] .logo-intro__stage-type {
+    animation: none;
+    opacity: 1;
+  }
+
+  @keyframes logo-reveal-diagonal {
+    0% {
+      opacity: 0;
+      clip-path: polygon(0 0, 0 0, -20% 100%, -20% 100%);
+      transform: translateX(-4%) skewX(-3deg);
+    }
+    100% {
+      opacity: 1;
+      clip-path: polygon(0 0, 120% 0, 100% 100%, 0 100%);
+      transform: none;
+    }
+  }
+
+  /* The descriptor belongs to the title at rest, not to the splash lockup, so
+     it stays outside the placed box and out of the way while the title is up
+     on the colour field. */
+  .logo-intro[data-title-state="splash"] .logo-intro__descriptor {
+    opacity: 0;
+    transition: opacity 420ms cubic-bezier(.22, 1, .36, 1);
+  }
+
+  /* Review round 2: the descriptor sits at the top right of the title area
+     (it used to run under the title, from the left). */
   .logo-intro__descriptor {
-    width: var(--logo-title-inline-size, 100%);
-    margin: clamp(.55rem, 1vw, .9rem) auto 0;
+    position: absolute;
+    z-index: 2;
+    top: clamp(1rem, 2.4vw, 2rem);
+    right: var(--page-gutter);
+    opacity: 1;
+    transition: opacity 620ms cubic-bezier(.22, 1, .36, 1) 480ms;
+    margin: 0;
     font-family: var(--font-body);
     font-size: var(--text-xs);
     font-weight: 700;
@@ -728,7 +1273,16 @@ const titleWordmarkMarkup = titleKit.wordmark
   }
 
   .logo-intro[data-title-treatment="type"] .logo-intro__descriptor {
-    width: min(100%, 1600px);
+    text-align: end;
+  }
+
+  /* On phones the title fills the width, so there is no free corner beside
+     it: the descriptor sits just above the title's top edge instead. */
+  @media (max-width: 767px) {
+    .logo-intro__descriptor {
+      top: auto;
+      bottom: calc(100% + .35rem);
+    }
   }
 
   .logo-intro__solid,
@@ -870,24 +1424,25 @@ const titleWordmarkMarkup = titleKit.wordmark
     }
     .logo-intro__type-title {
       font-size: clamp(6.1rem, 31vw, 11rem);
-      line-height: .68;
     }
     .logo-intro__mosaic { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .logo-intro__cell:nth-child(n + 3) { display: none; }
   }
 
-  /* This is a device/rendering distinction, not only a viewport distinction.
+  /* This is a device/rendering distinction, not a viewport distinction.
      Android Chrome remains a coarse, non-hovering pointer when "Desktop site"
-     gives it a wide viewport. In both phone layouts and that mode, paint one
-     resting word and remove the independently composited hover-letter layers. */
-  @media (max-width: 767px), (hover: none) and (pointer: coarse) {
+     gives it a wide viewport. Paint one resting word on touch devices while
+     retaining per-letter hover in narrow windows with a mouse. */
+  @media (hover: none) and (pointer: coarse) {
     .logo-intro__type-letter-hit { display: none; }
     .logo-intro__type-line--outline {
       color: transparent;
       -webkit-text-stroke-width: 0;
     }
     .logo-intro__mobile-outline-word {
-      display: block;
+      /* Share the inline baseline marker's line. A block here creates a
+         second empty line and pulls the two words apart. */
+      display: inline;
       color: transparent;
       letter-spacing: inherit;
       -webkit-text-stroke: clamp(1.5px, .17vw, 3px) var(--color-ink, #101010);
@@ -898,6 +1453,17 @@ const titleWordmarkMarkup = titleKit.wordmark
   }
 
   @media (prefers-reduced-motion: reduce) {
+    .logo-intro[data-logo-reveal][data-logo-reveal-ready="true"] .logo-intro__stage-type {
+      animation: none;
+      will-change: auto;
+      opacity: 1;
+      clip-path: none;
+      filter: none;
+      transform: none;
+      -webkit-mask-image: none;
+      mask-image: none;
+    }
+    .logo-intro__splash-canvas { transition: none; }
     .logo-intro__media { display: none; }
     .logo-intro__letter-face { transform: none !important; }
     .logo-intro__type-letter::before,

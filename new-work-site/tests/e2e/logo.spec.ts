@@ -37,6 +37,18 @@ const scrollGesture = async (page: Page, deltaY: number, mobile: boolean) => {
   }, deltaY);
 };
 
+// Review round 1 made returning to the splash deliberate: the page has to
+// have been resting at its own top past the dwell, and the gesture then has to
+// carry more distance than the thresholds in index.astro. These values sit
+// comfortably above both so the tests exercise intent, not the exact numbers.
+const SPLASH_RETURN_DWELL = 500;
+const SPLASH_RETURN_DISTANCE = 600;
+
+const returnToSplash = async (page: Page, mobile: boolean) => {
+  await page.waitForTimeout(SPLASH_RETURN_DWELL);
+  await scrollGesture(page, -SPLASH_RETURN_DISTANCE, mobile);
+};
+
 test.describe('logo mask study', () => {
   test.describe.configure({ mode: 'serial' });
 
@@ -138,8 +150,7 @@ test.describe('logo mask study', () => {
     expect(retiredRoute.status()).toBe(404);
   });
 
-  test('maps number keys 1–5 to the five non-blur reveal reloads', async ({ page }, testInfo) => {
-    test.setTimeout(90_000);
+  test('number keys no longer switch or reload the splash reveal', async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== 'desktop-chromium', 'Keyboard shortcuts are covered once on desktop.');
 
     await page.goto('/');
@@ -147,29 +158,20 @@ test.describe('logo mask study', () => {
 
     const experience = page.locator('[data-logo-mask-experience]');
     const stage = page.locator('[data-logo-stage]');
-    const reveals = [
-      ['1', 'logo-reveal-aperture'],
-      ['2', 'logo-reveal-diagonal'],
-      ['3', 'logo-reveal-fold'],
-      ['4', 'logo-reveal-blinds'],
-      ['5', 'logo-reveal-seam'],
-    ] as const;
-
-    for (const [key, animationName] of reveals) {
-      const previousLoad = await page.evaluate(() => performance.timeOrigin);
+    const previousLoad = await page.evaluate(() => performance.timeOrigin);
+    for (const key of ['1', '2', '3', '4', '5']) {
       await page.keyboard.press(key);
-      await page.waitForFunction((load) => performance.timeOrigin !== load, previousLoad);
-      await expectLogoPageReady(page);
-      await expect(experience).toHaveAttribute('data-logo-reveal', key);
-      await expect(experience).toHaveAttribute('data-logo-reveal-ready', 'true');
-      await expect(stage).toHaveCSS('animation-name', animationName);
     }
+    await expect(experience).toHaveAttribute('data-logo-reveal-phase', 'done');
+    expect(await page.evaluate(() => performance.timeOrigin)).toBe(previousLoad);
+    await expect(experience).toHaveAttribute('data-logo-reveal', '2');
+    await expect(stage).toHaveCSS('animation-name', 'logo-reveal-diagonal');
   });
 
-  test('randomizes ordinary loads and replays a new reveal on return', async ({ page }, testInfo) => {
+  test('keeps animation 2 on load, reload, and return to the splash', async ({ page }, testInfo) => {
     const mobile = testInfo.project.name.startsWith('mobile-');
     await page.addInitScript(() => {
-      window.sessionStorage.removeItem('new-work-logo-reveal');
+      window.sessionStorage.setItem('new-work-logo-reveal', '5');
       Math.random = () => .01;
     });
     await page.goto('/');
@@ -178,20 +180,29 @@ test.describe('logo mask study', () => {
     const experience = page.locator('[data-logo-mask-experience]');
     const hero = page.locator('[data-logo-work-hero]');
     const stage = page.locator('[data-logo-stage]');
-    await expect(experience).toHaveAttribute('data-logo-reveal', '1');
-    await expect(stage).toHaveCSS('animation-name', 'logo-reveal-aperture');
+    await expect(experience).toHaveAttribute('data-logo-reveal', '2');
+    await expect(stage).toHaveCSS('animation-name', 'logo-reveal-diagonal');
+
+    await page.reload();
+    await expectLogoPageReady(page);
+    await expect(experience).toHaveAttribute('data-logo-reveal', '2');
+    await expect(stage).toHaveCSS('animation-name', 'logo-reveal-diagonal');
 
     const viewportHeight = await page.evaluate(() => window.innerHeight);
     await scrollGesture(page, viewportHeight * .2, mobile);
     await expect(hero).toHaveAttribute('data-faded', 'true');
-    await page.waitForTimeout(200);
+    await expect(experience).toHaveAttribute('data-title-motion', 'settled');
+    await scrollGesture(page, viewportHeight * .2, mobile);
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
     await page.evaluate(() => { Math.random = () => .99; });
-    await scrollGesture(page, -viewportHeight * .2, mobile);
+    await returnToSplash(page, mobile);
 
     await expect(hero).toHaveAttribute('data-faded', 'false');
-    await expect(experience).toHaveAttribute('data-logo-reveal', '5');
+    await expect(experience).toHaveAttribute('data-logo-reveal', '2');
     await expect(experience).toHaveAttribute('data-logo-reveal-ready', 'true');
-    await expect(stage).toHaveCSS('animation-name', 'logo-reveal-seam');
+    await expect(stage).toHaveCSS('animation-name', 'logo-reveal-diagonal');
   });
 
   test('restarts the persisted title video after leaving Work and returning', async ({page}, testInfo) => {
@@ -269,73 +280,121 @@ test.describe('logo mask study', () => {
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
   });
 
+  test('keeps both wordmark rows together through narrow resizes in splash and gallery modes', async ({ page }, testInfo) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.setViewportSize({ width: 320, height: 812 });
+    await page.goto('/');
+    await expectLogoPageReady(page);
+    await page.evaluate(() => document.fonts.ready);
+
+    const title = page.locator('[data-type-title]');
+    for (const state of ['splash', 'home']) {
+      if (state === 'home') {
+        await scrollGesture(page, 240, testInfo.project.name.startsWith('mobile-'));
+        await expect(page.locator('[data-logo-intro]')).toHaveAttribute('data-title-state', 'home');
+      }
+      for (const width of [320, 375, 600, 767, 768, 1024]) {
+        await page.setViewportSize({ width, height: 812 });
+        await expect.poll(() => title.evaluate((element) => {
+          const rows = [...element.querySelectorAll<HTMLElement>('[data-type-title-line]')];
+          const lineHeight = Number.parseFloat(getComputedStyle(rows[0]!).lineHeight);
+          // Each word must occupy exactly one line, including the touch-only
+          // whole-word outline and its inline canvas baseline marker.
+          return Math.max(
+            ...rows.map((row) => Math.abs(Number.parseFloat(getComputedStyle(row).height) - lineHeight)),
+            Math.abs(Number.parseFloat(getComputedStyle(element).height) - lineHeight * 2),
+          );
+        }), { message: `Compact wordmark at ${width}px in ${state}` }).toBeLessThan(.1);
+
+        await expect.poll(() => title.evaluate((element) => {
+          const box = element.getBoundingClientRect();
+          return Math.max(-box.left, box.right - innerWidth, document.documentElement.scrollWidth - innerWidth);
+        }), { message: `Wordmark fits at ${width}px in ${state}` }).toBeLessThanOrEqual(1);
+
+        if (state === 'splash') {
+          await expect.poll(() => title.evaluate((element) => {
+            const box = element.getBoundingClientRect();
+            return Math.max(
+              Math.abs(box.left + box.width / 2 - innerWidth / 2),
+              Math.abs(box.top + box.height / 2 - innerHeight / 2),
+            );
+          }), { message: `Splash stays centered after resizing to ${width}px` }).toBeLessThan(1);
+        }
+      }
+    }
+  });
+
   test('centers the title stage instead of pinning overflow to the top in short viewports', async ({ page }) => {
     await page.setViewportSize({ width: 900, height: 500 });
     await page.goto('/');
     await expectLogoPageReady(page);
+    await expect(page.locator('[data-logo-intro]')).toHaveAttribute('data-logo-reveal-phase', 'done');
 
     const stage = page.locator('[data-logo-stage]');
     await stage.evaluate((element) => Promise.all(element.getAnimations().map((animation) => animation.finished)));
     const placement = await stage.evaluate((element) => {
       const rect = element.getBoundingClientRect();
-      const root = element.closest<HTMLElement>('[data-logo-mask-experience]');
-      const gutter = Number.parseFloat(getComputedStyle(root!).paddingLeft);
+      const frame = document.querySelector('.logo-work-page__splash-frame')!.getBoundingClientRect();
       return {
         centerY: rect.top + rect.height / 2,
         viewportCenterY: window.innerHeight / 2,
         left: rect.left,
         right: window.innerWidth - rect.right,
-        gutter,
+        width: rect.width,
+        height: rect.height,
+        frameWidth: frame.width,
+        frameHeight: frame.height,
       };
     });
 
     expect(Math.abs(placement.centerY - placement.viewportCenterY)).toBeLessThan(1);
-    expect(Math.abs(placement.left - placement.gutter)).toBeLessThan(1);
-    expect(Math.abs(placement.right - placement.gutter)).toBeLessThan(1);
+    // Leave 30% breathing room on both axes, even when height is the limit.
+    expect(Math.abs(placement.left - placement.right)).toBeLessThan(1);
+    const widthRatio = placement.width / placement.frameWidth;
+    const heightRatio = placement.height / placement.frameHeight;
+    expect(widthRatio).toBeLessThanOrEqual(.705);
+    expect(heightRatio).toBeLessThanOrEqual(.705);
+    expect(Math.max(widthRatio, heightRatio)).toBeCloseTo(.7, 2);
   });
 
   test('balances the visible title without clipping through its top edge', async ({ page }) => {
     await page.setViewportSize({ width: 1_642, height: 902 });
     await page.goto('/');
     await expectLogoPageReady(page);
+    await expect(page.locator('[data-logo-intro]')).toHaveAttribute('data-logo-reveal-phase', 'done');
 
     const stage = page.locator('[data-logo-stage]');
-    const maskedTitle = page.locator('.logo-mask-stage__single');
     await stage.evaluate((element) => Promise.all(element.getAnimations().map((animation) => animation.finished)));
     const placement = await stage.evaluate((element) => {
       const rect = element.getBoundingClientRect();
       return {
+        top: rect.top,
         centerY: rect.top + rect.height / 2,
         viewportCenterY: window.innerHeight / 2,
       };
     });
 
     expect(Math.abs(placement.centerY - placement.viewportCenterY)).toBeLessThan(1);
-    await expect(maskedTitle).toHaveCSS('clip-path', 'none');
+    // The title is one element scaled onto the splash box, so nothing may crop
+    // it: it has to sit inside the viewport rather than run off the top.
+    expect(placement.top).toBeGreaterThanOrEqual(-1);
   });
 
-  test('tightens and subtly compresses the title in wide, short viewports', async ({ page }) => {
+  test('tightens the splash frame in wide, short viewports', async ({ page }) => {
     await page.setViewportSize({ width: 1_470, height: 777 });
     await page.goto('/');
     await expectLogoPageReady(page);
 
-    const experience = page.locator('[data-logo-mask-experience]');
-    const maskedTitle = page.locator('.logo-mask-stage__single');
-    const layout = await experience.evaluate((element) => {
-      const styles = getComputedStyle(element);
-      return {
-        paddingTop: Number.parseFloat(styles.paddingTop),
-        paddingLeft: Number.parseFloat(styles.paddingLeft),
-      };
+    // The splash box is where the title is placed, so the vertical tightening
+    // belongs to that frame rather than to a correction on the artwork.
+    const frame = page.locator('.logo-work-page__splash-frame');
+    const inset = await frame.evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      return { top: rect.top, left: rect.left };
     });
 
-    expect(layout.paddingTop).toBeLessThan(layout.paddingLeft);
-    const transform = await maskedTitle.evaluate((element) => {
-      const matrix = new DOMMatrix(getComputedStyle(element).transform);
-      return {scaleY: matrix.d, translateY: matrix.f};
-    });
-    expect(transform.scaleY).toBeCloseTo(0.94, 2);
-    expect(transform.translateY).toBeGreaterThan(0);
+    expect(inset.top).toBeLessThan(inset.left);
+    expect(inset.top).toBeLessThanOrEqual(1);
   });
 
   test('uses the first scroll gesture for the crossfade, then scrolls normally', async ({ page }, testInfo) => {
@@ -385,7 +444,7 @@ test.describe('logo mask study', () => {
     expect(Math.abs(stagePlacement.right - stagePlacement.sidePadding)).toBeLessThan(1);
     await expect(siteHeader).toHaveCSS('opacity', '0');
     await expect(siteHeader).toHaveAttribute('inert', '');
-    await expect(workContent).toHaveCSS('opacity', '0');
+    await expect(page.locator('[data-logo-work-body]')).toHaveCSS('opacity', '0');
     await expect(normalTitle).toHaveCSS('z-index', '5');
     const siteFooter = page.locator('[data-site-footer]');
     await expect(siteFooter).toBeAttached();
@@ -406,8 +465,12 @@ test.describe('logo mask study', () => {
     expect(initialTitleTop).toBeLessThan(viewportHeight);
     await expect(normalTitle).toHaveCSS('transform', 'none');
 
+    // The splash media is no longer a painted layer behind a mask: it is the
+    // source the title's own letters are filled from, so what has to be true is
+    // that the fill has a frame and the source is running.
     const firstSingleAsset = page.locator('[data-single-layer]').first();
-    await expect(firstSingleAsset).toHaveCSS('opacity', '1');
+    await expect(page.locator('[data-splash-canvas]'))
+      .toHaveAttribute('data-media-ready', 'true');
     await expect.poll(() => firstSingleAsset.locator('video').evaluate((video) => {
       const media = video as HTMLVideoElement;
       return !media.paused && media.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA;
@@ -420,7 +483,7 @@ test.describe('logo mask study', () => {
     await scrollGesture(page, viewportHeight * .2, mobile);
     await expect(hero).toHaveAttribute('data-faded', 'true');
     await expect(hero).toHaveCSS('opacity', '0');
-    await expect(workContent).toHaveCSS('opacity', '1');
+    await expect(page.locator('[data-logo-work-body]')).toHaveCSS('opacity', '1');
     await expect(siteHeader).toHaveCSS('opacity', '1');
     await expect(siteHeader).not.toHaveAttribute('inert', '');
     await expect(siteFooter).not.toHaveAttribute('inert', '');
@@ -438,21 +501,21 @@ test.describe('logo mask study', () => {
     await page.evaluate(() => window.scrollTo(0, 0));
     await expect(hero).toHaveAttribute('data-faded', 'true');
     await expect(hero).toHaveCSS('opacity', '0');
-    await expect(workContent).toHaveCSS('opacity', '1');
+    await expect(page.locator('[data-logo-work-body]')).toHaveCSS('opacity', '1');
     await expect(siteHeader).toHaveCSS('opacity', '1');
 
-    await scrollGesture(page, -viewportHeight * .2, mobile);
+    await returnToSplash(page, mobile);
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
     await expect(hero).toHaveAttribute('data-faded', 'false');
     await expect(hero).toHaveCSS('opacity', '1');
-    await expect(workContent).toHaveCSS('opacity', '0');
+    await expect(page.locator('[data-logo-work-body]')).toHaveCSS('opacity', '0');
     await expect(siteHeader).toHaveCSS('opacity', '0');
 
     await scrollGesture(page, viewportHeight * .2, mobile);
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
     await expect(hero).toHaveAttribute('data-faded', 'true');
     await expect(hero).toHaveCSS('opacity', '0');
-    await expect(workContent).toHaveCSS('opacity', '1');
+    await expect(page.locator('[data-logo-work-body]')).toHaveCSS('opacity', '1');
     await expect(siteHeader).toHaveCSS('opacity', '1');
   });
 

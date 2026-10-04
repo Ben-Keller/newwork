@@ -402,14 +402,15 @@ const initializeSplitText = (environment: MotionEnvironment): MotionCleanup => {
     const splitType = mode === 'words'
       ? 'lines,words'
       : mode === 'scroll-letters'
-        ? 'lines,chars'
+        ? 'chars'
         : 'lines';
     const split = SplitText.create(element, {
       aria: element.dataset.motionSplitAria === 'none' ? 'none' : 'auto',
       autoSplit: true,
       charsClass: 'motion-char',
       linesClass: 'motion-line',
-      ...(mode === 'scroll-letters' ? {} : { mask: 'lines' as const }),
+      // Preserve authored rows and nested typography in scroll-driven headings.
+      ...(mode === 'scroll-letters' ? { deepSlice: false } : { mask: 'lines' as const }),
       type: splitType,
       wordsClass: 'motion-word',
       onSplit(instance) {

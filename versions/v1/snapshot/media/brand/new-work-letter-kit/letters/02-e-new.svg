@@ -1,0 +1,21 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="712.0 0 628.0 834" color="#1a1a1a" role="img" aria-label="E">
+  <defs>
+    <style>
+      .cls-1 { fill-rule: evenodd; }
+      .cls-1, .cls-2 { fill: currentColor; }
+      .nw-letter {
+        transform-box: fill-box;
+        transform-origin: center;
+        will-change: transform, opacity;
+      }
+      .nw-letter__part {
+        transform-box: fill-box;
+        transform-origin: center;
+      }
+    </style>
+  </defs>
+  <g id="nw-letter-02-e" class="nw-letter nw-letter--e nw-letter--new" data-nw-letter="E" data-letter="E" data-letter-index="1" data-word="new" data-word-index="0" aria-label="E">
+    <path id="nw-letter-02-e__part-1" class="cls-2 nw-letter__part" d="M724,24h600c-75,22-133,57-180,108,20-49-4-82-77-82h-143v343h130c73,0,118-42,145-112v226c-28-59-72-88-145-88h-130v365h158c100,0,178-53,246-145-43,81-46,132-11,171h-593c55-68,70-137,70-231V250c0-92-15-159-70-226Z" data-nw-part="1" />
+  </g>
+</svg>

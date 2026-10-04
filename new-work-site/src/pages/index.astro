@@ -1,15 +1,16 @@
 ---
-import Manifesto from '../components/Manifesto.astro';
 import NotesStrip from '../components/NotesStrip.astro';
 import LogoIntro from '../components/LogoIntro.astro';
-import LogoMaskExperience from '../components/LogoMaskExperience.astro';
 import ProjectGrid from '../components/ProjectGrid.astro';
 import GalleryBackdropCapture from '../components/GalleryBackdropCapture.astro';
 import Reel from '../components/Reel.astro';
+import BehindTheScenes from '../components/BehindTheScenes.astro';
+import ContactCallout from '../components/ContactCallout.astro';
 import BaseLayout from '../layouts/BaseLayout.astro';
-import { withBase } from '../lib/base-path';
+import { storagePrefix, withBase } from '../lib/base-path';
 import { getSiteContent } from '../lib/content';
 import { buildGalleryImageSizes } from '../lib/responsive-images';
+import { buildBtsItems } from '../lib/bts';
 
 const content = await getSiteContent();
 const { settings, projects, galleryEntries, notes, mode } = content;
@@ -25,6 +26,8 @@ const workReel = settings.reel.enabled
       mobileSource: placeholderReelProject?.cover.previewVideo,
       aspectRatio: '16 / 9',
     };
+// Placeholder BTS material drawn from the work gallery until real BTS content exists.
+const btsItems = buildBtsItems(galleryEntries);
 const preloadEntry = galleryEntries[0];
 const preloadImageSizes = preloadEntry
   ? buildGalleryImageSizes(preloadEntry.image, {
@@ -51,10 +54,10 @@ const preloadImageSizes = preloadEntry
   preloadMobileImage={preloadEntry?.photo ? undefined : preloadEntry?.work.cover.mobilePoster}
   preloadImageSizes={preloadImageSizes}
 >
-  <script is:inline data-astro-rerun>
+  <script is:inline data-astro-rerun define:vars={{ storagePrefix }}>
     (() => {
       try {
-        if (sessionStorage.getItem('new-work:work-navigation-entry') === 'true') {
+        if (sessionStorage.getItem(`${storagePrefix}new-work:work-navigation-entry`) === 'true') {
           document.documentElement.dataset.workNavigationTransition = 'true';
           window.__newWorkEntryStaticRevealsUntil = performance.now() + 5000;
           history.scrollRestoration = 'manual';
@@ -65,16 +68,23 @@ const preloadImageSizes = preloadEntry
         // component script will fall back to the normal first-load state.
       }
 
+      // Review round 1: the splash cycles through subdued pastels and
+      // off-whites rather than saturated darks. Hue still travels the same
+      // arc, but at low chroma and high lightness so the black lockup keeps
+      // its contrast and the page reads premium rather than playful.
+      // Keep this in step with `pastelColor` in the module script below.
       const rangeStartHue = 0;
       const rangeEndHue = -240;
-      const chroma = 71;
+      const saturation = .26;
+      const lightness = .93;
       const seed = Math.random();
       const bounceProgress = 1 - Math.abs(seed * 2 - 1);
       const hue = rangeStartHue + (rangeEndHue - rangeStartHue) * bounceProgress;
       const normalizedHue = ((hue % 360) + 360) % 360;
-      const secondary = Math.round(chroma * (1 - Math.abs((normalizedHue / 60) % 2 - 1)));
+      const chroma = (1 - Math.abs(2 * lightness - 1)) * saturation;
+      const secondary = chroma * (1 - Math.abs((normalizedHue / 60) % 2 - 1));
       const section = Math.floor(normalizedHue / 60) % 6;
-      const channels = [
+      const [red, green, blue] = [
         [chroma, secondary, 0],
         [secondary, chroma, 0],
         [0, chroma, secondary],
@@ -82,8 +92,9 @@ const preloadImageSizes = preloadEntry
         [secondary, 0, chroma],
         [chroma, 0, secondary],
       ][section] || [chroma, secondary, 0];
-      const color = '#' + channels
-        .map((channel) => channel.toString(16).padStart(2, '0'))
+      const offset = lightness - chroma / 2;
+      const color = '#' + [red, green, blue]
+        .map((channel) => Math.round((channel + offset) * 255).toString(16).padStart(2, '0'))
         .join('');
 
       window.__newWorkLogoBackgroundSeed = seed;
@@ -91,39 +102,50 @@ const preloadImageSizes = preloadEntry
     })();
   </script>
   <div class="logo-work-page" data-logo-work-page data-handoff="false" data-logo-page-ready="false">
+    <!-- The splash is a colour field and a geometry reference, nothing more.
+         There is only one title on this page: the one below, in flow. Its
+         splash state is that title placed on this frame. -->
     <div
       class="logo-work-page__hero"
       data-logo-work-hero
       data-faded="false"
     >
-      <LogoMaskExperience projects={homeProjects} />
+      <div class="logo-work-page__splash-frame" aria-hidden="true">
+        <div class="logo-work-page__splash-box" data-splash-box></div>
+      </div>
     </div>
 
     <div class="logo-work-page__content" data-logo-work-content>
       <div class="logo-work-page__title" data-logo-work-title>
         <LogoIntro siteName={settings.workIntroName} projects={homeProjects} />
       </div>
-      <div id="work-gallery" class="logo-work-page__gallery-anchor" aria-hidden="true"></div>
-      <div
-        class="route-gallery-layer"
-        data-route-gallery-layer
-        transition:persist="new-work-gallery-scene"
-      >
-        <div class="route-gallery-layer__content" data-route-gallery-content>
-          <ProjectGrid entries={galleryEntries} mode={mode} />
+      <!-- Everything below the title is what actually fades in behind it. The
+           title itself must stay out of this group: an opacity group would
+           fade the one element we are moving. -->
+      <div class="logo-work-page__body" data-logo-work-body>
+        <div id="work-gallery" class="logo-work-page__gallery-anchor" aria-hidden="true"></div>
+        <div
+          class="route-gallery-layer"
+          data-route-gallery-layer
+          transition:persist="new-work-gallery-scene"
+        >
+          <div class="route-gallery-layer__content" data-route-gallery-content>
+            <ProjectGrid entries={galleryEntries} mode={mode} />
+          </div>
         </div>
+        <GalleryBackdropCapture />
+        <NotesStrip notes={notes} mode={mode} />
+        <Reel reel={workReel} />
+        <BehindTheScenes items={btsItems} />
+        <ContactCallout />
       </div>
-      <GalleryBackdropCapture />
-      <Manifesto text={settings.manifesto} />
-      <NotesStrip notes={notes} mode={mode} />
-      <Reel reel={workReel} />
     </div>
   </div>
 
   <noscript>
     <style is:global>
       .logo-work-page__hero { display: none !important; }
-      .logo-work-page__content { opacity: 1 !important; pointer-events: auto !important; }
+      .logo-work-page__body { opacity: 1 !important; pointer-events: auto !important; }
       body.home-page .site-header { opacity: 1 !important; pointer-events: auto !important; transform: none !important; }
     </style>
   </noscript>
@@ -138,7 +160,7 @@ const preloadImageSizes = preloadEntry
     position: fixed;
     z-index: 2;
     inset: 0;
-    background: var(--logo-hero-background, #470000);
+    background: var(--logo-hero-background, #f4efe9);
     opacity: 1;
     pointer-events: none;
     transition: opacity 1200ms cubic-bezier(.22, 1, .36, 1);
@@ -150,10 +172,41 @@ const preloadImageSizes = preloadEntry
     pointer-events: none;
   }
 
+  /* Review round 1: the title now sits behind the gallery rather than in
+     front of it, so the top row of work crosses over the wordmark. The
+     gallery's own stacking context (.work-index, z-index 3) is what this has
+     to lose to, so any value below it works; 1 keeps the title above the
+     page field. Restore 5 to put the title back in front. */
   .logo-work-page__title {
     position: relative;
-    z-index: 5;
+    z-index: 1;
     pointer-events: none;
+  }
+
+  /* The splash box carries no paint. It exists so the size and position the
+     title takes on the splash are declared in CSS, next to the field they sit
+     on, and measured from the DOM rather than recomputed in script. */
+  .logo-work-page__splash-frame {
+    position: absolute;
+    inset: var(--page-gutter);
+    display: grid;
+    place-items: center;
+    pointer-events: none;
+  }
+
+  .logo-work-page__splash-box {
+    /* Review round 2: the splash title is 30% smaller than the full frame. */
+    --splash-title-scale: .7;
+    width: calc(100% * var(--splash-title-scale));
+    /* The home title's own ratio, so the splash state is a pure scale.
+       Measured from "new / work." (the full stop widened it from 2279 / 1490). */
+    aspect-ratio: 1689 / 1000;
+  }
+
+  @media (min-width: 768px) and (min-aspect-ratio: 15 / 8) {
+    .logo-work-page__splash-frame {
+      inset: 0 var(--page-gutter);
+    }
   }
 
   .logo-work-page__gallery-anchor {
@@ -161,9 +214,19 @@ const preloadImageSizes = preloadEntry
     scroll-margin-block-start: clamp(4.75rem, 6.2vw, 6.5rem);
   }
 
+  /* This layer sits above the splash field so the title inside it can be seen
+     against the colour during the splash state. */
   .logo-work-page__content {
     position: relative;
-    z-index: 1;
+    z-index: 3;
+    pointer-events: none;
+  }
+
+  .logo-work-page__body {
+    /* The animated transform creates a stacking context. Keep that entire
+       context above the title from the first frame, not just after settling. */
+    position: relative;
+    z-index: 3;
     opacity: 0;
     pointer-events: none;
     transition: opacity 1200ms cubic-bezier(.22, 1, .36, 1);
@@ -172,7 +235,22 @@ const preloadImageSizes = preloadEntry
   .logo-work-page[data-handoff='true'] .logo-work-page__content,
   .logo-work-page:has([data-work-gallery][data-gallery-restore='true']) .logo-work-page__content,
   :global(html[data-work-navigation-transition='true']) .logo-work-page__content {
+    pointer-events: auto;
+  }
+
+  .logo-work-page[data-handoff='true'] .logo-work-page__body,
+  .logo-work-page:has([data-work-gallery][data-gallery-restore='true']) .logo-work-page__body,
+  :global(html[data-work-navigation-transition='true']) .logo-work-page__body {
     opacity: 1;
+    pointer-events: none;
+  }
+
+  /* The gallery extends above its photographs into the wordmark. Let empty
+     space pass hover through to the letters while the photographs retain
+     their foreground hit areas. Other sections keep their usual controls. */
+  .logo-work-page__body > :global(section),
+  .logo-work-page__body :global(.route-gallery-layer:not([data-gallery-layer-state="background"]) .project-card > a),
+  .logo-work-page__body :global(.route-gallery-layer:not([data-gallery-layer-state="background"]) .gallery-card-remove) {
     pointer-events: auto;
   }
 
@@ -210,7 +288,7 @@ const preloadImageSizes = preloadEntry
       transition: none;
     }
 
-    .logo-work-page__content {
+    .logo-work-page__body {
       transition: none;
     }
 
@@ -224,7 +302,6 @@ const preloadImageSizes = preloadEntry
   import {
     readStorageValue,
     removeStorageValue,
-    writeStorageValue,
   } from '../lib/browser-storage';
 
   const WORK_NAVIGATION_ENTRY_KEY = 'new-work:work-navigation-entry';
@@ -297,6 +374,7 @@ const preloadImageSizes = preloadEntry
 
     const hero = page?.querySelector<HTMLElement>('[data-logo-work-hero]');
     const content = page?.querySelector<HTMLElement>('[data-logo-work-content]');
+    const body = page?.querySelector<HTMLElement>('[data-logo-work-body]');
     const header = document.querySelector<HTMLElement>('[data-site-header]');
     const footer = document.querySelector<HTMLElement>('[data-site-footer]');
     if (!page || !hero || !content || !header) return;
@@ -323,6 +401,19 @@ const preloadImageSizes = preloadEntry
     const wheelGestureGap = 120;
     const wheelMinimumHold = 520;
     const wheelMaximumHold = 900;
+    // --- Returning to the splash --------------------------------------
+    // Review round 1: the splash swung back down on any upward nudge at the
+    // top of the work page, which made the top of the gallery an awkward
+    // place to sit. Going back is now deliberate: the page has to have been
+    // resting at its own top for a moment, and the gesture then has to carry
+    // real distance in one continuous movement.
+    const splashReturnDwell = 360;
+    const splashReturnWheelDistance = 420;
+    const splashReturnTouchDistance = 150;
+    const splashReturnGestureGap = 280;
+    let splashTopSince = 0;
+    let splashReturnProgress = 0;
+    let splashReturnLastAt = 0;
     const lockedKeys = new Set<string>();
     const openAtGallery = window.location.hash === '#work-gallery';
     const openFromWorkNavigation = readStorageValue(
@@ -335,20 +426,143 @@ const preloadImageSizes = preloadEntry
       return readStorageValue('session', 'new-work-restore-requested') === 'true';
     })();
 
-    const setHandoff = (active: boolean) => {
+    // --- The title --------------------------------------------------------
+    // There is one title element on this page. Its resting size and position
+    // are the home title's; the splash state is that same element placed on
+    // the splash box measured from the hero field. Nothing is duplicated, so
+    // nothing can drift out of register: the handoff is this element changing
+    // where it sits and how big it is.
+    const splashBox = hero.querySelector<HTMLElement>('[data-splash-box]');
+    const titleIntro = content.querySelector<HTMLElement>('[data-logo-intro]');
+    const titleStage = content.querySelector<HTMLElement>('[data-logo-stage-morph]');
+    const titleMeasure = content.querySelector<HTMLElement>('[data-title-measure]');
+    const titleMoveDuration = 1_200;
+    let titleSettleTimer = 0;
+    let titleAnimation: Animation | null = null;
+
+    // The element is transformed from its own top-left, so placing it on the
+    // splash box is a plain translate-then-scale in viewport pixels.
+    // Always called with the title at rest, so the measured box is its own.
+    const splashPlacement = (): string | null => {
+      if (!splashBox || !titleMeasure) return null;
+      const box = splashBox.getBoundingClientRect();
+      const title = titleMeasure.getBoundingClientRect();
+      if (!box.width || !title.width) return null;
+      // Keep the same breathing room on both axes. The stacked type can be
+      // taller than the reference box, so a width-only fit would fill almost
+      // the entire viewport height on desktop and in short windows.
+      const frame = splashBox.parentElement?.getBoundingClientRect() ?? box;
+      const frameScale = Number.parseFloat(getComputedStyle(splashBox).getPropertyValue('--splash-title-scale')) || .7;
+      const scale = Math.min(box.width / title.width, frame.height * frameScale / title.height);
+      const x = (box.left + (box.width - title.width * scale) / 2 - title.left).toFixed(2);
+      const y = (box.top + (box.height - title.height * scale) / 2 - title.top).toFixed(2);
+      return `translate(${x}px, ${y}px) scale(${scale.toFixed(5)})`;
+    };
+
+    let mediaAnimation: Animation | null = null;
+
+    const applyTitleState = (active: boolean, animate: boolean): void => {
+      if (!titleIntro || !titleStage) return;
+      if (titleSettleTimer) window.clearTimeout(titleSettleTimer);
+      titleSettleTimer = 0;
+      titleAnimation?.cancel();
+      mediaAnimation?.cancel();
+      titleAnimation = null;
+      mediaAnimation = null;
+      titleStage.style.transition = 'none';
+      titleStage.style.transform = 'none';
+      const placement = splashPlacement() ?? 'none';
+      titleIntro.dataset.titleState = active ? 'home' : 'splash';
+      const hiddenMedia = `translateY(${window.innerHeight}px)`;
+
+      if (body) {
+        body.style.transition = 'none';
+        body.style.opacity = active ? '1' : '0';
+        body.style.transform = active ? 'none' : hiddenMedia;
+      }
+      titleStage.style.transform = active ? 'none' : placement;
+      if (!animate || reducedMotion) {
+        titleStage.style.removeProperty('transition');
+        titleIntro.dataset.titleMotion = 'settled';
+        if (active) document.dispatchEvent(new Event('new-work:work-layout-settled'));
+        return;
+      }
+
+      // Both directions move the title and media together with identical timing.
+      titleIntro.dataset.titleMotion = 'moving';
+      titleAnimation = titleStage.animate(
+        [{transform: active ? placement : 'none'},
+         {transform: active ? 'none' : placement}],
+        {duration: titleMoveDuration, delay: 0,
+         easing: 'cubic-bezier(.22, 1, .36, 1)', fill: 'backwards'},
+      );
+      if (body) {
+        mediaAnimation = body.animate(
+          [{transform: active ? hiddenMedia : 'none', opacity: 1},
+           {transform: active ? 'none' : hiddenMedia, opacity: 1}],
+          {duration: titleMoveDuration, delay: 0,
+           easing: 'cubic-bezier(.22, 1, .36, 1)', fill: 'backwards'},
+        );
+        mediaAnimation.addEventListener('finish', () => {
+          mediaAnimation = null;
+          // Scroll positions measured behind the splash include its full-screen
+          // translation. Remeasure only once the body reaches its resting place.
+          if (active) document.dispatchEvent(new Event('new-work:work-layout-settled'));
+        });
+      }
+      titleAnimation.addEventListener('finish', () => {
+        titleAnimation = null;
+        titleIntro.dataset.titleMotion = 'settled';
+        titleStage.style.removeProperty('transition');
+        if (active && !body) document.dispatchEvent(new Event('new-work:work-layout-settled'));
+      });
+    };
+
+    const clearTitleState = (): void => {
+      if (titleSettleTimer) window.clearTimeout(titleSettleTimer);
+      titleSettleTimer = 0;
+      titleAnimation?.cancel();
+      mediaAnimation?.cancel();
+      titleAnimation = null;
+      mediaAnimation = null;
+      body?.style.removeProperty('transform');
+      body?.style.removeProperty('opacity');
+      body?.style.removeProperty('transition');
+      hero.style.removeProperty('transition-delay');
+      if (!titleStage) return;
+      titleStage.style.removeProperty('transform');
+      titleStage.style.removeProperty('transition');
+    };
+    const replaceTitle = (): void => {
+      if (controller.signal.aborted || handoffActive) return;
+      applyTitleState(false, false);
+    };
+
+    const setHandoff = (active: boolean, animateTitle = true) => {
       const wasActive = handoffActive;
       handoffActive = active;
       page.dataset.handoff = String(active);
+      hero.style.transitionDelay = '0ms';
       hero.dataset.faded = String(active);
       hero.toggleAttribute('inert', active);
       hero.setAttribute('aria-hidden', String(active));
-      content.toggleAttribute('inert', !active);
+      // Only the page body goes inert while the splash is up: the title in
+      // front of it still takes hover (its letters carry no focusable content).
+      (body ?? content).toggleAttribute('inert', !active);
       content.setAttribute('aria-hidden', String(!active));
       document.body.dataset.logoHeaderVisible = String(active);
       header.toggleAttribute('inert', !active);
       header.setAttribute('aria-hidden', String(!active));
       footer?.toggleAttribute('inert', !active);
       footer?.setAttribute('aria-hidden', String(!active));
+      if (wasActive !== active) {
+        // Crossing between splash and work restarts the dwell, so the splash
+        // can never be re-entered on the momentum of the gesture that left it.
+        splashTopSince = 0;
+        splashReturnProgress = 0;
+      }
+      if (wasActive !== active) applyTitleState(active, animateTitle);
+      else if (!animateTitle) applyTitleState(active, false);
       if (wasActive && !active) window.dispatchEvent(new Event('new-work:logo-reveal'));
     };
 
@@ -371,7 +585,7 @@ const preloadImageSizes = preloadEntry
     const revealGallery = () => {
       document.querySelector<HTMLElement>('[data-work-gallery]')
         ?.removeAttribute('data-gallery-restore');
-      setHandoff(true);
+      setHandoff(true, false);
       requestGalleryScroll();
     };
 
@@ -384,14 +598,21 @@ const preloadImageSizes = preloadEntry
         ?.removeAttribute('data-gallery-restore');
       // Work navigation selects the post-splash state directly. Scroll is
       // reset only to establish the page's real top, never to drive handoff.
-      setHandoff(true);
+      setHandoff(true, false);
       finalizeWorkEntryAtTop(page);
     };
 
+    // Subdued pastels and off-whites. The hue arc is unchanged; only chroma
+    // and lightness were pulled back, so the cycle still moves without the
+    // background ever becoming a saturated field behind the lockup.
+    // The first-paint copy of this lives in the inline script above.
+    const backgroundSaturation = .26;
+    const backgroundLightness = .93;
+
     const automaticColor = (hue: number) => {
       const normalizedHue = ((hue % 360) + 360) % 360;
-      const chroma = 71;
-      const secondary = Math.round(chroma * (1 - Math.abs((normalizedHue / 60) % 2 - 1)));
+      const chroma = (1 - Math.abs(2 * backgroundLightness - 1)) * backgroundSaturation;
+      const secondary = chroma * (1 - Math.abs((normalizedHue / 60) % 2 - 1));
       const section = Math.floor(normalizedHue / 60) % 6;
       const channels = [
         [chroma, secondary, 0],
@@ -401,7 +622,10 @@ const preloadImageSizes = preloadEntry
         [secondary, 0, chroma],
         [chroma, 0, secondary],
       ][section] || [chroma, secondary, 0];
-      return '#' + channels.map((channel) => channel.toString(16).padStart(2, '0')).join('');
+      const offset = backgroundLightness - chroma / 2;
+      return '#' + channels
+        .map((channel) => Math.round((channel + offset) * 255).toString(16).padStart(2, '0'))
+        .join('');
     };
 
     const animateBackground = (time: number) => {
@@ -421,6 +645,34 @@ const preloadImageSizes = preloadEntry
       if (backgroundFrame) return;
       if (reducedMotion) animateBackground(performance.now());
       else backgroundFrame = window.requestAnimationFrame(animateBackground);
+    };
+
+    // The page counts as "at the top" only once it has been resting there. A
+    // frame that happens to report scrollY 0 mid-gesture does not start the clock.
+    const updateSplashDwell = (at: number): void => {
+      if (!handoffActive || window.scrollY > 0) {
+        splashTopSince = 0;
+        splashReturnProgress = 0;
+        return;
+      }
+      if (!splashTopSince) splashTopSince = at;
+    };
+
+    const splashDwellSatisfied = (at: number): boolean => (
+      Boolean(splashTopSince) && at - splashTopSince >= splashReturnDwell
+    );
+
+    // Accumulates one continuous upward gesture. A pause longer than the
+    // gesture gap starts the count over, so a series of small flicks never
+    // adds up to a return the visitor did not ask for.
+    const wantsSplashReturn = (distance: number, at: number, required: number): boolean => {
+      if (at - splashReturnLastAt > splashReturnGestureGap) splashReturnProgress = 0;
+      splashReturnLastAt = at;
+      if (!splashDwellSatisfied(at)) return false;
+      splashReturnProgress += distance;
+      if (splashReturnProgress < required) return false;
+      splashReturnProgress = 0;
+      return true;
     };
 
     const releaseWheelLock = () => {
@@ -444,8 +696,12 @@ const preloadImageSizes = preloadEntry
       const eventAt = performance.now();
       const beginsNewGesture = wheelLocked && eventAt - lastWheelEventAt >= wheelGestureGap;
       lastWheelEventAt = eventAt;
+      updateSplashDwell(eventAt);
       const revealWork = !handoffActive && event.deltaY > 0;
-      const revealLogo = handoffActive && window.scrollY <= 0 && event.deltaY < 0;
+      const revealLogo = handoffActive
+        && window.scrollY <= 0
+        && event.deltaY < 0
+        && wantsSplashReturn(-event.deltaY, eventAt, splashReturnWheelDistance);
       if (beginsNewGesture && !revealWork && !revealLogo) {
         wheelLocked = false;
         if (wheelReleaseTimer) window.clearTimeout(wheelReleaseTimer);
@@ -481,8 +737,13 @@ const preloadImageSizes = preloadEntry
       const currentY = event.touches[0]?.clientY;
       if (currentY === undefined) return;
       const deltaY = touchStartY - currentY;
+      const touchAt = performance.now();
+      updateSplashDwell(touchAt);
       const revealWork = !handoffActive && deltaY > 4;
-      const revealLogo = handoffActive && window.scrollY <= 0 && deltaY < -4;
+      const revealLogo = handoffActive
+        && window.scrollY <= 0
+        && deltaY < 0
+        && wantsSplashReturn(-deltaY, touchAt, splashReturnTouchDistance);
       if (!revealWork && !revealLogo) return;
       event.preventDefault();
       touchLocked = true;
@@ -499,15 +760,6 @@ const preloadImageSizes = preloadEntry
     const handleKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
       const isEditable = Boolean(target?.closest('input, textarea, select, [contenteditable="true"]'));
-      const revealNumber = /^[1-5]$/u.test(event.key) ? event.key : null;
-
-      if (revealNumber && !isEditable && !event.repeat && !event.metaKey && !event.ctrlKey && !event.altKey) {
-        event.preventDefault();
-        writeStorageValue('session', 'new-work-logo-reveal', revealNumber);
-        window.location.reload();
-        return;
-      }
-
       if (lockedKeys.has(event.code)) {
         event.preventDefault();
         return;
@@ -518,8 +770,14 @@ const preloadImageSizes = preloadEntry
           forwardScrollKeys.has(event.code)
           || (initialHandoffKeys.has(event.code) && !event.shiftKey)
         );
+      // Keyboard intent is already explicit, so this only takes the dwell: an
+      // arrow pressed while the gallery is still settling at its top no longer
+      // throws the visitor back to the splash.
+      const keyAt = performance.now();
+      updateSplashDwell(keyAt);
       const revealLogo = handoffActive
         && window.scrollY <= 0
+        && splashDwellSatisfied(keyAt)
         && (reverseScrollKeys.has(event.code) || (event.code === 'Space' && event.shiftKey));
       if (!revealWork && !revealLogo) return;
       event.preventDefault();
@@ -541,12 +799,25 @@ const preloadImageSizes = preloadEntry
       setHandoff(true);
     };
 
+    const handleSplashDwellScroll = () => {
+      updateSplashDwell(performance.now());
+    };
+
     const handleScrollFallback = () => {
       if (restoreWorkOnLoad || handoffActive || window.scrollY <= 0) return;
-      setHandoff(true);
+      // This fallback re-anchors the page itself, so the title has no stable
+      // box to land on. Take the plain cross-fade.
+      setHandoff(true, false);
       window.scrollTo(0, 0);
     };
 
+    // Observe the laid-out title and frame: resize events can still report the
+    // previous viewport's type size, leaving the splash oversized or off-center.
+    // Placement changes only transforms, so it cannot resize these observed boxes.
+    const titleResizeObserver = new ResizeObserver(replaceTitle);
+    if (titleMeasure) titleResizeObserver.observe(titleMeasure);
+    if (splashBox?.parentElement) titleResizeObserver.observe(splashBox.parentElement);
+    void document.fonts?.ready.then(replaceTitle).catch(() => undefined);
     window.addEventListener('wheel', handleWheel, { passive: false, signal: controller.signal });
     window.addEventListener('touchstart', handleTouchStart, { passive: true, signal: controller.signal });
     window.addEventListener('touchmove', handleTouchMove, { passive: false, signal: controller.signal });
@@ -556,6 +827,7 @@ const preloadImageSizes = preloadEntry
     window.addEventListener('keyup', handleKeyUp, { signal: controller.signal });
     window.addEventListener('click', handlePageClick, { signal: controller.signal });
     window.addEventListener('scroll', handleScrollFallback, { passive: true, signal: controller.signal });
+    window.addEventListener('scroll', handleSplashDwellScroll, { passive: true, signal: controller.signal });
     window.addEventListener('new-work:work-navigation', enterWorkAtTop, { signal: controller.signal });
     window.addEventListener('hashchange', () => {
       if (window.location.hash === '#work-gallery') revealGallery();
@@ -567,13 +839,15 @@ const preloadImageSizes = preloadEntry
     if (openFromWorkNavigation) {
       enterWorkAtTop();
     } else {
-      setHandoff(restoreWorkOnLoad);
+      setHandoff(restoreWorkOnLoad, false);
     }
     if (openAtGallery) requestGalleryScroll();
 
     window.__newWorkLogoPageCleanup = () => {
       controller.abort();
+      titleResizeObserver.disconnect();
       if (wheelReleaseTimer) window.clearTimeout(wheelReleaseTimer);
+      clearTitleState();
       if (backgroundFrame) window.cancelAnimationFrame(backgroundFrame);
       if (galleryScrollFrame) window.cancelAnimationFrame(galleryScrollFrame);
       delete page.dataset.handoff;
@@ -581,6 +855,7 @@ const preloadImageSizes = preloadEntry
       delete page.dataset.workEntryAtTop;
       delete document.body.dataset.logoHeaderVisible;
       content.removeAttribute('inert');
+      body?.removeAttribute('inert');
       content.removeAttribute('aria-hidden');
       hero.style.removeProperty('--logo-hero-background');
       delete hero.dataset.backgroundMode;

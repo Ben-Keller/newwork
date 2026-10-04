@@ -1,0 +1,515 @@
+---
+import type { BtsItem } from './types';
+
+interface Props {
+  items: BtsItem[];
+}
+const { items } = Astro.props;
+const first = items[0];
+---
+
+<div class="bts-vf" data-bts-viewfinder data-grid="false" data-peaking="true">
+  <div class="bts-vf__body">
+    <div
+      class="bts-vf__frame"
+      data-vf-frame
+      tabindex="0"
+      role="application"
+      aria-roledescription="camera viewfinder"
+      aria-label="Viewfinder. Move to focus, click or press Enter to take the shot, arrow keys move focus."
+    >
+      <div class="bts-vf__optics" data-vf-optics>
+        <img class="bts-vf__plate bts-vf__plate--soft" data-vf-plate src={first?.large} alt="" decoding="async" />
+        <img class="bts-vf__plate bts-vf__plate--sharp" data-vf-plate src={first?.large} alt={first ? `${first.note}, ${first.project}` : ''} decoding="async" />
+        <canvas class="bts-vf__peaking" data-vf-peaking aria-hidden="true"></canvas>
+      </div>
+
+      <div class="bts-vf__guides" aria-hidden="true">
+        <div class="bts-vf__matte bts-vf__matte--top"></div>
+        <div class="bts-vf__matte bts-vf__matte--bottom"></div>
+        <div class="bts-vf__thirds"></div>
+        <div class="bts-vf__corners"></div>
+        <div class="bts-vf__center"></div>
+      </div>
+
+      <div class="bts-vf__reticle" data-vf-reticle aria-hidden="true"><span>AF-C</span></div>
+
+      <div class="bts-vf__hud" aria-hidden="true">
+        <div class="bts-vf__hud-row">
+          <span class="bts-vf__rec"><i></i>REC</span>
+          <span data-vf-timecode>00:00:00:00</span>
+          <span class="bts-vf__hud-center">A-CAM · 4.5K · 23.98</span>
+          <span class="bts-vf__battery"><b></b>15.2V</span>
+          <span>SSD 2:14</span>
+        </div>
+        <div class="bts-vf__hud-row bts-vf__hud-row--bottom">
+          <span>ISO <b data-vf-iso>800</b></span>
+          <span>180°</span>
+          <span>5600K</span>
+          <span data-vf-stop>T2.8</span>
+          <span class="bts-vf__hud-center">FOCUS <b data-vf-distance>2.4m</b></span>
+          <span data-vf-focal>35mm</span>
+          <canvas class="bts-vf__histogram" data-vf-histogram width="128" height="40"></canvas>
+        </div>
+      </div>
+
+      <svg class="bts-vf__iris" data-vf-iris viewBox="0 0 160 90" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+        <path data-vf-iris-blades fill-rule="evenodd"></path>
+        <g data-vf-iris-seams></g>
+      </svg>
+    </div>
+
+    <div class="bts-vf__controls">
+      <div class="bts-vf__slate">
+        <p class="bts-vf__shot"><span>Shot</span> <b data-vf-counter>01</b> / {String(items.length).padStart(2, '0')}</p>
+        <p class="bts-vf__note" data-vf-note>{first?.note}</p>
+        <p class="bts-vf__meta"><span data-vf-time>{first?.time}</span> · <span data-vf-department>{first?.department}</span></p>
+        <a class="bts-vf__project" data-vf-link href={first?.href}>{first?.project} <span aria-hidden="true">↗</span></a>
+      </div>
+
+      <label class="bts-vf__ring">
+        <span>Aperture</span>
+        <input type="range" min="0" max="7" step="1" value="1" data-vf-aperture aria-valuetext="T2.8" />
+        <span class="bts-vf__ring-scale" aria-hidden="true"><i>1.4</i><i>2.8</i><i>5.6</i><i>11</i><i>16</i></span>
+      </label>
+      <label class="bts-vf__ring">
+        <span>Zoom</span>
+        <input type="range" min="24" max="135" step="1" value="35" data-vf-zoom aria-valuetext="35mm" />
+        <span class="bts-vf__ring-scale" aria-hidden="true"><i>24</i><i>50</i><i>85</i><i>135</i></span>
+      </label>
+
+      <div class="bts-vf__buttons">
+        <button type="button" data-vf-prev aria-label="Previous shot">←</button>
+        <button type="button" class="bts-vf__trigger" data-vf-take>Take shot</button>
+        <button type="button" data-vf-next aria-label="Next shot">→</button>
+        <button type="button" data-vf-toggle="grid" aria-pressed="false">Grid</button>
+        <button type="button" data-vf-toggle="peaking" aria-pressed="true">Peaking</button>
+      </div>
+    </div>
+  </div>
+
+  <ol class="bts-vf__roll" data-vf-roll aria-label="Shots taken"></ol>
+</div>
+
+<style>
+  .bts-vf {
+    --vf-bg: #0c0c0c;
+    --vf-ink: #f2efe8;
+    --vf-muted: #8a867e;
+    --vf-red: #ff3b30;
+    --vf-peak: #ff2d2d;
+    --fx: 50%;
+    --fy: 50%;
+    --dof: 200px;
+    --defocus: 9px;
+    --exposure: 1;
+    max-width: 1800px;
+    margin-inline: auto;
+    padding: clamp(1rem, 2.4vw, 2.5rem) var(--page-gutter);
+    color: var(--vf-ink);
+    background: var(--vf-bg);
+  }
+
+  .bts-vf__body {
+    display: grid;
+    gap: clamp(1rem, 2vw, 2rem);
+  }
+
+  .bts-vf__frame {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    border-radius: 4px;
+    background: #000;
+    cursor: none;
+    outline-offset: 4px;
+    user-select: none;
+    touch-action: pan-y;
+  }
+
+  .bts-vf__optics {
+    position: absolute;
+    inset: 0;
+    transform-origin: var(--fx) var(--fy);
+    transform: scale(var(--zoom, 1));
+    transition: transform 500ms cubic-bezier(.22, 1, .36, 1);
+    filter: brightness(var(--exposure));
+  }
+
+  /* All three layers share one slight overscan so the blurred plate's soft
+     edges stay out of frame and the layers remain in register. */
+  .bts-vf__plate,
+  .bts-vf__peaking {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scale(1.04);
+  }
+
+  .bts-vf__plate--soft {
+    filter: blur(var(--defocus));
+  }
+
+  /* The plane of focus: a sharp copy revealed in a soft-edged circle whose
+     radius (in px, set from script) grows as the aperture closes. */
+  .bts-vf__plate--sharp,
+  .bts-vf__peaking {
+    -webkit-mask-image: radial-gradient(circle var(--dof) at var(--mx, 50%) var(--my, 50%), #000 55%, transparent 100%);
+    mask-image: radial-gradient(circle var(--dof) at var(--mx, 50%) var(--my, 50%), #000 55%, transparent 100%);
+  }
+
+  .bts-vf__peaking {
+    mix-blend-mode: screen;
+    opacity: .9;
+    pointer-events: none;
+  }
+
+  .bts-vf[data-peaking='false'] .bts-vf__peaking {
+    opacity: 0;
+  }
+
+  .bts-vf__guides > * {
+    position: absolute;
+    pointer-events: none;
+  }
+
+  /* 2.39:1 extraction inside the 16:9 sensor. */
+  .bts-vf__matte {
+    right: 0;
+    left: 0;
+    height: 12.8%;
+    background: rgb(0 0 0 / 45%);
+  }
+
+  .bts-vf__matte--top { top: 0; border-bottom: 1px solid rgb(255 255 255 / 45%); }
+  .bts-vf__matte--bottom { bottom: 0; border-top: 1px solid rgb(255 255 255 / 45%); }
+
+  .bts-vf__thirds {
+    inset: 12.8% 0;
+    background:
+      linear-gradient(90deg, transparent calc(33.333% - .5px), rgb(255 255 255 / 35%) 0 calc(33.333% + .5px), transparent 0 calc(66.666% - .5px), rgb(255 255 255 / 35%) 0 calc(66.666% + .5px), transparent 0),
+      linear-gradient(transparent calc(33.333% - .5px), rgb(255 255 255 / 35%) 0 calc(33.333% + .5px), transparent 0 calc(66.666% - .5px), rgb(255 255 255 / 35%) 0 calc(66.666% + .5px), transparent 0);
+    opacity: 0;
+    transition: opacity 200ms ease;
+  }
+
+  .bts-vf[data-grid='true'] .bts-vf__thirds { opacity: 1; }
+
+  .bts-vf__corners {
+    inset: 16% 4%;
+    --c: rgb(255 255 255 / 80%);
+    background:
+      linear-gradient(var(--c), var(--c)) 0 0 / 22px 2px no-repeat,
+      linear-gradient(var(--c), var(--c)) 0 0 / 2px 22px no-repeat,
+      linear-gradient(var(--c), var(--c)) 100% 0 / 22px 2px no-repeat,
+      linear-gradient(var(--c), var(--c)) 100% 0 / 2px 22px no-repeat,
+      linear-gradient(var(--c), var(--c)) 0 100% / 22px 2px no-repeat,
+      linear-gradient(var(--c), var(--c)) 0 100% / 2px 22px no-repeat,
+      linear-gradient(var(--c), var(--c)) 100% 100% / 22px 2px no-repeat,
+      linear-gradient(var(--c), var(--c)) 100% 100% / 2px 22px no-repeat;
+  }
+
+  .bts-vf__center {
+    top: 50%;
+    left: 50%;
+    width: 26px;
+    height: 26px;
+    background:
+      linear-gradient(rgb(255 255 255 / 70%), rgb(255 255 255 / 70%)) 50% 0 / 1px 100% no-repeat,
+      linear-gradient(rgb(255 255 255 / 70%), rgb(255 255 255 / 70%)) 0 50% / 100% 1px no-repeat;
+    transform: translate(-50%, -50%);
+  }
+
+  .bts-vf__reticle {
+    position: absolute;
+    z-index: 3;
+    top: 0;
+    left: 0;
+    width: 64px;
+    height: 44px;
+    --r: #fff;
+    background:
+      linear-gradient(var(--r), var(--r)) 0 0 / 12px 2px no-repeat,
+      linear-gradient(var(--r), var(--r)) 0 0 / 2px 12px no-repeat,
+      linear-gradient(var(--r), var(--r)) 100% 0 / 12px 2px no-repeat,
+      linear-gradient(var(--r), var(--r)) 100% 0 / 2px 12px no-repeat,
+      linear-gradient(var(--r), var(--r)) 0 100% / 12px 2px no-repeat,
+      linear-gradient(var(--r), var(--r)) 0 100% / 2px 12px no-repeat,
+      linear-gradient(var(--r), var(--r)) 100% 100% / 12px 2px no-repeat,
+      linear-gradient(var(--r), var(--r)) 100% 100% / 2px 12px no-repeat;
+    transform: translate(-50%, -50%);
+    transition: width 220ms ease, height 220ms ease;
+    pointer-events: none;
+    will-change: left, top;
+  }
+
+  .bts-vf__reticle[data-locked='true'] {
+    --r: #48ff7a;
+    width: 54px;
+    height: 36px;
+  }
+
+  .bts-vf__reticle span {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    color: var(--r);
+    font: 700 .55rem / 1 ui-monospace, "SF Mono", Menlo, monospace;
+    letter-spacing: .1em;
+  }
+
+  .bts-vf__hud {
+    position: absolute;
+    z-index: 4;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: clamp(.4rem, 1.2vw, 1rem) clamp(.6rem, 1.6vw, 1.4rem);
+    font: 700 clamp(.55rem, .4rem + .45vw, .85rem) / 1 ui-monospace, "SF Mono", Menlo, monospace;
+    letter-spacing: .06em;
+    text-shadow: 0 1px 2px rgb(0 0 0 / 80%);
+    pointer-events: none;
+  }
+
+  .bts-vf__hud-row {
+    display: flex;
+    gap: clamp(.6rem, 1.4vw, 1.4rem);
+    align-items: center;
+  }
+
+  .bts-vf__hud-center {
+    margin-inline: auto;
+  }
+
+  .bts-vf__hud b {
+    color: #fff;
+  }
+
+  .bts-vf__rec i {
+    display: inline-block;
+    width: .75em;
+    height: .75em;
+    margin-right: .35em;
+    border-radius: 50%;
+    background: var(--vf-red);
+    animation: bts-vf-blink 1s steps(1) infinite;
+  }
+
+  @keyframes bts-vf-blink { 50% { opacity: .15; } }
+
+  .bts-vf__battery b {
+    display: inline-block;
+    width: 1.8em;
+    height: .8em;
+    margin-right: .35em;
+    border: 1px solid currentColor;
+    background: linear-gradient(90deg, #7dff9a 0 72%, transparent 0) 1px 1px / calc(100% - 2px) calc(100% - 2px) no-repeat;
+    vertical-align: -.05em;
+  }
+
+  .bts-vf__histogram {
+    width: clamp(64px, 7vw, 128px);
+    height: auto;
+    aspect-ratio: 128 / 40;
+    background: rgb(0 0 0 / 40%);
+  }
+
+  .bts-vf__iris {
+    position: absolute;
+    z-index: 5;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+
+  .bts-vf__iris path {
+    fill: #050505;
+  }
+
+  /* Seams and roll entries are created at runtime, so they carry no scoped
+     attribute and are reached with :global. */
+  .bts-vf__iris :global(line) {
+    stroke: #2a2a2a;
+    stroke-width: .35;
+  }
+
+  .bts-vf__controls {
+    display: grid;
+    gap: 1.25rem;
+    align-content: start;
+    font-size: var(--text-xs);
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+
+  .bts-vf__slate {
+    display: grid;
+    gap: .35rem;
+  }
+
+  .bts-vf__shot {
+    color: var(--vf-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .bts-vf__shot b {
+    color: var(--vf-red);
+  }
+
+  .bts-vf__note {
+    font-family: var(--font-display);
+    font-size: clamp(1.4rem, 1rem + 1.4vw, 2.6rem);
+    font-weight: 900;
+    letter-spacing: -.04em;
+    line-height: .95;
+    text-transform: none;
+  }
+
+  .bts-vf__meta {
+    color: var(--vf-muted);
+  }
+
+  .bts-vf__project {
+    justify-self: start;
+    color: var(--vf-ink);
+    text-decoration: none;
+    border-bottom: 1px solid rgb(242 239 232 / 40%);
+  }
+
+  .bts-vf__ring {
+    display: grid;
+    gap: .45rem;
+    color: var(--vf-muted);
+  }
+
+  .bts-vf__ring input {
+    width: 100%;
+    height: 34px;
+    margin: 0;
+    border-radius: 17px;
+    background:
+      repeating-linear-gradient(90deg, #2c2b29 0 2px, #1a1918 2px 7px);
+    box-shadow: inset 0 2px 6px rgb(0 0 0 / 70%);
+    appearance: none;
+    cursor: ew-resize;
+  }
+
+  .bts-vf__ring input::-webkit-slider-thumb {
+    width: 10px;
+    height: 34px;
+    border-radius: 2px;
+    background: #f0c24b;
+    box-shadow: 0 0 10px rgb(240 194 75 / 45%);
+    appearance: none;
+  }
+
+  .bts-vf__ring input::-moz-range-thumb {
+    width: 10px;
+    height: 34px;
+    border: 0;
+    border-radius: 2px;
+    background: #f0c24b;
+  }
+
+  .bts-vf__ring-scale {
+    display: flex;
+    justify-content: space-between;
+    font-size: .62rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .bts-vf__ring-scale i {
+    font-style: normal;
+  }
+
+  .bts-vf__buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .4rem;
+  }
+
+  .bts-vf__buttons button {
+    min-width: 44px;
+    min-height: 44px;
+    padding: .5rem .8rem;
+    border: 1px solid rgb(242 239 232 / 22%);
+    border-radius: 4px;
+    background: #171716;
+    color: var(--vf-ink);
+    font: inherit;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+
+  .bts-vf__buttons button[aria-pressed='true'] {
+    border-color: #f0c24b;
+    color: #f0c24b;
+  }
+
+  .bts-vf__buttons .bts-vf__trigger {
+    flex: 1;
+    border-color: var(--vf-red);
+    background: #2a0d0b;
+    color: #ffd6d2;
+  }
+
+  .bts-vf__roll {
+    display: flex;
+    gap: 6px;
+    min-height: 58px;
+    margin: 1.25rem 0 0;
+    padding: 8px;
+    list-style: none;
+    overflow-x: auto;
+    border-radius: 3px;
+    background:
+      repeating-linear-gradient(90deg, #1a120c 0 10px, #0c0c0c 10px 16px) 0 0 / 100% 5px no-repeat,
+      repeating-linear-gradient(90deg, #1a120c 0 10px, #0c0c0c 10px 16px) 0 100% / 100% 5px no-repeat,
+      #1f150e;
+    scrollbar-width: none;
+  }
+
+  .bts-vf__roll :global(li) {
+    flex: 0 0 auto;
+    animation: bts-vf-roll-in 520ms cubic-bezier(.22, 1, .36, 1) both;
+  }
+
+  .bts-vf__roll :global(button) {
+    display: block;
+    width: 72px;
+    aspect-ratio: 16 / 9;
+    padding: 0;
+    border: 0;
+    background: #000;
+  }
+
+  .bts-vf__roll :global(img) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  @keyframes bts-vf-roll-in {
+    from { opacity: 0; transform: translateX(-24px) scale(.8); }
+  }
+
+  @media (min-width: 1000px) {
+    .bts-vf__body {
+      grid-template-columns: minmax(0, 3fr) minmax(16rem, 1fr);
+    }
+  }
+
+  @media (hover: none) {
+    .bts-vf__frame { cursor: default; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .bts-vf__optics { transition: none; }
+    .bts-vf__rec i { animation: none; }
+    .bts-vf__roll :global(li) { animation: none; }
+  }
+</style>

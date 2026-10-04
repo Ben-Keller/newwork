@@ -40,7 +40,9 @@ let copied = 0;
 
 for (const file of files) {
   const relative = path.relative(canonicalRoot, file);
-  const maximumDimension = 960;
+  // Splash cuts fill the home title at several times a gallery tile's size,
+  // so they keep full HD; every other preview is sized for its tile.
+  const maximumDimension = /(^|\/)splash-cut-[^/]+\.mp4$/u.test(relative) ? 1920 : 960;
   const budget = previewBudget;
   const before = probe(file);
   const needsOptimization = before.size > budget || Math.max(before.width, before.height) > maximumDimension;

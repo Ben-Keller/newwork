@@ -3,6 +3,24 @@ import path from 'node:path';
 import sharp from 'sharp';
 
 const root = path.resolve('public/media/images');
+// This landscape photograph is cropped tightly into a portrait gallery tile.
+// Keep the original resolution with a high-quality delivery encode that fits
+// the source-image budget. The private original remains untouched.
+const rainbowName = 'michael-wow-rainbow-pavement.webp';
+const rainbowOriginal = path.resolve('../assets/source/michael/portfolio-expansion', rainbowName);
+const rainbowOutput = path.join(root, 'michael/portfolio-expansion', rainbowName);
+try {
+  const originalStat = await stat(rainbowOriginal);
+  const outputStat = await stat(rainbowOutput);
+  const metadata = await sharp(rainbowOutput).metadata();
+  if (metadata.width !== 2339 || outputStat.size > 1024 * 1024 || originalStat.mtimeMs > outputStat.mtimeMs) {
+    await sharp(rainbowOriginal).webp({quality: 98, effort: 6, smartSubsample: true}).toFile(rainbowOutput);
+  }
+} catch (error) {
+  // The private original is optional in CI; the checked-in canonical image
+  // remains sufficient to reproduce all delivery formats there.
+  if (error.code !== 'ENOENT') throw error;
+}
 const targetWidths = [320, 480, 720, 960, 1200];
 const formats = [
   {
@@ -50,7 +68,12 @@ for (const source of originals) {
         }
         if (current && current.mtimeMs >= sourceStat.mtimeMs) return false;
         const pipeline = sharp(source).resize({width, withoutEnlargement: true});
-        await pipeline[format.extension](format.options).toFile(output);
+        const options = path.basename(source) === rainbowName
+          ? (format.extension === 'avif'
+            ? {quality: 80, effort: 4, chromaSubsampling: '4:4:4'}
+            : {quality: 94, effort: 5})
+          : format.options;
+        await pipeline[format.extension](options).toFile(output);
         return true;
       });
     }

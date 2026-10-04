@@ -1,0 +1,133 @@
+---
+interface Props {
+  class?: string;
+}
+const { class: className = '' } = Astro.props;
+---
+
+<dialog class:list={['bts-viewer', className]} data-bts-viewer aria-label="Behind the scenes frame">
+  <div class="bts-viewer__body">
+    <figure class="bts-viewer__figure">
+      <div class="bts-viewer__media">
+        <img data-viewer-image alt="" decoding="async" />
+      </div>
+      <figcaption class="bts-viewer__caption">
+        <p class="bts-viewer__meta">
+          <span data-viewer-time></span>
+          <span data-viewer-department></span>
+          <span data-viewer-position></span>
+        </p>
+        <p class="bts-viewer__note" data-viewer-note></p>
+        <p class="bts-viewer__project"><a data-viewer-link href="#"><span data-viewer-project></span> <span aria-hidden="true">↗</span></a></p>
+      </figcaption>
+    </figure>
+    <div class="bts-viewer__actions">
+      <slot />
+      <button type="button" data-viewer-prev aria-label="Previous frame">←</button>
+      <button type="button" data-viewer-next aria-label="Next frame">→</button>
+      <button type="button" data-viewer-close aria-label="Close">Close</button>
+    </div>
+  </div>
+</dialog>
+
+<style is:global>
+  .bts-viewer {
+    width: min(96vw, 1280px);
+    max-width: none;
+    max-height: 94vh;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #f6f3ea;
+    overflow: visible;
+  }
+
+  .bts-viewer::backdrop {
+    background: rgb(12 11 10 / 88%);
+    backdrop-filter: blur(6px);
+  }
+
+  .bts-viewer__body {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .bts-viewer__figure {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .bts-viewer__media {
+    position: relative;
+    display: grid;
+    place-items: center;
+  }
+
+  .bts-viewer__media img {
+    width: auto;
+    max-width: 100%;
+    height: auto;
+    max-height: 72vh;
+    object-fit: contain;
+  }
+
+  .bts-viewer__caption {
+    display: grid;
+    gap: .35rem;
+    font-size: var(--text-sm);
+  }
+
+  .bts-viewer__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .3rem 1.2rem;
+    font-size: var(--text-xs);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    opacity: .7;
+  }
+
+  .bts-viewer__note {
+    font-family: var(--font-display);
+    font-size: clamp(1.4rem, 1rem + 1.6vw, 2.6rem);
+    font-weight: 900;
+    letter-spacing: -.04em;
+    line-height: .95;
+  }
+
+  .bts-viewer__project a {
+    text-decoration: none;
+    border-bottom: 1px solid currentColor;
+  }
+
+  .bts-viewer__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .35rem;
+    justify-content: flex-end;
+  }
+
+  .bts-viewer__actions button {
+    min-width: 44px;
+    min-height: 44px;
+    padding: .5rem .9rem;
+    border: 1px solid rgb(246 243 234 / 40%);
+    border-radius: 0;
+    background: transparent;
+    color: inherit;
+    font-size: var(--text-sm);
+  }
+
+  .bts-viewer__actions button:hover {
+    background: #f6f3ea;
+    color: #101010;
+  }
+
+  @media (min-width: 900px) {
+    .bts-viewer__figure {
+      grid-template-columns: minmax(0, 1fr) 18rem;
+      align-items: end;
+    }
+  }
+</style>

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { mediaVertexShader } from "../../src/lib/reel/shaders";
+import { mediaVertexShader } from "../../src/archive/about-experience/lib/reel/shaders";
 
 const PI = Math.PI;
 const TAU = PI * 2;

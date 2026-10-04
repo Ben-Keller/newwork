@@ -110,9 +110,16 @@ const initializeGalleryPointer = (gallery: HTMLElement): MotionCleanup => {
 
   const onPointerMove = (event: PointerEvent): void => {
     if (event.pointerType === 'touch' || !galleryIsVisible()) return;
+    // Header hover motion can emit pointer updates during a route transition.
+    // Navigation should not pan the newly revealed gallery underneath it.
+    if (event.target instanceof Element && event.target.closest('[data-site-header]')) return;
     pointerInside = true;
+    // Review round 1: the plane used to follow the pointer, so moving right
+    // pushed the grid right and revealed less of the right-hand edge. The
+    // offset is negated, so the gallery now moves against the pointer and
+    // moving right reveals what sits beyond the right edge.
     const normalized = clampMotionValue((event.clientX / window.innerWidth) * 2 - 1, -1, 1);
-    setTarget(normalized * MOTION_LIMIT.galleryPointerX);
+    setTarget(-normalized * MOTION_LIMIT.galleryPointerX);
   };
 
   const onPointerLeave = (): void => {

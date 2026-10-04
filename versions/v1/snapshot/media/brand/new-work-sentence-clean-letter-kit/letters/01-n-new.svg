@@ -1,0 +1,23 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-12.0 0.0 648.36 785.25" style="color:#1a1a1a" role="img" aria-label="N">
+  <defs>
+    <style>
+      .st0, .cls-1 { fill-rule: evenodd; }
+      .st0, .st1, .cls-1, .cls-2 { fill: currentColor; }
+      .nw-letter {
+        transform-box: fill-box;
+        transform-origin: center;
+        will-change: transform, opacity;
+      }
+      .nw-letter__part {
+        transform-box: fill-box;
+        transform-origin: center;
+      }
+    </style>
+  </defs>
+  <g id="nw-sentence-letter-01-n" class="nw-letter nw-letter--n nw-letter--new" data-nw-letter="N" data-letter="N" data-letter-index="0" data-word="new" data-word-index="0" aria-label="N">
+    <path class="cls-2 nw-letter__part" d="M223.13,780.69c-3.52,2.97-6,3.74-10.14,3.74l-205.4-.04c-2.53,0-5.53-2.31-7.59-3.89,33.17-16.34,57.77-62,75.66-122.88,8.48-28.83,15.27-58.62,20.44-91.23l3.83-24.17,3.5-25.16c1.26-9.06,2.28-18.89,3.15-28.04l3.32-34.73c2.37-24.81-.28-49.42,6.62-51.05,1.22,19.84.96,37.37,2.47,54.99l2.9,33.7c.93,10.82,2.15,22.5,3.56,33.26l3.39,25.87,2.87,19.58c2.21,15.07,5.02,29.21,7.99,43.57,13.98,67.61,34.88,124.93,66.72,154.05,2.48,2.27,5.71,4.18,8.24,6.09l8.47,6.44v-.07Z" id="nw-sentence-letter-01-n__part-1" data-nw-part="1" />
+    <path class="cls-2 nw-letter__part" d="M506.07,784.42c-1.76,0-4.05-3.28-5.12-4.94l-39.38-61.37-12.67-19.74-9.03-14.17-54.45-86.02-34.54-55.21C262.54,401.75,174.88,260.6,93.72,113.47l-18.56-33.64c-5.33-9.67-10.97-18.48-16.88-27.62C45.62,32.61,25.6,10.52,6.01,2.47L0,0c1.29-.74,2.91-1.68,4.5-1.68l189.37-.02,82.08,136.48,28.67,47.61,67.73,112.74,25.82,42.98,17.76,29.45,18.13,30.05,92.82,154.44c1.13,1.88,2.14,4.45,2.14,6.84v219.32c0,2.02-.92,4.61-1.68,6.19h-21.24v.02Z" id="nw-sentence-letter-01-n__part-2" data-nw-part="2" />
+    <path class="cls-2 nw-letter__part" d="M553.36-1.69h-189c18,8.57,33,22.04,47,41.63,21,29.39,34,67.34,39,110.2,4,37.96,3,82.04,0,122.44l-3,29.39c19-63.67,45-127.34,75-178.77,24-41.63,48-82.04,73-105.3,10-9.8,20-15.92,29-19.59h-71Z" id="nw-sentence-letter-01-n__part-3" data-nw-part="3" />
+  </g>
+</svg>

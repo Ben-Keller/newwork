@@ -1,0 +1,1 @@
+import{o as e}from"./browser-storage.CvoB6DBm.js";var t=()=>{document.querySelectorAll(`[data-restore-work-scroll]:not([data-ready])`).forEach(t=>{t.dataset.ready=`true`,t.addEventListener(`click`,()=>{e(`session`,`new-work-restore-requested`,`true`)})})};document.addEventListener(`astro:page-load`,t),t();

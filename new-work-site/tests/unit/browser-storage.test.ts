@@ -24,9 +24,27 @@ function memoryStorage(): Storage {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
+  vi.resetModules();
 });
 
 describe('browser storage', () => {
+  it('isolates hosted version storage from V1 and the local preview', async () => {
+    vi.stubEnv('BASE_URL', '/newwork/v2/');
+    vi.resetModules();
+    const storage = memoryStorage();
+    storage.setItem('route', 'legacy');
+    storage.setItem('/newwork/v1:route', 'v1');
+    vi.stubGlobal('window', {localStorage: storage, sessionStorage: storage});
+    const scoped = await import('../../src/lib/browser-storage');
+    expect(scoped.readStorageValue('session', 'route')).toBeNull();
+    expect(scoped.writeStorageValue('session', 'route', 'v2')).toBe(true);
+    expect(storage.getItem('/newwork/v2:route')).toBe('v2');
+    expect(scoped.removeStorageValue('session', 'route')).toBe(true);
+    expect(storage.getItem('route')).toBe('legacy');
+    expect(storage.getItem('/newwork/v1:route')).toBe('v1');
+  });
+
   it('reads, writes, and removes values from the requested storage area', () => {
     const localStorage = memoryStorage();
     const sessionStorage = memoryStorage();

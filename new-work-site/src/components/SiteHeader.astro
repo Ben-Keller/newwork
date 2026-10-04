@@ -2,7 +2,7 @@
 import DesktopNav from './DesktopNav.astro';
 import type { NavItem } from './DesktopNav.astro';
 import MobileMenu from './MobileMenu.astro';
-import BrandLockup from './BrandLockup.astro';
+import NwMark from './NwMark.astro';
 import type { WordmarkPath, WordmarkTone, WordmarkVariant } from './Wordmark.astro';
 import type { BrandAssetView } from '../lib/types';
 import { withBase, withoutBase } from '../lib/base-path';
@@ -12,6 +12,8 @@ export interface Props {
   showNotes?: boolean;
   siteName?: string;
   navItems?: readonly NavItem[];
+  /* Retained for callers and for restoring a designed mark; the header now
+     draws "nw" from type, so these are not read here. */
   logoVariant?: WordmarkVariant;
   tone?: WordmarkTone;
   wordmarkPaths?: readonly (string | WordmarkPath)[];
@@ -29,10 +31,6 @@ const {
   showNotes = false,
   siteName = 'New Work Agency',
   navItems,
-  logoVariant = 'full',
-  tone = 'dark',
-  wordmarkPaths = [],
-  wordmarkViewBox,
   wordmarkAsset,
   compactMarkAsset,
   galleryEditing = false,
@@ -43,7 +41,6 @@ const {
 
 const defaultItems: NavItem[] = [
   { href: withBase('/'), label: 'Work', match: 'section' },
-  { href: withBase('/about'), label: 'About', match: 'section' },
   ...(showNotes ? [{ href: withBase('/notes'), label: 'Notes', match: 'section' as const }] : []),
   { href: withBase('/contact'), label: 'Contact', match: 'section' },
 ];
@@ -65,28 +62,11 @@ const showGalleryTools = galleryEditing && currentPath === '/';
       class:list={['site-header__brand', compactMarkAsset && 'site-header__brand--has-compact']}
       aria-label={siteName}
     >
-      <BrandLockup
-        class="site-header__full-mark"
-        label={siteName}
-        variant={logoVariant}
-        tone={tone}
-        paths={wordmarkPaths}
-        viewBox={wordmarkViewBox}
-        artworkSrc={wordmarkAsset?.src}
-        artworkWidth={wordmarkAsset?.width}
-        artworkHeight={wordmarkAsset?.height}
-      />
-      {compactMarkAsset ? (
-        <BrandLockup
-          class="site-header__compact-mark"
-          label={siteName}
-          variant="compact"
-          tone={tone}
-          artworkSrc={compactMarkAsset.src}
-          artworkWidth={compactMarkAsset.width}
-          artworkHeight={compactMarkAsset.height}
-        />
-      ) : null}
+      {/* Review round 2: the header mark is just "nw", the title's own n and w
+          side by side. The split-flap board lives in the footer. The stacked
+          lockup and the supplied artwork stay wired through the layout, so
+          either can be dropped back in by restoring the BrandLockup here. */}
+      <NwMark class="site-header__mark" />
     </a>
 
     <div class="site-header__actions">

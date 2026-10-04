@@ -29,16 +29,11 @@ const {
   editable = false,
 } = Astro.props;
 const project = entry.work;
-// The first tile in every responsive lane is immediately visible during the
-// opening zoom. Load those posters eagerly, while reserving high fetch priority
-// for the single LCP candidate.
+// Keep opening-lane posters marked separately while galleryPreload starts
+// every tile behind the splash. Only the first image gets high fetch priority.
 const eager = index === 0 || desktopColumnStart || tabletColumnStart;
 const homeCardSize = entry.cardSize || project.homeCardSize || 'standard';
 const homeTreatment = entry.treatment || project.homeTreatment || 'standard';
-const requestedOffset = Number.isFinite(project.homeOffset) ? project.homeOffset : 0;
-// Keep editorial staggering visible without letting repeated card offsets open
-// oversized holes inside an otherwise packed column.
-const safeOffset = Math.max(0, Math.min(12, requestedOffset || 0));
 const transitionName = `project-${entry.id}-media`;
 const columnResponse = desktopColumn ? COLUMN_SCROLL_RESPONSES[desktopColumn - 1] : undefined;
 const tabletColumnResponse = tabletColumn
@@ -74,7 +69,6 @@ const galleryImageSizes = buildGalleryImageSizes(entry.image, {
   data-motion-column-response-tablet={tabletColumnResponse}
   data-motion-reveal={index === 0 ? undefined : 'clip'}
   data-motion-delay={index === 0 ? undefined : Math.min(index, 7) * 0.035}
-  style={`--home-offset:${safeOffset}px`}
 >
   <a
     href={withBase(entry.href)}

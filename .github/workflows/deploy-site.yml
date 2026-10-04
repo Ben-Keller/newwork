@@ -1,10 +1,12 @@
-name: Deploy production site
+name: Deploy versioned site
 
 on:
   push:
     branches: [main]
     paths:
       - new-work-site/**
+      - hosting/**
+      - versions/v1/**
       - studio-new-work/schemaTypes/**
       - studio-new-work/shared/**
       - studio-new-work/sanity.constants.ts
@@ -16,17 +18,20 @@ permissions:
   pages: write
   id-token: write
 
-# A newer content publish supersedes an older site build. Studio deployment has
-# a separate concurrency group, so a content publish can never cancel it.
+# A newer Pages build supersedes an older one. Studio deployment has its own
+# concurrency group and is never cancelled by a site build.
 concurrency:
   group: github-pages-production
   cancel-in-progress: true
 
 jobs:
   build:
-    name: Validate and build from Sanity
+    name: Validate and build V1 and V2
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    env:
+      PAGES_SITE_URL: https://${{ github.repository_owner }}.github.io
+      PAGES_BASE_PATH: /${{ github.event.repository.name }}
     defaults:
       run:
         working-directory: new-work-site
@@ -52,12 +57,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Audit the published Sanity release graph
-        run: pnpm sanity:audit
-        env:
-          PUBLIC_SANITY_PROJECT_ID: 7un4plyu
-          PUBLIC_SANITY_DATASET: production
-
       - name: Check types and Astro templates
         run: pnpm typecheck
 
@@ -68,52 +67,29 @@ jobs:
         if: github.event_name == 'push'
         run: pnpm test:coverage
 
-      - name: Build published Sanity content for verification
-        run: pnpm build
-        env:
-          PUBLIC_CONTENT_MODE: production
-          PUBLIC_SANITY_PROJECT_ID: 7un4plyu
-          PUBLIC_SANITY_DATASET: production
-          PUBLIC_SITE_URL: https://${{ github.repository_owner }}.github.io
-          PUBLIC_BASE_PATH: /
+      - name: Test Pages packaging and version isolation
+        run: node --test ../hosting/hosting.test.mjs
 
-      - name: Verify static output
-        run: pnpm verify:dist
+      - name: Build the isolated versions and root redirect
+        run: node ../hosting/build.mjs
 
-      - name: Install the production smoke-test browser
+      - name: Verify every versioned route and local asset
+        run: node ../hosting/verify.mjs
+
+      - name: Install the Pages smoke-test browser
         run: pnpm exec playwright install --with-deps chromium
 
-      - name: Verify the published CMS graph on desktop and mobile
+      - name: Verify both versions on their actual Pages paths
         run: >-
-          PLAYWRIGHT_PREVIEW_SERVER=1 pnpm exec playwright test
-          tests/e2e/cms-production.spec.ts
+          pnpm exec playwright test --config playwright.pages.config.ts
           --project=desktop-chromium
           --project=mobile-chromium
-          --workers=1
-        env:
-          PLAYWRIGHT_CONTENT_MODE: production
-          PUBLIC_CONTENT_MODE: production
-          PUBLIC_SANITY_PROJECT_ID: 7un4plyu
-          PUBLIC_SANITY_DATASET: production
-          PUBLIC_SITE_URL: https://${{ github.repository_owner }}.github.io
-          PUBLIC_BASE_PATH: /
-
-      - name: Build the repository-path Pages artifact
-        run: pnpm exec astro build
-        env:
-          PUBLIC_CONTENT_MODE: production
-          PUBLIC_SANITY_PROJECT_ID: 7un4plyu
-          PUBLIC_SANITY_DATASET: production
-          PUBLIC_SITE_URL: https://${{ github.repository_owner }}.github.io
-          PUBLIC_BASE_PATH: /${{ github.event.repository.name }}
-
-      - name: Verify repository-path output
-        run: pnpm verify:dist
+          --workers=2
 
       - name: Upload GitHub Pages artifact
         uses: actions/upload-pages-artifact@v5
         with:
-          path: new-work-site/dist
+          path: pages-dist
 
   deploy:
     name: Publish GitHub Pages

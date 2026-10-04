@@ -11,7 +11,39 @@ const { entries, mode = 'prototype' } = Astro.props;
 // Temporary editorial tooling remains implemented, but is not rendered in the
 // review UI. Switch this flag back on when another curation pass is needed.
 const galleryEditingEnabled = false;
-const galleryEntries = entries;
+// Keep the home gallery's curated selection to at most 20 pieces.
+const MAX_GALLERY_ENTRIES = 20;
+const selectedEntries = entries.slice(0, MAX_GALLERY_ENTRIES);
+const hasPreviewVideo = (entry: WorkGalleryEntryView) => Boolean(
+  entry.asset?.kind === 'video' ? entry.asset.video?.src
+    : !entry.asset && !entry.photo && entry.work.cover.previewVideo,
+);
+const videos = selectedEntries.filter(hasPreviewVideo);
+const photos = selectedEntries.filter((entry) => !hasPreviewVideo(entry));
+const rowCount = Math.ceil(selectedEntries.length / 4);
+const firstRowVideos = videos.length ? Math.max(1, Math.floor(videos.length / rowCount)) : 0;
+const remainingVideos = videos.length - firstRowVideos;
+// Keep the selected 20 pieces, spreading motion across rows instead of
+// bunching films in the same lanes. The opening video's fourth position is
+// fixed; later rows move it across the composition. Extra videos are spaced
+// through the remaining rows when the edit contains more than one per row.
+const galleryEntries: WorkGalleryEntryView[] = [];
+for (let row = 0; row < rowCount; row += 1) {
+  const videoCount = row === 0 ? firstRowVideos
+    : Math.round(row * remainingVideos / (rowCount - 1))
+      - Math.round((row - 1) * remainingVideos / (rowCount - 1));
+  const firstVideoColumn = 3 - (row % 4);
+  const videoColumns = [0, 2, 1, 3]
+    .map((offset) => (firstVideoColumn + offset) % 4)
+    .slice(0, videoCount);
+  const columns = Math.min(4, selectedEntries.length - row * 4);
+  for (let column = 0; column < columns; column += 1) {
+    const entry = videoColumns.includes(column)
+      ? videos.shift() || photos.shift()
+      : photos.shift() || videos.shift();
+    if (entry) galleryEntries.push(entry);
+  }
+}
 const isWideFeature = (entry: WorkGalleryEntryView, index: number) =>
   entry.work.cover.cardRatio === 'wideFeature' && index >= 8;
 const assignColumns = (columnCount: number) => {
@@ -22,17 +54,13 @@ const assignColumns = (columnCount: number) => {
       return undefined;
     }
 
-    const requestedColumn = entry.work.homeColumn;
-    const preferred = requestedColumn
-      ? ((requestedColumn - 1) % columnCount) + 1
-      : undefined;
-    const column = preferred || nextColumn + 1;
+    const column = nextColumn + 1;
     nextColumn = column % columnCount;
     return column;
   });
 };
-// A fixed visual column is applied after the placement cursor is calculated,
-// so moving one editorial tile does not reshuffle every card that follows it.
+// Use the arranged row order at both breakpoints so legacy film-column
+// assignments cannot pull videos back together or leave gaps in a lane.
 const desktopColumns = assignColumns(4);
 const tabletColumns = assignColumns(2);
 const desktopColumnStarts = desktopColumns.map((column, index) =>
@@ -85,7 +113,7 @@ const tabletColumnStarts = tabletColumns.map((column, index) =>
 
   // Editorial source order changed after the original review shuffle. Keep
   // removals, but do not let that stale saved sequence override new placements.
-  const galleryOrderStorageKey = 'new-work:gallery-order:v2';
+  const galleryOrderStorageKey = 'new-work:gallery-order:v3';
   const galleryHiddenStorageKey = 'new-work:gallery-hidden:v1';
   const detailPosterSizes = '(min-width: 1200px) 56vw, (min-width: 768px) 52vw, 100vw';
   const detailPosterCacheLimit = 8;
@@ -319,8 +347,11 @@ const tabletColumnStarts = tabletColumns.map((column, index) =>
         // Measure intrinsic content rather than the card's existing grid area.
         // Otherwise a breakpoint resize can feed the previous row span back
         // into the next calculation and open a full-tile hole in a lane.
-        const contentHeight = content?.offsetHeight ?? card.scrollHeight;
-        const span = Math.max(1, Math.ceil((contentHeight + paddingStart + rhythm) / 4));
+        const contentHeight = content
+          ? Number.parseFloat(getComputedStyle(content).height)
+          : card.scrollHeight;
+        // One-pixel rows keep the gutter consistent at fractional card widths.
+        const span = Math.max(1, Math.ceil(contentHeight + paddingStart + rhythm));
         const nextValue = `span ${span}`;
         if (card.style.gridRowEnd !== nextValue) card.style.gridRowEnd = nextValue;
       });

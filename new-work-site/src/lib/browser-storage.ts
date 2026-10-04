@@ -1,3 +1,5 @@
+import { storagePrefix } from './base-path';
+
 export type BrowserStorageArea = 'local' | 'session';
 
 function resolveStorage(area: BrowserStorageArea): Storage | undefined {
@@ -11,7 +13,7 @@ function resolveStorage(area: BrowserStorageArea): Storage | undefined {
 
 export function readStorageValue(area: BrowserStorageArea, key: string): string | null {
   try {
-    return resolveStorage(area)?.getItem(key) ?? null;
+    return resolveStorage(area)?.getItem(`${storagePrefix}${key}`) ?? null;
   } catch {
     return null;
   }
@@ -25,7 +27,7 @@ export function writeStorageValue(
   try {
     const storage = resolveStorage(area);
     if (!storage) return false;
-    storage.setItem(key, value);
+    storage.setItem(`${storagePrefix}${key}`, value);
     return true;
   } catch {
     return false;
@@ -36,7 +38,7 @@ export function removeStorageValue(area: BrowserStorageArea, key: string): boole
   try {
     const storage = resolveStorage(area);
     if (!storage) return false;
-    storage.removeItem(key);
+    storage.removeItem(`${storagePrefix}${key}`);
     return true;
   } catch {
     return false;

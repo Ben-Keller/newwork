@@ -2,6 +2,7 @@ import {readdir, readFile, stat} from 'node:fs/promises';
 import path from 'node:path';
 
 const root = path.resolve('dist');
+const base = (process.env.PUBLIC_BASE_PATH || '/').replace(/\/$/u, '');
 const failures = [];
 
 async function filesWithin(directory) {
@@ -48,10 +49,15 @@ for (const file of inspectableFiles) {
 for (const file of htmlFiles) {
   const html = await readFile(file, 'utf8');
   const imageSources = [...html.matchAll(/(?:src|srcset)="([^"]+)"/giu)].flatMap((match) =>
-    match[1].split(',').map((value) => value.trim().split(/\s+/u)[0]).filter((value) => value.startsWith('/media/')),
+    match[1].split(',').map((value) => value.trim().split(/\s+/u)[0])
+      .filter((value) => value.startsWith('/media/') || value.startsWith(`${base}/media/`)),
   );
   for (const source of imageSources) {
-    const pathname = decodeURIComponent(source.split(/[?#]/u)[0]);
+    if (base && !source.startsWith(base + '/')) {
+      failures.push(`${path.relative(root, file)} escapes its base path with ${source}.`);
+      continue;
+    }
+    const pathname = decodeURIComponent(source.split(/[?#]/u)[0]).slice(base.length);
     const target = path.resolve(root, `.${pathname}`);
     if (!target.startsWith(`${root}${path.sep}`)) {
       failures.push(`${path.relative(root, file)} references an unsafe asset path ${pathname}.`);

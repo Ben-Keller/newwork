@@ -7,6 +7,7 @@
 /new-work-site/playwright-report/
 /new-work-site/test-results/
 /new-work-site/.lighthouseci/
+/pages-dist/
 
 # The original media package is migrated for local preservation, but never
 # published to GitHub. Deployable derivatives live in new-work-site/public/.

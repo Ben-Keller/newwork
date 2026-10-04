@@ -1,4 +1,9 @@
 ---
+// SUPERSEDED. The splash and the home title are now one element, owned by
+// LogoIntro: this component's mask-and-media stage was the second copy. It is
+// kept only as a record of the masked treatment and is not rendered anywhere;
+// re-introducing it would collide with LogoIntro over the same data-logo-*
+// attributes.
 import { inferVideoMimeType } from './media/video-mime';
 import { withBase } from '../lib/base-path';
 import type { ProjectView } from '../lib/types';
@@ -41,7 +46,11 @@ const media = assignments.flatMap((assignment, index) => {
   }];
 });
 
-const maskUrl = withBase('/media/brand/new-work-block-mask.png');
+// The splash lockup and the home title are the same wordmark. This mask is
+// generated from the client V1 artwork outlines at the shared
+// tracking and leading tokens, so the two titles are geometrically identical
+// and the handoff between them can be a single continuous element.
+const maskUrl = withBase('/media/brand/new-work-v1-mask.svg');
 const experienceStyle = `--logo-mask:url("${maskUrl}")`;
 ---
 
@@ -55,6 +64,10 @@ const experienceStyle = `--logo-mask:url("${maskUrl}")`;
   aria-label="New Work logo media study"
 >
   <div class="logo-mask-experience__canvas">
+    <!-- The reveal animations own the stage's own transform, so the handoff
+         morph is applied to this wrapper instead. It hugs the stage exactly,
+         which keeps "measure the stage, transform the wrapper" honest. -->
+    <div class="logo-mask-stage-morph" data-logo-stage-morph>
     <div class="logo-mask-stage" data-logo-stage>
       <div class="logo-mask-stage__solid" aria-hidden="true"></div>
 
@@ -82,6 +95,7 @@ const experienceStyle = `--logo-mask:url("${maskUrl}")`;
         ))}
       </div>
     </div>
+    </div>
   </div>
 </section>
 
@@ -103,9 +117,15 @@ const experienceStyle = `--logo-mask:url("${maskUrl}")`;
     ) return;
     root.dataset.logoMaskReady = 'true';
 
+    // Every authored reveal, still addressable by number for review.
     const revealModes = ['1', '2', '3', '4', '5'] as const;
+    // The rotation visitors actually see. Review round 1 dropped 3 (fold)
+    // and 5 (seam) as too playful; both remain above so the number keys and
+    // a stored preference can still call them up during review.
+    const rotationRevealModes = ['1', '2', '4'] as const;
     const initialBackgroundHold = 240;
-    const randomRevealMode = (): string => revealModes[Math.floor(Math.random() * revealModes.length)] ?? '1';
+    const randomRevealMode = (): string =>
+      rotationRevealModes[Math.floor(Math.random() * rotationRevealModes.length)] ?? '1';
     let revealFrame = 0;
     let revealSettleFrame = 0;
     let revealTimer = 0;
@@ -232,28 +252,36 @@ const experienceStyle = `--logo-mask:url("${maskUrl}")`;
     perspective: 1200px;
   }
 
+  .logo-mask-stage-morph {
+    /* Review round 1: the splash lockup was full bleed. At 70% the video
+       behind the letters is no longer scaled past its own resolution, and
+       the type reads as a mark rather than as a banner. The handoff morph
+       measures this element's real box, so it follows the new size. */
+    width: var(--splash-title-scale, 70%);
+    margin-inline: auto;
+    transform-origin: 0 0;
+    will-change: transform;
+  }
+
   .logo-mask-stage {
     position: relative;
     width: 100%;
-    aspect-ratio: 1487 / 849;
+    /* The generated lockup's box is the home title's rendered line box, so
+       this ratio and that title's are the same by construction. */
+    aspect-ratio: 2279 / 1490;
     isolation: isolate;
     opacity: 0;
     will-change: clip-path, filter, opacity, transform;
   }
 
+  /* The vector lockup carries no transparent padding, so the stage needs none
+     of the optical correction the old bitmap mask required. Keeping these
+     boxes at the stage's own edges is what lets the splash title and the home
+     title measure as the same rectangle during the handoff. */
   .logo-mask-stage__solid,
   .logo-mask-stage__single {
     position: absolute;
-    top: -10.247%;
-    left: -1.681%;
-    width: 103.295%;
-    height: 120.612%;
-    /* The source mask's visible alpha is slightly top-heavy. This optical
-       correction centers the actual letters, not the transparent bitmap box.
-       Do not crop at the mask's first opaque row: a fractional intersection
-       there rasterizes as a detached one-pixel rule at some viewport widths. */
-    transform: translateY(1.75%) scaleY(.95);
-    transform-origin: 50% 50%;
+    inset: 0;
   }
 
   .logo-mask-stage__single-layer { position: absolute; inset: 0; }
@@ -261,8 +289,8 @@ const experienceStyle = `--logo-mask:url("${maskUrl}")`;
   .logo-mask-stage__solid {
     z-index: 1;
     background: var(--color-ink);
-    -webkit-mask: var(--logo-mask) center / 100% 100% no-repeat;
-    mask: var(--logo-mask) center / 100% 100% no-repeat;
+    -webkit-mask: var(--logo-mask) center / contain no-repeat;
+    mask: var(--logo-mask) center / contain no-repeat;
     -webkit-mask-mode: alpha;
     mask-mode: alpha;
   }
@@ -273,8 +301,8 @@ const experienceStyle = `--logo-mask:url("${maskUrl}")`;
     overflow: hidden;
     opacity: 0;
     pointer-events: none;
-    -webkit-mask: var(--logo-mask) center / 100% 100% no-repeat;
-    mask: var(--logo-mask) center / 100% 100% no-repeat;
+    -webkit-mask: var(--logo-mask) center / contain no-repeat;
+    mask: var(--logo-mask) center / contain no-repeat;
     -webkit-mask-mode: alpha;
     mask-mode: alpha;
     transition: opacity 260ms ease;
@@ -391,11 +419,6 @@ const experienceStyle = `--logo-mask:url("${maskUrl}")`;
   @media (min-width: 768px) and (min-aspect-ratio: 15 / 8) {
     .logo-mask-experience {
       padding-block: 0;
-    }
-
-    .logo-mask-stage__solid,
-    .logo-mask-stage__single {
-      transform: translateY(1.75%) scaleY(.94);
     }
   }
 </style>

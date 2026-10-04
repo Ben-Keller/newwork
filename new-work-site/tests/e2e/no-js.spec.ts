@@ -2,22 +2,6 @@ import { expect, test } from '@playwright/test';
 
 test.use({ javaScriptEnabled: false });
 
-test('the About experience remains complete and navigable without JavaScript', async ({page}) => {
-  const response = await page.goto('/about');
-  expect(response?.status()).toBe(200);
-
-  const about = page.locator('[data-about-experience]');
-  await expect(about.locator('.reel-motion-stage')).toBeHidden();
-  await expect(about.locator('.reel-static-fallback')).toBeVisible();
-  await expect(about.locator('.reel-fallback-card')).toHaveCount(6);
-  await expect(page.getByRole('heading', {
-    level: 1,
-    name: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
-  }))
-    .toBeVisible();
-  await expect(page.getByRole('link', {name: 'Start a project'}).last()).toHaveAttribute('href', '/contact');
-});
-
 test('the work index and film fallback remain useful without JavaScript', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1_000 });
   const homeResponse = await page.goto('/');
@@ -27,11 +11,19 @@ test('the work index and film fallback remain useful without JavaScript', async 
   expect(await page.locator('[data-type-title-line]').evaluateAll((lines) =>
     lines.map((line) => (line as HTMLElement).dataset.typeTitleLine),
   )).toEqual(['new', 'work']);
+  // Logo 01 ("headline"): the title closes on a full stop.
+  expect(await page.locator('[data-type-title-line]').evaluateAll((lines) =>
+    lines.map((line) => (line as HTMLElement).dataset.typeTitleText),
+  )).toEqual(['new', 'work.']);
   await expect(page.locator('[data-svg-title]')).toHaveCount(0);
   await expect(page.getByRole('heading', { level: 1, name: 'Selected work' })).toBeAttached();
-  await expect(page.locator('[data-project-card]')).toHaveCount(28);
+  await expect(page.locator('[data-project-card]')).toHaveCount(20);
+  await expect(page.locator('[data-manifesto]')).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Behind the scenes', exact: true })).toBeVisible();
+  await expect(page.locator('.bts__heading-text')).toHaveCSS('opacity', '1');
   await expect(page.locator('[data-gallery-remove]')).toHaveCount(0);
-  await expect(page.getByRole('link', { name: /Arc/u })).toBeVisible();
+  // Scoped to the gallery: the Behind the scenes strip also links to Arc.
+  await expect(page.locator('[data-work-gallery]').getByRole('link', { name: /Arc/u })).toBeVisible();
   await expect(page.locator('[data-project-grid]')).not.toHaveAttribute('data-masonry-ready');
   await expect(page.locator('[data-gallery-entrance]')).toHaveCSS('transform', 'none');
   const staticLayout = await page.locator('[data-project-grid]').evaluate((grid) => {

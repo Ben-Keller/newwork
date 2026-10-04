@@ -46,9 +46,9 @@ test('the landing loads directly into the stacked typographic title while its en
   await expect(intro.locator('[data-type-title]')).toBeVisible();
 });
 
-test('the Work tab enters the stable Work view from About while leaving the splash reachable', async ({ page }) => {
+test('the Work tab enters the stable Work view from Contact while leaving the splash reachable', async ({ page }) => {
   await page.setViewportSize({ width: 1_440, height: 900 });
-  await page.goto('/about');
+  await page.goto('/contact');
   const desktopWorkLink = page.locator('[data-desktop-nav]').getByRole('link', { name: 'Work' });
   await expect(desktopWorkLink).toHaveAttribute('href', '/');
   await expect(desktopWorkLink).toHaveAttribute('data-work-navigation', '');
@@ -95,10 +95,10 @@ test('the Work tab enters the stable Work view from About while leaving the spla
     const maxScroll = scroller.scrollHeight - window.innerHeight;
     scroller.scrollTo({top: Math.max(0, maxScroll), behavior: 'auto'});
   });
-  const aboutMaxScroll = await page.evaluate(() => (
+  const startMaxScroll = await page.evaluate(() => (
     (document.scrollingElement ?? document.documentElement).scrollHeight - window.innerHeight
   ));
-  if (aboutMaxScroll > 0) {
+  if (startMaxScroll > 0) {
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
   }
 
@@ -137,13 +137,18 @@ test('the Work tab enters the stable Work view from About while leaving the spla
   const pointerY = Math.min(galleryBox.y + 240, page.viewportSize()!.height - 24);
   const stageTranslateX = () => page.locator('[data-gallery-entrance]').evaluate((element) =>
     new DOMMatrixReadOnly(getComputedStyle(element).transform).m41);
+  // Review round 1 inverted the drag: the plane moves against the pointer, so
+  // the left edge pushes the grid right and reveals what sits beyond it.
   await page.mouse.move(12, pointerY);
-  await expect.poll(stageTranslateX).toBeLessThan(-10);
-  await page.mouse.move(page.viewportSize()!.width - 12, pointerY);
   await expect.poll(stageTranslateX).toBeGreaterThan(10);
+  await page.mouse.move(page.viewportSize()!.width - 12, pointerY);
+  await expect.poll(stageTranslateX).toBeLessThan(-10);
 
   await page.evaluate(() => window.scrollTo({top: 0, behavior: 'auto'}));
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+  // The splash only comes back once the page has been resting at its top past
+  // the dwell, and then only on a gesture that carries real distance.
+  await page.waitForTimeout(500);
   await page.mouse.wheel(0, -700);
   await expect(workPage).toHaveAttribute('data-handoff', 'false');
 
@@ -170,7 +175,7 @@ test('the Work tab enters the stable Work view from About while leaving the spla
   expect(await page.evaluate(() => sessionStorage.getItem('new-work:work-navigation-entry'))).toBeNull();
 
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('/about');
+  await page.goto('/contact');
   await page.locator('[data-mobile-menu-root]').getByRole('button', { name: 'Menu' }).click();
   const mobileWorkLink = page.locator('[data-mobile-menu-root] [data-menu-link]', { hasText: 'Work' });
   await expect(mobileWorkLink).toBeVisible();
@@ -189,7 +194,6 @@ test('the site header remains on a non-fading transition layer across main tabs'
   await expect(header).toHaveCSS('opacity', '1');
 
   for (const {name, pathname} of [
-    {name: 'About', pathname: '/about'},
     {name: 'Contact', pathname: '/contact'},
   ]) {
     const transitionState = page.evaluate(() => new Promise<{
@@ -225,7 +229,7 @@ test('the site header remains on a non-fading transition layer across main tabs'
   }
 });
 
-test('About to Work entry reveals warmed gallery images only after decoded pixels exist', async ({ page }) => {
+test('Contact to Work entry reveals warmed gallery images only after decoded pixels exist', async ({ page }) => {
   await page.setViewportSize({ width: 1_440, height: 900 });
   await page.addInitScript(() => {
     const selector = 'a[href="/work/michael-selected-photography/michael-wow-rainbow-pavement"] img[data-gallery-image]';
@@ -286,7 +290,7 @@ test('About to Work entry reveals warmed gallery images only after decoded pixel
       window.requestAnimationFrame(sample);
     }, {once: true});
   });
-  await page.goto('/about');
+  await page.goto('/contact');
 
   await page.locator('[data-desktop-nav]').getByRole('link', { name: 'Work' }).click();
   await page.waitForURL(/\/$/u);
@@ -343,22 +347,41 @@ test('refreshing a scrolled route returns it to the top', async ({ page }) => {
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
 });
 
-test('the supplied NW artwork is the persistent header, footer, and browser icon', async ({ page }) => {
+test('the nw header mark, the main footer wordmark with its split-flap board, and the browser icon', async ({ page }) => {
   await page.goto('/');
   await expect(page).toHaveTitle('New Work Agency');
 
-  const headerLogo = page.locator('[data-site-header] .site-header__full-mark img');
-  const footerLogo = page.locator('[data-site-footer] .site-footer__brand img');
-  await expect(headerLogo).toHaveAttribute('src', '/media/brand/new-black.svg');
-  await expect(headerLogo).toHaveAttribute('width', '1641');
-  await expect(headerLogo).toHaveAttribute('height', '824');
-  await expect(footerLogo).toHaveAttribute('src', '/media/brand/new-black.svg');
-  const headerLockup = page.locator(
-    '[data-site-header] .site-header__full-mark:visible, [data-site-header] .site-header__compact-mark:visible',
-  );
-  const footerLockup = page.locator('[data-site-footer] [data-brand-lockup]');
-  await expect(headerLockup.locator('[data-brand-lockup-qualifier]')).toHaveCount(0);
-  await expect(footerLockup.locator('[data-brand-lockup-qualifier]')).toHaveCount(0);
+  // Review round 2: the header mark is just "nw" (the title's own outlined n
+  // and solid w, drawn as live text). The split-flap board that flips through
+  // what the studio makes sits beside the footer's stacked main wordmark.
+  const headerMark = page.locator('[data-site-header] [data-nw-mark]');
+  const footerLogo = page.locator('[data-site-footer] .site-footer__wordmark');
+  await expect(headerMark).toBeVisible();
+  await expect(headerMark).toHaveText('nw');
+  // Only the fill of the n is cleared, so its currentColor outline still paints.
+  await expect(headerMark.locator('.nw-mark__n')).toHaveCSS('-webkit-text-fill-color', 'rgba(0, 0, 0, 0)');
+  await expect(headerMark.locator('.nw-mark__n')).not.toHaveCSS('-webkit-text-stroke-color', 'rgba(0, 0, 0, 0)');
+  await expect(page.locator('[data-site-header] [data-flap-ticker]')).toHaveCount(0);
+  await expect(page.locator('[data-site-header] .site-header__brand img')).toHaveCount(0);
+  await expect(footerLogo.locator('span')).toHaveText(['new', 'work.']);
+  await expect(footerLogo.locator('.site-footer__wordmark-outline'))
+    .toHaveCSS('-webkit-text-fill-color', 'rgba(0, 0, 0, 0)');
+
+  const board = page.locator('[data-site-footer] [data-flap-ticker]');
+  await expect(board).toHaveAttribute('data-ticker-words', '["PHOTO","CREATIVE","FILM"]');
+  await expect(board.locator('[data-flap]')).toHaveCount(8);
+  await expect(board.locator('.sr-only')).toHaveText('photo, creative, film');
+  // The board is always mid-cycle by the time it can be read, so assert that
+  // it settles on at least two different words from the set.
+  const boardText = () => board.locator('[data-flap-bottom]').evaluateAll((halves) =>
+    halves.map((half) => half.textContent).join('').trim());
+  const settledWords = new Set<string>();
+  await expect.poll(async () => {
+    const text = await boardText();
+    if (['PHOTO', 'CREATIVE', 'FILM'].includes(text)) settledWords.add(text);
+    return settledWords.size;
+  }, { timeout: 15_000, intervals: [100] }).toBeGreaterThanOrEqual(2);
+
   await expect(page.locator('[data-site-header] .site-header__brand')).toHaveAttribute('href', '/');
   await expect(page.locator('[data-site-footer] .site-footer__brand')).toHaveAttribute('href', '/');
   await expect(page.locator('link[rel="icon"]')).toHaveAttribute('href', '/favicon.svg');
@@ -367,15 +390,17 @@ test('the supplied NW artwork is the persistent header, footer, and browser icon
   expect(favicon).toContain('viewBox="0 0 1640.52 1640.52"');
   expect(favicon).toContain('<rect width="1640.52" height="1640.52" rx="220" fill="#fff"/>');
 
+  // One mark at every width, phones included.
   await page.setViewportSize({ width: 390, height: 844 });
-  await expect(page.locator('[data-site-header] .site-header__compact-mark img'))
-    .toHaveAttribute('src', '/media/brand/new-black.svg');
+  await expect(headerMark).toBeVisible();
 
   await page.locator('[data-project-link][href="/work/tour-de-france-x-toyota"]').dispatchEvent('click');
   await page.waitForURL('**/work/tour-de-france-x-toyota');
   await expect(page.locator('body')).toHaveAttribute('data-page-theme', 'dark');
-  await expect(page.locator('[data-site-header] .site-header__full-mark img')).not.toHaveCSS('filter', 'none');
-  await expect(page.locator('[data-site-footer] .site-footer__brand img')).not.toHaveCSS('filter', 'none');
+  // Both marks inherit the page ink on dark project pages.
+  await expect(page.locator('[data-site-header] .nw-mark__w'))
+    .toHaveCSS('color', 'rgb(244, 242, 234)');
+  await expect(footerLogo).toHaveCSS('color', 'rgb(244, 242, 234)');
 });
 
 test('the header keeps the full title and default logo without preview sliders', async ({ page }) => {
@@ -387,19 +412,19 @@ test('the header keeps the full title and default logo without preview sliders',
   await expect(page.locator('html')).not.toHaveAttribute('data-title-mask');
   await expect(page.locator('[data-type-title-line="new"]')).toHaveCSS('clip-path', 'none');
   await expect(page.locator('[data-type-title]')).toHaveCSS('align-items', 'flex-start');
-  await expect(page.locator('[data-logo-descriptor]')).toHaveCSS('text-align', 'start');
+  await expect(page.locator('[data-logo-descriptor]')).toHaveCSS('text-align', 'end');
   expect(await page.evaluate(() => localStorage.getItem('new-work:title-mask'))).toBeNull();
   expect(await page.evaluate(() => localStorage.getItem('new-work:title-alignment'))).toBeNull();
 
   await expect(header).not.toHaveAttribute('data-header-logo');
-  await expect(header.locator('.site-header__full-mark img')).toHaveAttribute('src', '/media/brand/new-black.svg');
+  await expect(header.locator('[data-nw-mark]')).toHaveText('nw');
   expect(await page.evaluate(() => localStorage.getItem('new-work:header-logo'))).toBeNull();
 
-  await page.goto('/about');
+  await page.goto('/contact');
   await expect(page.locator('html')).not.toHaveAttribute('data-title-mask');
   await expect(page.locator('[data-site-header]')).not.toHaveAttribute('data-header-logo');
-  await expect(page.locator('[data-site-header] .site-header__full-mark img'))
-    .toHaveAttribute('src', '/media/brand/new-black.svg');
+  await expect(page.locator('[data-site-header] [data-nw-mark]'))
+    .toHaveText('nw');
 
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.locator('[data-header-design-controls], input[type="range"]')).toHaveCount(0);
@@ -409,17 +434,18 @@ test('the header keeps the full title and default logo without preview sliders',
 
 test('the gallery order toolbar stays hidden from the review UI', async ({ page }) => {
   await page.goto('/');
-  await expect(page.locator('[data-project-card]')).toHaveCount(28);
+  await expect(page.locator('[data-project-card]')).toHaveCount(20);
   await expect(page.locator('[data-gallery-order-tools]')).toHaveCount(0);
   await expect(page.getByRole('button', { name: /shuffle gallery|save gallery|restore removed/iu }))
     .toHaveCount(0);
 });
 
-test('the footer closes every route with a studio statement, directory, and oversized identity', async ({ page }) => {
+test('the footer closes every route with a compact directory and main identity', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1_000 });
   await page.goto('/');
   const footer = page.locator('[data-site-footer]');
-  await expect(footer.locator('.site-footer__strapline p')).toHaveCount(4);
+  await expect(footer).not.toContainText('Come create with us.');
+  await expect(footer.locator('.site-footer__discipline > span').first()).toHaveText('IS');
   await expect(footer.getByRole('heading', { level: 2, name: 'People' })).toHaveCount(0);
   await expect(footer.getByRole('heading', { level: 2, name: 'Explore' })).toBeVisible();
   await expect(footer.getByRole('heading', { level: 2, name: 'Connect' })).toBeVisible();
@@ -434,16 +460,17 @@ test('the footer closes every route with a studio statement, directory, and over
       return { top: box.top, right: box.right, bottom: box.bottom, left: box.left, width: box.width, height: box.height };
     };
     const box = rect(element);
-    const strapline = rect(element.querySelector('.site-footer__strapline'));
+    const signature = rect(element.querySelector('.site-footer__signature'));
     const explore = rect(element.querySelector('.site-footer__group--explore'));
     const brand = rect(element.querySelector('.site-footer__brand'));
     const legal = rect(element.querySelector('.site-footer__legal'));
-    return { box, strapline, explore, brand, legal, overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth };
+    return { box, signature, explore, brand, legal, overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth };
   });
-  expect(desktop.box.height).toBeGreaterThanOrEqual(900);
-  expect(desktop.strapline.right).toBeLessThanOrEqual(desktop.explore.left + 1);
-  expect(desktop.brand.width).toBeGreaterThan(500);
-  expect(Math.abs(desktop.brand.bottom - desktop.legal.bottom)).toBeLessThanOrEqual(4);
+  expect(desktop.box.height).toBeLessThan(400);
+  expect(desktop.signature.right).toBeLessThanOrEqual(desktop.explore.left + 1);
+  expect(Math.abs(desktop.signature.top - desktop.explore.top)).toBeLessThanOrEqual(1);
+  expect(desktop.brand.width).toBeGreaterThan(250);
+  expect(desktop.legal.top - desktop.signature.bottom).toBeLessThanOrEqual(20);
   expect(desktop.overflow).toBeLessThanOrEqual(1);
 
   await page.setViewportSize({ width: 390, height: 844 });
@@ -459,8 +486,9 @@ test('the footer closes every route with a studio statement, directory, and over
     const brand = rect(element.querySelector('.site-footer__brand'));
     return { box, explore, connect, brand, overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth };
   });
-  expect(mobile.box.height).toBeGreaterThanOrEqual(844);
-  expect(Math.abs(mobile.explore.left - mobile.connect.left)).toBeLessThanOrEqual(1);
+  expect(mobile.box.height).toBeLessThan(450);
+  expect(Math.abs(mobile.explore.top - mobile.connect.top)).toBeLessThanOrEqual(1);
+  expect(mobile.explore.right).toBeLessThanOrEqual(mobile.connect.left);
   expect(mobile.brand.width).toBeGreaterThan(150);
   expect(mobile.overflow).toBeLessThanOrEqual(1);
 });
@@ -498,7 +526,7 @@ test('the earlier SVG title kits remain available behind the title treatment swi
   await page.goto('/');
   const intro = page.locator('[data-logo-intro]');
   await expect(intro).toHaveAttribute('data-state', 'settled', { timeout: 6_000 });
-  await expect(intro).toHaveAttribute('data-title-source', 'pp-neue-montreal');
+  await expect(intro).toHaveAttribute('data-title-source', 'helvetica-now-display');
   await expect(intro).toHaveAttribute('data-title-treatment', 'type');
   await expect(intro.locator('[data-svg-title]')).toHaveCount(0);
   expect((await page.request.get('/media/brand/new-work-title-letter-kit/new-work-title-letters.svg')).ok())
@@ -512,7 +540,7 @@ test('the earlier SVG title kits remain available behind the title treatment swi
 test('the disabled title entrance remains disabled across navigation', async ({ page }) => {
   await page.goto('/', { waitUntil: 'domcontentloaded' });
   await expect(page.locator('[data-logo-intro]')).toHaveAttribute('data-state', 'settled');
-  await page.goto('/about');
+  await page.goto('/contact');
   expect(await page.evaluate(() => sessionStorage.getItem('new-work:logo-intro:title:v1'))).toBeNull();
 
   await page.goto('/', { waitUntil: 'domcontentloaded' });
@@ -522,12 +550,28 @@ test('the disabled title entrance remains disabled across navigation', async ({ 
   expect(await page.evaluate(() => sessionStorage.getItem('new-work:logo-intro:title:v1'))).toBeNull();
 });
 
-test('the type title reveals animated imagery one letter at a time on hover', async ({ page }) => {
+test('the opening gallery title reveals animated imagery on both words in both modes', async ({ page }) => {
   await page.goto('/');
   test.skip(
     !await page.evaluate(() => matchMedia('(hover: hover) and (pointer: fine)').matches),
     'Per-letter title hover is a fine-pointer enhancement.',
   );
+  await page.evaluate(() => document.fonts.ready);
+  await expect(page.locator('[data-logo-intro]')).toHaveAttribute('data-logo-reveal-phase', 'done');
+
+  // On the splash, hover selects the shared fill rather than covering part
+  // of the lockup with a separate letter-sized video.
+  for (const index of [0, 1, 2, 3, 4, 5, 6]) {
+    const letter = page.locator(`[data-type-letter="${index}"]`);
+    await letter.locator('[data-type-letter-hit]').hover();
+    await expect(letter).toHaveAttribute('data-type-active', 'true');
+    await expect(letter.locator('[data-type-letter-canvas]')).toHaveCSS('opacity', '0');
+    await expect(page.locator('[data-splash-canvas]')).toHaveCSS('opacity', '1');
+    expect(await letter.evaluate((element) => getComputedStyle(element, '::before').opacity)).toBe('0');
+  }
+  await page.keyboard.press('Enter');
+  await expect(page.locator('[data-logo-intro]')).toHaveAttribute('data-title-state', 'home');
+  await expect(page.locator('[data-logo-intro]')).toHaveAttribute('data-title-motion', 'settled');
 
   const firstLetter = page.locator('[data-type-letter="0"]');
   const nextLetter = page.locator('[data-type-letter="1"]');
@@ -550,17 +594,41 @@ test('the type title reveals animated imagery one letter at a time on hover', as
   expect(await firstLetter.evaluate((element) => getComputedStyle(element, '::after').opacity)).toBe('0');
   const maskGeometry = await firstLetter.evaluate((element) => {
     const canvas = element.querySelector<HTMLCanvasElement>('[data-type-letter-canvas]')!;
-    const glyph = element.querySelector<HTMLElement>('[data-type-letter-glyph]')!;
+    const canvasBox = canvas.getBoundingClientRect();
+    const letterBox = element.getBoundingClientRect();
     return {
-      canvasWidth: canvas.getBoundingClientRect().width,
-      letterWidth: element.getBoundingClientRect().width,
-      negativeTracking: Math.max(0, -Number.parseFloat(getComputedStyle(glyph).letterSpacing)),
+      canvasWidth: canvasBox.width,
+      letterWidth: letterBox.width,
+      containsLetter: canvasBox.left <= letterBox.left && canvasBox.right >= letterBox.right
+        && canvasBox.top <= letterBox.top && canvasBox.bottom >= letterBox.bottom,
     };
   });
   expect(maskGeometry.canvasWidth).toBeGreaterThan(maskGeometry.letterWidth);
-  expect(maskGeometry.canvasWidth - maskGeometry.letterWidth)
-    .toBeCloseTo(maskGeometry.negativeTracking, 0);
+  expect(maskGeometry.containsLetter).toBe(true);
   expect(await firstLetter.evaluate((element) => element.getBoundingClientRect().width)).toBeCloseTo(initialWidth, 1);
+
+  const hoverEveryLetter = async () => {
+    for (const index of [0, 1, 2, 3, 4, 5, 6]) {
+      const letter = page.locator(`[data-type-letter="${index}"]`);
+      const hit = letter.locator('[data-type-letter-hit]');
+      const bounds = await hit.boundingBox();
+      expect(bounds).not.toBeNull();
+      // The gallery overlaps the bottom of the wordmark. Test the exposed
+      // upper part of each glyph without forcing a pointer through a photo.
+      await page.mouse.move(bounds!.x + bounds!.width / 2, bounds!.y + Math.min(16, bounds!.height / 4));
+      await expect(letter).toHaveAttribute('data-type-active', 'true');
+      await expect(page.locator('[data-type-active="true"]')).toHaveCount(1);
+      await expect(hit).toHaveCSS('pointer-events', 'auto');
+      if (await letter.locator('video').count()) {
+        await expect(letter).toHaveAttribute('data-type-media-ready', 'true');
+        await expect(letter.locator('[data-type-letter-canvas]')).toHaveCSS('opacity', '1');
+      } else {
+        await expect.poll(() => letter.evaluate((element) =>
+          getComputedStyle(element, '::before').opacity)).toBe('1');
+      }
+    }
+  };
+  await hoverEveryLetter();
 });
 
 test("title hover zones share the painted glyphs' vertical bounds", async ({ page }) => {
@@ -570,6 +638,7 @@ test("title hover zones share the painted glyphs' vertical bounds", async ({ pag
     'Per-letter title hover is a fine-pointer enhancement.',
   );
   await page.evaluate(() => document.fonts.ready);
+  await expect(page.locator('[data-logo-intro]')).toHaveAttribute('data-logo-reveal-phase', 'done');
 
   const geometry = await page.locator('[data-type-letter]').evaluateAll((letters) => letters.map((letter) => {
     const hit = letter.querySelector<HTMLElement>('[data-type-letter-hit]')!;
@@ -643,6 +712,9 @@ test('the settled title uses two lowercase lines above the staggered gallery col
         stageWidth: stage?.width || 0,
         stageBottom: stage?.bottom || 0,
         descriptorTop: descriptor?.top || 0,
+        descriptorRight: descriptor?.right || 0,
+        introRight: box.right,
+        stageTop: stage?.top || 0,
         gridTop: grid?.top || 0,
         galleryTop: gallery?.getBoundingClientRect().top || 0,
         introBottom: box.bottom,
@@ -674,25 +746,28 @@ test('the settled title uses two lowercase lines above the staggered gallery col
     expect(layout.stageHeight / layout.stageWidth).toBeGreaterThanOrEqual(0.28);
     expect(layout.titleTranslate).toMatch(/-10%$/u);
     expect(layout.lineCount).toBe(2);
-    expect(layout.descriptorTop).toBeGreaterThanOrEqual(layout.stageBottom);
+    // Review round 2: the descriptor sits at the top right of the title area.
+    expect(layout.descriptorTop).toBeLessThan(layout.stageTop + (layout.stageBottom - layout.stageTop) / 2);
+    expect(layout.introRight - layout.descriptorRight).toBeLessThanOrEqual(80);
     expect(layout.gridTop).toBeLessThan(layout.introBottom);
     expect(layout.titleStack).toBeGreaterThan(layout.galleryStack);
     expect(layout.galleryOverflow).toBe('clip');
     expect(layout.galleryClip).toBe('none');
     if (viewport.width >= 1_200) {
       expect(Math.min(...Object.values(layout.firstColumnTops))).toBeGreaterThanOrEqual(layout.galleryTop);
-      expect(layout.firstColumnTops['1']! - layout.firstColumnTops['2']!).toBeGreaterThanOrEqual(48);
-      expect(layout.firstColumnTops['3']!).toBeLessThan(layout.firstColumnTops['2']!);
+      const heightOrder = Object.keys(layout.firstColumnTops).sort((left, right) =>
+        layout.firstColumnTops[left]! - layout.firstColumnTops[right]!);
+      expect(heightOrder).toEqual(['1', '4', '3', '2']);
       expect(Math.min(...Object.values(layout.firstColumnTops))).toBeLessThan(layout.introBottom);
-      expect(layout.firstColumnLifts['2']! / layout.firstColumnLifts['1']!).toBeCloseTo(.8, 1);
-      expect(layout.firstColumnLifts['3']! / layout.firstColumnLifts['1']!).toBeCloseTo(10 / 3, 1);
-      expect(layout.firstColumnLifts['4']! / layout.firstColumnLifts['1']!).toBeCloseTo(5 / 3, 1);
+      expect(layout.firstColumnLifts['2']).toBe(0);
+      expect(layout.firstColumnLifts['3']! / layout.firstColumnLifts['1']!).toBeCloseTo(1 / 3, 1);
+      expect(layout.firstColumnLifts['4']! / layout.firstColumnLifts['1']!).toBeCloseTo(2 / 3, 1);
     }
     expect(layout.outlineColor).toBe('rgba(0, 0, 0, 0)');
     expect(Number.parseFloat(layout.outlineStroke || '0')).toBeGreaterThanOrEqual(1);
     expect(layout.solidColor).not.toBe('rgba(0, 0, 0, 0)');
-    expect(layout.fontFamily).toContain('New Work Sans');
-    expect(Number(layout.fontWeight)).toBeGreaterThanOrEqual(700);
+    expect(layout.fontFamily).toContain('New Work Title');
+    expect(Number(layout.fontWeight)).toBeGreaterThanOrEqual(900);
     expect(layout.overflow).toBeLessThanOrEqual(1);
   }
 });
@@ -775,6 +850,7 @@ async function expectGridColumns(page: Page, width: number, expectedColumns: num
       grid: { left: gridBox.left, right: gridBox.right },
       cards: cardBoxes,
       laneNumbers: [...lanes.keys()].sort((left, right) => left - right),
+      laneCounts: [...lanes.values()].map((entries) => entries.length),
       firstTopByLane,
       maxCardGap: Math.max(0, ...laneGaps.map((gap) => gap.card)),
       maxContentGap: Math.max(0, ...laneGaps.map((gap) => gap.content)),
@@ -795,6 +871,7 @@ async function expectGridColumns(page: Page, width: number, expectedColumns: num
     expect(layout.grid.right).toBeLessThanOrEqual(layout.viewportWidth + 1);
   }
   expect(layout.laneNumbers).toEqual(Array.from({ length: expectedColumns }, (_, index) => index + 1));
+  expect(Math.max(...layout.laneCounts) - Math.min(...layout.laneCounts)).toBeLessThanOrEqual(1);
   expect(layout.overlaps).toEqual([]);
   expect(layout.maxCardGap).toBeLessThanOrEqual(expectedColumns === 1 ? 8 : 16);
   expect(layout.maxContentGap).toBeLessThanOrEqual(expectedColumns === 1 ? 8 : 32);
@@ -828,7 +905,14 @@ async function expectGridColumns(page: Page, width: number, expectedColumns: num
 
 test('the work index has exactly 4, 2, and 2 complete columns', async ({ page }) => {
   await page.goto('/');
-  await expect(page.locator('[data-project-card]')).toHaveCount(28);
+  await expect(page.locator('[data-project-card]')).toHaveCount(20);
+  const videoSlots = await page.locator('[data-project-card]').evaluateAll((cards) =>
+    cards.map((card) => Boolean(card.querySelector('video'))));
+  expect(videoSlots.slice(0, 4)).toEqual([false, false, false, true]);
+  const videosPerRow = Array.from({ length: 5 }, (_, row) =>
+    videoSlots.slice(row * 4, row * 4 + 4).filter(Boolean).length);
+  expect(videosPerRow.reduce((total, count) => total + count, 0)).toBe(7);
+  expect(videosPerRow.every((count) => count >= 1 && count <= 2)).toBe(true);
   await expect(page.locator('[data-gallery-remove]')).toHaveCount(0);
   await expect(page.locator('[data-gallery-item-id="michael-native-stop-motion-still"]')).toHaveCount(0);
   expect(await page.locator('.project-card__media').evaluateAll((items) => items.every((item) => {
@@ -850,7 +934,7 @@ test('the work index has exactly 4, 2, and 2 complete columns', async ({ page })
 test('every photo doorway opens its shared Work page and never routes through About', async ({ page }) => {
   await page.goto('/');
   const photoLinks = page.locator('[data-gallery-photo-link]');
-  await expect(photoLinks).toHaveCount(14);
+  await expect(photoLinks).toHaveCount(10);
 
   const destinations = await photoLinks.evaluateAll((links) => links.map((link) =>
     (link as HTMLAnchorElement).getAttribute('href') || ''));
@@ -1101,11 +1185,11 @@ test('the four gallery tracks share one scroll target with subtle first-order mo
     return matrix.m41;
   });
   await page.mouse.move(12, Math.min(galleryBox.y + 240, page.viewportSize()!.height - 24));
-  await expect.poll(readGalleryPointer).toBeLessThan(-10);
-  await expect.poll(readStageTranslateX).toBeLessThan(-10);
-  await page.mouse.move(page.viewportSize()!.width - 12, Math.min(galleryBox.y + 240, page.viewportSize()!.height - 24));
   await expect.poll(readGalleryPointer).toBeGreaterThan(10);
   await expect.poll(readStageTranslateX).toBeGreaterThan(10);
+  await page.mouse.move(page.viewportSize()!.width - 12, Math.min(galleryBox.y + 240, page.viewportSize()!.height - 24));
+  await expect.poll(readGalleryPointer).toBeLessThan(-10);
+  await expect.poll(readStageTranslateX).toBeLessThan(-10);
 
   await page.goto('/?motionDebug=1');
   const debugPanel = page.locator('[data-column-motion-debug]');
@@ -1275,10 +1359,23 @@ test('the desktop gallery shifts laterally while keeping card hit targets usable
   const startingBox = await targetLink.boundingBox();
   if (!startingBox) throw new Error('The gallery card is not visible.');
 
-  for (const x of [startingBox.x + 3, startingBox.x + startingBox.width - 3]) {
+  for (const [edge, x] of [
+    ['left', startingBox.x + 3],
+    ['right', startingBox.x + startingBox.width - 3],
+  ] as const) {
     const y = startingBox.y + Math.min(32, startingBox.height / 2);
     await page.mouse.move(x, y);
     await page.waitForTimeout(500);
+    // The plane pans opposite the pointer. Follow the card's current edge
+    // before hit-testing, rather than sampling where it was before the pan.
+    const shiftedBox = await targetLink.boundingBox();
+    if (!shiftedBox) throw new Error('The gallery card is not visible.');
+    const point = {
+      x: edge === 'left' ? shiftedBox.x + 3 : shiftedBox.x + shiftedBox.width - 3,
+      y: shiftedBox.y + Math.min(32, shiftedBox.height / 2),
+    };
+    await page.mouse.move(point.x, point.y);
+    await page.waitForTimeout(250);
     const hitState = await targetLink.evaluate((element, point) => {
       const hit = document.elementFromPoint(point.x, point.y);
       return {
@@ -1286,7 +1383,7 @@ test('the desktop gallery shifts laterally while keeping card hit targets usable
         left: element.getBoundingClientRect().left,
         ownsPoint: Boolean(hit && element.contains(hit)),
       };
-    }, { x, y });
+    }, point);
     expect(hitState.ownsPoint).toBe(true);
     expect(hitState.cursor).toBe('pointer');
     expect(Math.abs(await horizontalTransform())).toBeLessThan(.1);
@@ -1427,9 +1524,9 @@ test('card, navigation, and related-project hover treatments have keyboard-focus
     await expect.poll(async () => Math.abs((await readPan()).x) + Math.abs((await readPan()).y)).toBeLessThan(.1);
   }
 
-  const aboutLink = page.locator('.desktop-nav__link', { hasText: 'About' });
-  await aboutLink.focus();
-  await expect.poll(() => aboutLink.evaluate((element) =>
+  const contactLink = page.locator('.desktop-nav__link', { hasText: 'Contact' });
+  await contactLink.focus();
+  await expect.poll(() => contactLink.evaluate((element) =>
     new DOMMatrixReadOnly(getComputedStyle(element, '::after').transform).a)).toBeGreaterThan(0.95);
 
   await page.goto('/work/native-cucumber-mint-stop-motion');
@@ -1451,41 +1548,38 @@ test('card, navigation, and related-project hover treatments have keyboard-focus
   expect(copyShift).toBeLessThan(0);
 });
 
-test('the manifesto reveals letters in direct proportion to reversible page scroll', async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 1_000 });
+test('the BTS heading reveals letters in direct proportion to reversible page scroll', async ({ page }) => {
   await page.goto('/');
-  const manifesto = page.locator('[data-manifesto]');
-  const statement = manifesto.locator('p:not(.sr-only)');
+  const statement = page.locator('[data-bts] [data-motion-split]');
 
-  await expect(manifesto.locator('.manifesto__meta')).toHaveCount(0);
-  await expect(manifesto).not.toContainText('NW / 001');
+  await expect(page.locator('[data-manifesto]')).toHaveCount(0);
+  await expect(page.locator('main')).not.toContainText('Lorem ipsum');
+  await expect(page.getByRole('heading', { name: 'Behind the scenes', exact: true })).toBeAttached();
   await expect(statement).toHaveAttribute('data-motion-split', 'scroll-letters');
   await expect(statement).toHaveAttribute('data-motion-split-ready', 'animated');
   const opening = await statement.evaluate((element) => {
-    const lines = [...element.querySelectorAll<HTMLElement>('.motion-line')];
     const chars = [...element.querySelectorAll<HTMLElement>('.motion-char')];
-    const style = getComputedStyle(element);
+    const title = element.querySelector<HTMLElement>('.bts__title')!;
     return {
-      text: element.textContent?.trim() || '',
-      textTransform: style.textTransform,
-      width: element.getBoundingClientRect().width,
-      lineCount: lines.length,
+      text: element.textContent?.replace(/\s+/gu, ' ').trim() || '',
+      textTransform: getComputedStyle(title).textTransform,
+      outline: getComputedStyle(element.querySelector('.bts__title-outline')!).webkitTextStrokeWidth,
       charCount: chars.length,
       visibleChars: chars.filter((char) => Number(getComputedStyle(char).opacity) >= .5).length,
     };
   });
-  expect(opening.text).toMatch(/^Lorem ipsum/u);
-  expect(opening.text).not.toMatch(/^LOREM IPSUM/u);
-  expect(opening.textTransform).toBe('none');
-  expect(opening.width).toBeGreaterThan(900);
-  expect(opening.lineCount).toBeGreaterThan(1);
-  expect(opening.charCount).toBeGreaterThan(40);
+  expect(opening.text).toBe('Behind the scenes');
+  expect(opening.textTransform).toBe('lowercase');
+  expect(parseFloat(opening.outline)).toBeGreaterThanOrEqual(1);
+  expect(opening.charCount).toBe(15);
   expect(opening.visibleChars).toBe(0);
 
   const visibleCharacters = () => statement.evaluate((element) =>
     [...element.querySelectorAll<HTMLElement>('.motion-char')]
       .filter((char) => Number(getComputedStyle(char).opacity) >= .5).length);
-  await manifesto.evaluate((element) => element.scrollIntoView({ block: 'center' }));
+  await statement.evaluate((element) => {
+    window.scrollTo(0, window.scrollY + element.getBoundingClientRect().top - window.innerHeight * .65);
+  });
   await expect.poll(visibleCharacters).toBeGreaterThan(0);
   const midpointCount = await visibleCharacters();
   expect(midpointCount).toBeLessThan(opening.charCount);
@@ -1504,15 +1598,48 @@ test('the manifesto reveals letters in direct proportion to reversible page scro
   await expect(statement).toHaveCSS('opacity', '1');
 });
 
+test('the BTS heading stays aligned after the opening gallery handoff', async ({ page }) => {
+  await page.goto('/');
+  const workPage = page.locator('[data-logo-work-page]');
+  const statement = page.locator('[data-bts] [data-motion-split]');
+  await expect(workPage).toHaveAttribute('data-handoff', 'false');
+  await expect(statement).toHaveAttribute('data-motion-split-ready', 'animated');
+  const visibleCharacters = () => statement.locator('.motion-char').evaluateAll((chars) =>
+    chars.filter((char) => Number(getComputedStyle(char).opacity) >= .5).length);
+  const charCount = await statement.locator('.motion-char').count();
+
+  for (let visit = 0; visit < 2; visit += 1) {
+    await page.keyboard.press('PageDown');
+    await expect(workPage).toHaveAttribute('data-handoff', 'true');
+    await expect(page.locator('[data-logo-intro]')).toHaveAttribute('data-title-motion', 'settled');
+    await statement.evaluate((element) => {
+      window.scrollTo(0, window.scrollY + element.getBoundingClientRect().top - window.innerHeight * .65);
+    });
+    await expect.poll(visibleCharacters).toBeGreaterThan(0);
+    expect(await visibleCharacters()).toBeLessThan(charCount);
+
+    await statement.evaluate((element) => {
+      window.scrollTo(0, window.scrollY + element.getBoundingClientRect().bottom - window.innerHeight * .35);
+    });
+    await expect.poll(visibleCharacters).toBe(charCount);
+
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await expect.poll(visibleCharacters).toBe(0);
+    if (visit === 0) {
+      // Returning to the opening screen requires deliberate input after a dwell.
+      await page.waitForTimeout(500);
+      await page.keyboard.press('Home');
+      await expect(workPage).toHaveAttribute('data-handoff', 'false');
+      await expect(page.locator('[data-logo-intro]')).toHaveAttribute('data-title-motion', 'settled');
+      // A resize can remeasure scroll triggers while the page is displaced.
+      const viewport = page.viewportSize()!;
+      await page.setViewportSize({ width: viewport.width, height: viewport.height + 40 });
+    }
+  }
+});
+
 test('prototype filler copy completes the editorial review surfaces', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.goto('/about');
-  await expect(page.locator('[data-about-experience]')).toHaveAttribute('data-mode', 'fallback');
-  await expect(page.getByRole('heading', { level: 1, name: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.' }))
-    .toBeVisible();
-  await expect(page.getByRole('heading', { level: 2, name: 'What should we make next?' }))
-    .toBeVisible();
-
   await page.goto('/contact');
   await expect(page.getByRole('link', { name: 'hello@lorem.ipsum' })).toHaveCount(1);
   await expect(page.locator('.contact-content').getByRole('link', { name: 'hello@lorem.ipsum' }))
@@ -1528,7 +1655,8 @@ test('prototype filler copy completes the editorial review surfaces', async ({ p
   await expect(page.locator('.project-disclosures details')).toHaveCount(2);
 
   await page.goto('/');
-  await expect(page.locator('[data-manifesto]')).toContainText('Lorem ipsum dolor sit amet');
+  await expect(page.locator('[data-manifesto]')).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Behind the scenes', exact: true })).toBeVisible();
   await expect(page.locator('.reel')).toHaveCount(1);
   await expect(page.locator('[data-reel-shell]')).toBeVisible();
   await expect(page.locator('.notes-strip')).toHaveCount(0);
@@ -1539,7 +1667,6 @@ test('key routes render without editorial markers and remain noindex in prototyp
   await page.emulateMedia({ reducedMotion: 'reduce' });
   const routes = [
     { path: '/', heading: 'Selected work', statuses: [200] },
-    { path: '/about', heading: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.', statuses: [200] },
     { path: '/contact', heading: 'Contact', statuses: [200] },
     { path: '/work/arc', heading: 'Arc', statuses: [200] },
     { path: '/work/mercury-an-unexpected-life', heading: 'Mercury — An Unexpected Life', statuses: [200] },
@@ -1558,7 +1685,9 @@ test('key routes render without editorial markers and remain noindex in prototyp
   }
 
   await page.goto('/');
-  await expect(page.getByText('Chanel Test', { exact: true }).first()).toBeAttached();
+  // A prototype-only piece inside the 20-piece gallery (Chanel Test now falls
+  // outside the cap).
+  await expect(page.getByText('Dune / Tansy — Title to Confirm', { exact: true }).first()).toBeAttached();
   await expect(page.getByText('Do Not Publish Without Approval')).toHaveCount(0);
 });
 
@@ -3526,8 +3655,8 @@ test('ClientRouter navigation persists project media and restores the originatin
   await page.waitForTimeout(300);
   const returnedRightPointerX = await page.locator('[data-work-gallery]').evaluate((element) =>
     Number.parseFloat(getComputedStyle(element).getPropertyValue('--gallery-pointer-x')) || 0);
-  expect(returnedLeftPointerX).toBeLessThan(-1);
-  expect(returnedRightPointerX).toBeGreaterThan(1);
+  expect(returnedLeftPointerX).toBeGreaterThan(1);
+  expect(returnedRightPointerX).toBeLessThan(-1);
 
   await expect(page.locator('[data-card-cursor-label]')).toHaveCount(0);
 
@@ -3684,7 +3813,7 @@ test('a failed first-party image leaves a titled fallback without collapsing the
   await expect(page.getByRole('heading', { level: 1, name: 'Arc' })).toBeVisible();
 });
 
-test('the placeholder About film closes Work above the footer while disabled Notes stay absent', async ({ page }) => {
+test('the unlabeled reel closes Work above the footer while disabled Notes stay absent', async ({ page }) => {
   await page.goto('/');
 
   const reel = page.locator('.reel');
@@ -3699,7 +3828,8 @@ test('the placeholder About film closes Work above the footer while disabled Not
       && (element.compareDocumentPosition(footer) & Node.DOCUMENT_POSITION_FOLLOWING));
   })).toBe(true);
   await expect(page.locator('[data-notes-strip]')).toHaveCount(0);
-  await expect(page.getByRole('heading', { name: 'About' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'About' })).toHaveCount(0);
+  await expect(reel.locator('#reel-heading')).toHaveClass('sr-only');
   await expect(page.getByRole('heading', { name: 'Notes' })).toHaveCount(0);
   await expect(page.locator('[data-site-header] a', { hasText: 'Notes' })).toHaveCount(0);
 
@@ -4036,6 +4166,52 @@ test('pointer motion never reshuffles the active desktop preview pool', async ({
   })).toBe(true);
 });
 
+test('gallery posters cover every frame while a delayed preview fades into playback', async ({ page }) => {
+  let releaseVideos!: () => void;
+  const videoGate = new Promise<void>((resolve) => { releaseVideos = resolve; });
+  await page.route('**/media/video-previews/**/*.mp4', async (route) => {
+    await videoGate;
+    await route.continue();
+  });
+  await page.goto('/', { waitUntil: 'domcontentloaded' });
+  const preview = page.locator('[data-preview-video]').first();
+  await preview.evaluate((video) => video.scrollIntoView({ block: 'center' }));
+  const poster = page.locator('[data-project-card]:has([data-preview-video])').first()
+    .locator('img[data-gallery-image]');
+  await expect(poster).toHaveAttribute('data-gallery-image-ready', 'true');
+  await expect(poster).toHaveCSS('opacity', '1');
+  await expect(preview).toHaveCSS('opacity', '0');
+
+  await preview.evaluate((element) => {
+    const video = element as HTMLVideoElement;
+    const image = video.closest('[data-card-media]')!.querySelector('img')!;
+    const frames: Array<{ videoOpacity: number; coverage: number }> = [];
+    (window as Window & { __previewHandoffFrames?: typeof frames }).__previewHandoffFrames = frames;
+    const sample = () => {
+      const videoOpacity = Number.parseFloat(getComputedStyle(video).opacity);
+      const imageStyle = getComputedStyle(image);
+      const posterOpacity = imageStyle.visibility === 'visible'
+        ? Number.parseFloat(imageStyle.opacity) : 0;
+      const frameOpacity = video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA ? videoOpacity : 0;
+      frames.push({
+        videoOpacity,
+        coverage: frameOpacity + posterOpacity * (1 - frameOpacity),
+      });
+      if (video.dataset.playing !== 'true' || videoOpacity < 1) requestAnimationFrame(sample);
+    };
+    sample();
+  });
+  releaseVideos();
+  await expect(preview).toHaveAttribute('data-playing', 'true');
+  await expect(preview).toHaveCSS('opacity', '1');
+  const frames = await page.evaluate(() => (
+    window as Window & { __previewHandoffFrames?: Array<{ videoOpacity: number; coverage: number }> }
+  ).__previewHandoffFrames ?? []);
+  expect(frames.some(({ videoOpacity }) => videoOpacity > 0 && videoOpacity < 1)).toBe(true);
+  expect(frames.filter(({ coverage }) => coverage < .99), 'No frame should expose the card background')
+    .toEqual([]);
+});
+
 test('every predominantly visible gallery preview starts without hover or focus', async ({ page }) => {
   await page.goto('/');
   const olympicsPreview = page.locator(
@@ -4059,21 +4235,26 @@ test('every predominantly visible gallery preview starts without hover or focus'
   })).toBe(0);
 });
 
-test('gallery images prepare early while background video requests remain bounded', async ({ page }) => {
-  await page.goto('/');
-  const imageApproachDistance = await page.evaluate(() => Math.max(720, window.innerHeight * 1.5));
-
-  await expect.poll(() => page.locator('img[data-gallery-preload]').evaluateAll((images, distance) => {
-    const approaching = images.filter((image) => {
-      const bounds = image.getBoundingClientRect();
-      return bounds.top > window.innerHeight && bounds.top <= window.innerHeight + Number(distance);
-    });
-    return {
-      count: approaching.length,
-      ready: approaching.length > 0
-        && approaching.every((image) => image.dataset.galleryPreloaded === 'true'),
-    };
-  }, imageApproachDistance)).toEqual({ count: expect.any(Number), ready: true });
+test('opening gallery images load behind the splash while background video requests remain bounded', async ({ page }) => {
+  const imageRequests = new Set<string>();
+  page.on('request', (request) => {
+    if (request.resourceType() === 'image') imageRequests.add(request.url());
+  });
+  await page.goto('/', { waitUntil: 'domcontentloaded' });
+  const galleryImages = page.locator('[data-project-grid] img[data-gallery-image]');
+  await expect(galleryImages).toHaveCount(20);
+  await expect.poll(() => galleryImages.evaluateAll((images) => images.every((element) => {
+    const image = element as HTMLImageElement;
+    return image.complete && image.naturalWidth > 0 && image.dataset.galleryImageReady === 'true';
+  }))).toBe(true);
+  const sources = await galleryImages.evaluateAll((images) => images.map((image) =>
+    (image as HTMLImageElement).currentSrc));
+  expect(sources.filter((source) => !imageRequests.has(source))).toEqual([]);
+  // The entire edit, including offscreen rows, is decoded before any gesture
+  // leaves the splash. Loading does not depend on the hidden gallery's bounds.
+  await expect(page.locator('[data-logo-work-page]')).toHaveAttribute('data-handoff', 'false');
+  await expect(page.locator('[data-logo-work-body]')).toHaveCSS('opacity', '0');
+  expect(await page.evaluate(() => scrollY)).toBe(0);
 
   await expect.poll(() => page.locator('[data-preview-video]').evaluateAll((videos) => ({
     prepared: videos.filter((video) => video.hasAttribute('src')).length,

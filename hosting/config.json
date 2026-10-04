@@ -1,0 +1,7 @@
+{
+  "site": "https://ben-keller.github.io",
+  "base": "/newwork",
+  "defaultVersion": "v2",
+  "includeV1": true,
+  "v2ContentMode": "prototype"
+}

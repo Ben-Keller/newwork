@@ -1,0 +1,67 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import BtsExperiments from '../../archive/bts-experiments/BtsExperiments.astro';
+import { getSiteContent } from '../../lib/content';
+import { buildBtsItems } from '../../lib/bts';
+import type { SiteContent } from '../../lib/types';
+
+// Archived work stays viewable in local and preview builds and is never
+// published: a production build generates no archive pages at all.
+export async function getStaticPaths() {
+  const content = await getSiteContent();
+  if (content.mode === 'production') return [];
+  return [{ params: { experiment: 'bts-experiments' }, props: { content } }];
+}
+
+interface Props {
+  content: SiteContent;
+}
+const { content } = Astro.props;
+// Placeholder frames drawn from this site's work gallery.
+const items = buildBtsItems(content.galleryEntries);
+---
+
+<BaseLayout
+  content={content}
+  title="Archive · BTS experiments"
+  description="Archived behind-the-scenes presentation experiments."
+  seo={{ noIndex: true }}
+  pageClass="archive-page"
+>
+  <section class="archive-intro" aria-labelledby="archive-heading">
+    <p class="archive-intro__kicker">Archive</p>
+    <h1 id="archive-heading">BTS experiments</h1>
+    <p class="archive-intro__note">
+      Four interactive ways to present behind-the-scenes material, set aside in review round 2 for use on another
+      site. The code lives in <code>src/archive/bts-experiments</code>; this page only exists in local and preview
+      builds.
+    </p>
+  </section>
+  <BtsExperiments items={items} />
+</BaseLayout>
+
+<style>
+  .archive-intro {
+    display: grid;
+    gap: .75rem;
+    max-width: 1800px;
+    margin: 0 auto;
+    padding: clamp(2rem, 6vw, 5rem) var(--page-gutter) clamp(1.5rem, 3vw, 2.5rem);
+  }
+
+  .archive-intro__kicker {
+    font-size: var(--text-xs);
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+
+  .archive-intro h1 {
+    font-size: clamp(2.6rem, 1.4rem + 5vw, 6.5rem);
+  }
+
+  .archive-intro__note {
+    max-width: 60ch;
+    color: var(--color-muted);
+  }
+</style>

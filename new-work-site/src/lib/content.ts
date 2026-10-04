@@ -669,7 +669,6 @@ function normalizeReel(value: unknown): ReelView {
 
 const DEFAULT_NAVIGATION: SiteSettingsView['navigation'] = [
   {label: 'Work', destination: 'work', visible: true},
-  {label: 'About', destination: 'about', visible: true},
   {label: 'Contact', destination: 'contact', visible: true},
 ];
 
@@ -764,18 +763,12 @@ function normalizeFooter(value: unknown): FooterSettingsView {
     : [];
 
   return {
-    strapline: strapline.length ? strapline : [
-      {text: 'New Work is film.', emphasis: 'New Work'},
-      {text: 'New Work is photography.', emphasis: 'New Work'},
-      {text: 'We make beautiful work.', emphasis: 'beautiful'},
-      {text: 'Come create with us.', emphasis: 'create'},
-    ],
+    strapline,
     peopleHeading: stringFrom(footer.peopleHeading) || 'People',
     exploreHeading: stringFrom(footer.exploreHeading) || 'Explore',
     connectHeading: stringFrom(footer.connectHeading) || 'Connect',
     exploreLinks: exploreLinks.length ? exploreLinks : [
       {label: 'Work', destination: 'work'},
-      {label: 'About', destination: 'about'},
       {label: 'Contact', destination: 'contact'},
     ],
     contactLabel: stringFrom(footer.contactLabel),

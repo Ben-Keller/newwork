@@ -157,6 +157,9 @@ html[data-work-project-transition="to-project"] .project-overlay__panel {
 @layer components {
   .work-index {
     --gallery-pointer-x: 0px;
+    /* How far the gallery rises into the wordmark. Review round 2 lowered it
+       (was clamp(-9.5rem, -9vw, -5.5rem)) so the media covers less of it. */
+    --gallery-title-overlap: clamp(-6rem, -5.75vw, -3.5rem);
     position: relative;
     /* Gallery media crosses the lower wordmark edge, but remains behind the
        title so the wordmark reads cleanly and every letter stays interactive. */
@@ -164,7 +167,7 @@ html[data-work-project-transition="to-project"] .project-overlay__panel {
     isolation: isolate;
     overflow: clip;
     max-width: 1800px;
-    margin: clamp(-9.5rem, -9vw, -5.5rem) auto 0;
+    margin: var(--gallery-title-overlap) auto 0;
     padding: 0 var(--page-gutter);
   }
   .project-grid-stage {
@@ -179,12 +182,12 @@ html[data-work-project-transition="to-project"] .project-overlay__panel {
     will-change: transform;
   }
   .project-grid {
+    --gallery-gap: 10px;
     position: relative;
     z-index: 1;
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    column-gap: clamp(4px, .5vw, 8px);
-    row-gap: 8px;
+    gap: var(--gallery-gap);
     align-items: start;
   }
   .project-grid[data-masonry-ready="true"] {
@@ -192,7 +195,7 @@ html[data-work-project-transition="to-project"] .project-overlay__panel {
        Dense placement lets each lane use its earliest available row while the
        fixed column and DOM order keep the composition and keyboard order stable. */
     grid-auto-flow: row dense;
-    grid-auto-rows: 4px;
+    grid-auto-rows: 1px;
     row-gap: 0;
   }
 
@@ -202,13 +205,13 @@ html[data-work-project-transition="to-project"] .project-overlay__panel {
     --card-scale: 1;
     /* Read directly by the masonry measurement script; keep this resolved to
        a numeric CSS length instead of an unevaluated clamp() token. */
-    --card-rhythm: 8px;
+    --card-rhythm: var(--gallery-gap);
     --column-entry-offset: 0px;
     --column-lift: 0px;
     position: relative;
     min-width: 0;
     align-self: start;
-    padding-block-start: calc(var(--column-entry-offset) + max(0px, var(--home-offset, 0px)));
+    padding-block-start: var(--column-entry-offset);
     /* Keep the editorial lift independent from the scroll-lag transform. The
        motion runtime owns `transform`; individual `translate` composes with it
        without producing a second scroll response or a layout jump. */
@@ -217,7 +220,7 @@ html[data-work-project-transition="to-project"] .project-overlay__panel {
   .gallery-card-remove {
     position: absolute;
     z-index: 6;
-    top: calc(var(--column-entry-offset) + max(0px, var(--home-offset, 0px)) + 6px);
+    top: calc(var(--column-entry-offset) + 6px);
     left: 50%;
     display: grid;
     width: 40px;
@@ -261,6 +264,7 @@ html[data-work-project-transition="to-project"] .project-overlay__panel {
   }
   .project-card--wide { grid-column: 1 / -1; }
   .project-card--wide .project-card__media { aspect-ratio: 3 / 2; }
+
   .project-card .responsive-image, .project-card .responsive-image picture,
   .project-card .responsive-image img { width: 100%; height: 100%; }
   .project-card img { object-fit: cover; }
@@ -307,16 +311,14 @@ html[data-work-project-transition="to-project"] .project-overlay__panel {
   .project-card a:focus-visible .project-card__label-mask > span { opacity: 1; transform: translateY(0); }
   .preview-video, .preview-video video { position: absolute; inset: 0; width: 100%; height: 100%; }
   .preview-video { z-index: 2; pointer-events: none; }
+  /* Keep the decoded photo underneath for the entire video fade. Hiding it
+     at playback start exposes the card background before video is opaque. */
   .preview-video video {
     object-fit: cover;
     opacity: 0;
     transition: opacity var(--duration-fast);
   }
   .preview-video video[data-playing="true"] { opacity: 1; }
-  .project-card__media-inner:has(.preview-video video[data-playing="true"])
-  > .responsive-image {
-    visibility: hidden;
-  }
   .preview-video video[data-route-transition-poster] { opacity: 0; transition: none; }
   [data-project-hero-media][data-route-media-destination-empty]
   :is(.responsive-image, .hosted-video, .lazy-embed, .media-placeholder, .error-media),
@@ -361,7 +363,9 @@ html[data-work-project-transition="to-project"] .project-overlay__panel {
     margin-inline: auto;
     padding-inline: var(--page-gutter);
   }
-  .manifesto { padding-block: clamp(8rem, 20vh, 16rem); }
+  .manifesto {
+    padding-block: clamp(2rem, 5vh, 4rem) clamp(5rem, 9vw, 9rem);
+  }
   .manifesto p {
     max-width: 24ch;
     font-family: var(--font-editorial, var(--font-display));
@@ -379,7 +383,8 @@ html[data-work-project-transition="to-project"] .project-overlay__panel {
 
   .section-kicker, .notes-strip > header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: .75rem; }
   .section-kicker h2, .notes-strip h2 { font: 700 var(--text-sm) / 1 var(--font-body); letter-spacing: 0; text-transform: uppercase; }
-  .reel { padding-bottom: clamp(5rem, 10vw, 10rem); }
+  .reel { padding-block: clamp(2rem, 4vw, 4rem) clamp(5rem, 10vw, 10rem); }
+  .reel > :not(.sr-only) { width: 70%; margin-inline: auto; }
   .reel__frame { position: relative; overflow: hidden; background: #101010; }
   .reel__frame .responsive-image, .reel__frame video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
   .reel__frame .error-media { position: absolute; inset: 0; z-index: 4; }
@@ -653,9 +658,9 @@ html[data-work-project-transition="to-project"] .project-overlay__panel {
     --gallery-outer-bleed: clamp(84px, 7vw, 112px);
     --gallery-vertical-bleed: clamp(10rem, 15.625vw, 16.25rem);
     /* Extend the clipped gallery canvas above the raised tracks without
-       changing the grid's visual position. This keeps the complete image
-       inside the paint region while the outer tracks remain clipped inline. */
-    margin-top: calc(clamp(-9.5rem, -9vw, -5.5rem) - var(--gallery-vertical-bleed));
+       changing the grid's visual position. Include room for the entrance zoom
+       so the highest image stays complete while outer tracks clip inline. */
+    margin-top: calc(var(--gallery-title-overlap) - var(--gallery-vertical-bleed));
     padding-top: var(--gallery-vertical-bleed);
     padding-inline: max(var(--page-gutter), 42px);
   }
@@ -668,28 +673,12 @@ html[data-work-project-transition="to-project"] .project-overlay__panel {
   .project-card[data-desktop-column="2"] { grid-column: 2; }
   .project-card[data-desktop-column="3"] { grid-column: 3; }
   .project-card[data-desktop-column="4"] { grid-column: 4; }
-  /* A standard 4:5 tile is approximately 31.25vw tall in the four-track
-     desktop composition. These fixed per-track lifts therefore correspond to
-     15%, 12%, 50%, and 25% of one standard gallery tile while every card in a
-     track moves by the same amount and its internal spacing remains intact. */
-  .project-card[data-desktop-column="1"] { --column-lift: clamp(3rem, 4.6875vw, 5rem); }
-  .project-card[data-desktop-column="2"] { --column-lift: clamp(2.4rem, 3.75vw, 4rem); }
-  .project-card[data-desktop-column="3"] { --column-lift: clamp(10rem, 15.625vw, 16.25rem); }
-  .project-card[data-desktop-column="4"] { --column-lift: clamp(5rem, 7.8125vw, 8.125rem); }
-  .project-card[data-desktop-column-start][data-desktop-column="1"] {
-    /* A 4:5 tile is 1.25× its width, so 18.75% of the lane width equals
-       15% of one standard tile's height. */
-    --column-entry-offset: calc(clamp(7rem, 14vh, 10rem) + 18.75%);
-  }
-  .project-card[data-desktop-column-start][data-desktop-column="2"] {
-    --column-entry-offset: clamp(1.25rem, 2vw, 2rem);
-  }
-  .project-card[data-desktop-column-start][data-desktop-column="3"] {
-    --column-entry-offset: clamp(7rem, 14vh, 10rem);
-  }
-  .project-card[data-desktop-column-start][data-desktop-column="4"] {
-    --column-entry-offset: clamp(3rem, 6vh, 4.5rem);
-  }
+  /* Highest to lowest: 1, 4, 3, 2. Move each whole lane by the same lift so
+     the hierarchy repeats down the gallery without opening internal gaps. */
+  .project-card[data-desktop-column="1"] { --column-lift: clamp(6rem, 9.375vw, 9.75rem); }
+  .project-card[data-desktop-column="2"] { --column-lift: 0px; }
+  .project-card[data-desktop-column="3"] { --column-lift: clamp(2rem, 3.125vw, 3.25rem); }
+  .project-card[data-desktop-column="4"] { --column-lift: clamp(4rem, 6.25vw, 6.5rem); }
   .project-card--wide { --column-entry-offset: 0px; grid-column: 1 / -1; }
 }
 
@@ -718,7 +707,7 @@ html[data-work-project-transition="to-project"] .project-overlay__panel {
   :root { --page-gutter: max(14px, env(safe-area-inset-left), env(safe-area-inset-right)); --grid-gap: 14px; }
   .work-index { margin-top: -1.5rem; }
   .responsive-image img { object-position: var(--image-mobile-position, var(--image-position, 50% 50%)); }
-  .project-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 6px; }
+  .project-grid { --gallery-gap: 6px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .project-grid > .project-card[data-project-card] {
     --column-entry-offset: 0px;
     padding-block-start: 0;
@@ -756,7 +745,7 @@ html[data-work-project-transition="to-project"] .project-overlay__panel {
   .project-grid-stage, .project-grid, .project-card__media-inner, .manifesto p,
   .project-card__label--overlay, .project-card__label-mask > span,
   .related-projects img, .related-projects__copy { transform: none !important; }
-  .project-card { padding-block-start: calc(var(--column-entry-offset) + max(0px, var(--home-offset, 0px))); }
+  .project-card { padding-block-start: var(--column-entry-offset); }
   .project-card__media { clip-path: inset(0) !important; }
   :is(.all-work-link, .text-link, .social-list a)::after { transform: none !important; opacity: 0; }
   :is(.all-work-link, .text-link, .social-list a):focus-visible::after { opacity: 1; }

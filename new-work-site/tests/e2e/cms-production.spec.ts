@@ -35,19 +35,20 @@ test.describe('CMS production build', () => {
       expect(response.status, `${response.href} should be built`).toBe(200)
     }
 
-    await expect(page.locator('[data-manifesto]')).toBeVisible()
+    await expect(page.locator('[data-manifesto]')).toHaveCount(0)
     await expect(page.locator('.site-footer')).toBeVisible()
     await expect(page.locator('.draft-badge, .media-review-note, .prototype-media-note'))
       .toHaveCount(0)
 
-    await expect(page.locator('[data-site-header] a[href="/about"]')).toHaveCount(2)
+    // Review round 2: About is archived, so a CMS About destination is not
+    // linked and the route is not built.
+    await expect(page.locator('[data-site-header] a[href="/about"]')).toHaveCount(0)
     const [aboutResponse, contactResponse, notesResponse] = await Promise.all([
       page.request.get('/about'),
       page.request.get('/contact'),
       page.request.get('/notes'),
     ])
-    expect(aboutResponse.status()).toBe(200)
-    expect(await aboutResponse.text()).toContain('data-about-experience')
+    expect(aboutResponse.status()).toBe(404)
     expect(contactResponse.status()).toBe(200)
     expect(await contactResponse.text()).toMatch(/<h1\b/iu)
     expect(notesResponse.status()).toBe(404)

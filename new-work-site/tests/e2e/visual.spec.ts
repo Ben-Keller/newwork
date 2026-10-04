@@ -37,16 +37,3 @@ test('film detail visual baseline', async ({page}) => {
     timeout: 15_000,
   });
 });
-
-test('About visual baseline', async ({page}) => {
-  await page.goto('/about');
-  await page.locator('[data-about-experience]').waitFor();
-  await expect(page.locator('.reel-fallback-card')).toHaveCount(6);
-  await settleVisualPage(page);
-  await expect(page).toHaveScreenshot('about.png', {
-    fullPage: true,
-    animations: 'disabled',
-    maxDiffPixelRatio: 0.02,
-    timeout: 15_000,
-  });
-});

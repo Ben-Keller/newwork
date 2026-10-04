@@ -1,5 +1,7 @@
 ---
 import FocusGuard from './FocusGuard.astro';
+import NavigationLabel from './NavigationLabel.astro';
+import NwMark from './NwMark.astro';
 import type { NavItem } from './DesktopNav.astro';
 import { withBase, withoutBase } from '../lib/base-path';
 
@@ -16,7 +18,6 @@ export interface Props {
 const {
   items = [
     { href: withBase('/'), label: 'Work', match: 'section' },
-    { href: withBase('/about'), label: 'About', match: 'section' },
     { href: withBase('/contact'), label: 'Contact', match: 'section' },
   ],
   currentPath = withoutBase(Astro.url.pathname),
@@ -63,6 +64,7 @@ const isCurrent = (item: NavItem): boolean => {
     >
       <span class="mobile-menu__open-label">{menuLabel}</span>
       <span class="mobile-menu__summary-close-label">{closeLabel}</span>
+      <span class="mobile-menu__lines" aria-hidden="true"><span></span><span></span></span>
     </summary>
 
     <div
@@ -76,9 +78,11 @@ const isCurrent = (item: NavItem): boolean => {
 
       <div class="mobile-menu__panel-inner">
         <div class="mobile-menu__panel-header">
-          <p class="mobile-menu__title" id={titleId}>{menuLabel}</p>
-          <button class="mobile-menu__close" type="button" data-menu-close>
-            {closeLabel}
+          <NwMark />
+          <p class="sr-only" id={titleId}>{menuLabel}</p>
+          <button class="mobile-menu__close" type="button" aria-label={closeLabel} data-menu-close>
+            Close
+            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m4 4 12 12M16 4 4 16" /></svg>
           </button>
         </div>
 
@@ -89,11 +93,12 @@ const isCurrent = (item: NavItem): boolean => {
                 <a
                   class:list={['mobile-menu__link', { 'is-current': isCurrent(item) }]}
                   href={item.href}
+                  aria-label={item.label}
                   aria-current={isExactPage(item) ? 'page' : undefined}
                   data-menu-link
                   data-work-navigation={normalizePath(withoutBase(item.href)) === '/' ? '' : undefined}
                 >
-                  {item.label}
+                  <NavigationLabel label={item.label} />
                 </a>
               </li>
             ))
@@ -163,6 +168,15 @@ const isCurrent = (item: NavItem): boolean => {
       let lockedElements: LockedElement[] = [];
       let lockedScrollY = 0;
       let bodyStyles: BodyStyleSnapshot | null = null;
+      let menuAnimations: Animation[] = [];
+      let isClosing = false;
+      const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+      const cancelMenuAnimations = (): void => {
+        menuAnimations.forEach((animation) => animation.cancel());
+        menuAnimations = [];
+        isClosing = false;
+      };
 
       const getFocusableElements = (): HTMLElement[] =>
         Array.from(panel.querySelectorAll<HTMLElement>(focusableSelector)).filter(
@@ -227,6 +241,7 @@ const isCurrent = (item: NavItem): boolean => {
       };
 
       const closeMenu = (restoreFocus = true, restoreScroll = true): void => {
+        cancelMenuAnimations();
         if (!isOpen) {
           trigger.setAttribute('aria-expanded', 'false');
           panel.removeAttribute('aria-modal');
@@ -251,11 +266,27 @@ const isCurrent = (item: NavItem): boolean => {
       };
 
       const requestClose = (restoreFocus = true, restoreScroll = true): void => {
-        closeMenu(false, restoreScroll);
-        details.open = false;
-        if (restoreFocus) {
-          window.setTimeout(() => trigger.focus(), 0);
+        if (isClosing && restoreFocus) return;
+        const finish = (): void => {
+          closeMenu(false, restoreScroll);
+          details.open = false;
+          if (restoreFocus && !routeSignal.aborted) trigger.focus();
+        };
+        // Route changes and breakpoint changes close immediately. Only an
+        // intentional dismissal keeps the focus trap through the exit motion.
+        if (!isOpen || !restoreFocus || reducedMotion.matches) {
+          finish();
+          return;
         }
+        const { opacity, transform } = getComputedStyle(panel);
+        cancelMenuAnimations();
+        isClosing = true;
+        const exit = panel.animate([
+          { opacity, transform },
+          { opacity: 0, transform: 'translateY(-6px)' },
+        ], { duration: 180, easing: 'cubic-bezier(.4, 0, 1, 1)', fill: 'both' });
+        menuAnimations.push(exit);
+        void exit.finished.then(finish, () => undefined);
       };
 
       const openMenu = (): void => {
@@ -271,7 +302,26 @@ const isCurrent = (item: NavItem): boolean => {
         });
         lockBackground();
 
+        if (!reducedMotion.matches) {
+          menuAnimations.push(panel.animate([
+            { opacity: 0, transform: 'translateY(-10px)' },
+            { opacity: 1, transform: 'translateY(0)' },
+          ], { duration: 300, easing: 'cubic-bezier(.22, 1, .36, 1)' }));
+          root.querySelectorAll<HTMLElement>('.mobile-menu__item').forEach((item, index) => {
+            menuAnimations.push(item.animate([
+              { opacity: 0, transform: 'translateY(18px)' },
+              { opacity: 1, transform: 'translateY(0)' },
+            ], {
+              duration: 420,
+              delay: 60 + index * 60,
+              easing: 'cubic-bezier(.22, 1, .36, 1)',
+              fill: 'backwards',
+            }));
+          });
+        }
+
         window.requestAnimationFrame(() => {
+          if (!isOpen || isClosing || routeSignal.aborted) return;
           const focusTarget = closeButton.getClientRects().length > 0
             ? closeButton
             : getFocusableElements()[0];

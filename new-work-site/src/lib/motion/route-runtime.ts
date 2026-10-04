@@ -23,6 +23,13 @@ export const initializeMotionRoute = (
   };
   let refreshFrame = 0;
   let context: ReturnType<typeof gsap.context> | undefined;
+  const requestLayoutRefresh = (): void => {
+    if (refreshFrame) return;
+    refreshFrame = window.requestAnimationFrame(() => {
+      refreshFrame = 0;
+      ScrollTrigger.refresh();
+    });
+  };
 
   try {
     context = gsap.context(() => {
@@ -31,10 +38,11 @@ export const initializeMotionRoute = (
         if (cleanup) scopedEnvironment.addCleanup(cleanup);
       });
     }, environment.root);
-    refreshFrame = window.requestAnimationFrame(() => {
-      refreshFrame = 0;
-      ScrollTrigger.refresh();
+    document.addEventListener('new-work:work-layout-settled', requestLayoutRefresh);
+    routeCleanups.push(() => {
+      document.removeEventListener('new-work:work-layout-settled', requestLayoutRefresh);
     });
+    requestLayoutRefresh();
   } catch (error) {
     routeCleanups.reverse().forEach((cleanup) => cleanup());
     context?.revert();

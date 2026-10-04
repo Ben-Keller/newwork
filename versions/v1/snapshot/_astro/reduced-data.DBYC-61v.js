@@ -1,0 +1,1 @@
+var e=e=>{if(e)return e;if(!(typeof navigator>`u`))return navigator},t=t=>!!e(t)?.connection?.saveData,n=(t,n)=>{let r=e(n)?.connection;if(!r)return t(!1),()=>void 0;let i=()=>t(!!r.saveData);return t(!!r.saveData),r.addEventListener(`change`,i),()=>r.removeEventListener(`change`,i)};export{t as n,n as t};

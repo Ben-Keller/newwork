@@ -1,5 +1,46 @@
 # New Work deployment and content workflow
 
+## Current versioned Pages release
+
+The active Pages workflow now packages two independent versions. Follow
+[hosting/README.md](hosting/README.md) for the current build, preview, publishing,
+and V1 retirement procedure.
+
+| Address | Content |
+|---|---|
+| `https://ben-keller.github.io/newwork/` | Redirect to V2 |
+| `https://ben-keller.github.io/newwork/v1/` | Frozen capture of the previously live release |
+| `https://ben-keller.github.io/newwork/v2/` | Current app in `new-work-site/` |
+
+V1 is immutable archival input under `versions/v1/`; its generated copy receives
+the `/v1` prefix during packaging. V2 has its own scripts, styles, media, routes,
+and storage namespace. The Pages artifact is `pages-dist/`, not the app's raw
+`dist/` directory. Existing unversioned V1 page bookmarks redirect into V1.
+
+V2 currently uses the local review content (`prototype` mode, with `noindex`) so
+deployment reproduces the version being reviewed. Neither version queries the
+CMS during packaging. Existing Sanity webhook dispatches can still start the
+workflow, but do not change these frozen/local content inputs. Studio deployment
+and the Sanity production dataset are unchanged. A later move of V2 to published
+CMS content requires an explicit content-mode change and CMS release validation.
+
+From the repository root:
+
+```sh
+node hosting/build.mjs
+node hosting/verify.mjs
+node hosting/serve.mjs
+```
+
+Review at `http://127.0.0.1:4326/newwork/`. A push to `main` or manual workflow
+dispatch is still required to publish; local preparation does not deploy.
+
+## Earlier production-CMS workflow reference
+
+The sections below document the previous unversioned, live-CMS release process
+and the existing Studio/webhook configuration. Their unversioned build commands
+and production-CMS smoke tests are not the current Pages packaging procedure.
+
 This repository deliberately has two sources of truth:
 
 | Source | Owns | Never owns |

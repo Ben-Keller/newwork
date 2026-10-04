@@ -1,0 +1,248 @@
+---
+/**
+ * A split-flap "departure board" that flips through what the studio makes.
+ * The tiles are decorative; `label` gives assistive tech the same words once.
+ */
+interface Props {
+  words?: readonly string[];
+  label?: string;
+  /** Tile height, any CSS length. */
+  size?: string;
+  class?: string;
+}
+const {
+  words = ['photo', 'creative', 'film'],
+  label = words.join(', '),
+  size,
+  class: className,
+} = Astro.props;
+const normalized = words.map((word) => word.toUpperCase());
+const cells = Math.max(...normalized.map((word) => word.length));
+const first = (normalized[0] ?? '').padEnd(cells, ' ');
+---
+
+<span
+  class:list={['flap-ticker', className]}
+  data-flap-ticker
+  data-ticker-words={JSON.stringify(normalized)}
+  style={size ? `--flap-height:${size}` : undefined}
+>
+  <span class="sr-only">{label}</span>
+  <span class="flap-ticker__board" aria-hidden="true">
+    {[...first].map((glyph) => (
+      <span class="flap" data-flap>
+        <span class="flap__half flap__half--top"><span data-flap-top>{glyph}</span></span>
+        <span class="flap__half flap__half--bottom"><span data-flap-bottom>{glyph}</span></span>
+        <span class="flap__leaf flap__leaf--top"><span data-flap-leaf-top>{glyph}</span></span>
+        <span class="flap__leaf flap__leaf--bottom"><span data-flap-leaf-bottom>{glyph}</span></span>
+      </span>
+    ))}
+  </span>
+</span>
+
+<style>
+  .flap-ticker {
+    --flap-height: clamp(1.7rem, 2.3vw, 2.35rem);
+    --flap-width: calc(var(--flap-height) * .64);
+    --flap-face: #161616;
+    --flap-ink: #f3f0e8;
+    display: inline-flex;
+  }
+
+  .flap-ticker__board {
+    display: inline-flex;
+    gap: 2px;
+    padding: 3px;
+    background: #0b0b0b;
+    border-radius: 3px;
+    box-shadow: inset 0 0 0 1px rgb(255 255 255 / 6%);
+  }
+
+  .flap {
+    position: relative;
+    display: block;
+    width: var(--flap-width);
+    height: var(--flap-height);
+    color: var(--flap-ink);
+    font: 700 calc(var(--flap-height) * .62) / var(--flap-height) var(--font-body);
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+    perspective: calc(var(--flap-height) * 6);
+  }
+
+  .flap__half,
+  .flap__leaf {
+    position: absolute;
+    left: 0;
+    width: 100%;
+    height: 50%;
+    overflow: hidden;
+    background: var(--flap-face);
+    backface-visibility: hidden;
+  }
+
+  .flap__half--top,
+  .flap__leaf--top {
+    top: 0;
+    border-radius: 2px 2px 0 0;
+    background: linear-gradient(#1f1f1f, var(--flap-face));
+    transform-origin: 50% 100%;
+  }
+
+  .flap__half--bottom,
+  .flap__leaf--bottom {
+    bottom: 0;
+    border-radius: 0 0 2px 2px;
+    transform-origin: 50% 0;
+  }
+
+  /* Each half shows its share of one glyph centred on the whole tile. */
+  .flap__half > span,
+  .flap__leaf > span {
+    position: absolute;
+    left: 0;
+    width: 100%;
+    height: 200%;
+  }
+
+  .flap__half--top > span,
+  .flap__leaf--top > span {
+    top: 0;
+  }
+
+  .flap__half--bottom > span,
+  .flap__leaf--bottom > span {
+    top: -100%;
+  }
+
+  /* The hinge between the two halves. */
+  .flap::after {
+    position: absolute;
+    top: calc(50% - .5px);
+    left: 0;
+    width: 100%;
+    height: 1px;
+    background: rgb(0 0 0 / 85%);
+    content: '';
+  }
+
+  .flap__leaf {
+    visibility: hidden;
+  }
+
+  .flap[data-flipping='true'] .flap__leaf {
+    visibility: visible;
+  }
+
+  .flap__leaf--bottom {
+    transform: rotateX(90deg);
+  }
+
+</style>
+
+<script>
+  const ALPHABET = ' ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const STEP_MS = 64;
+  const HOLD_MS = 2600;
+
+  let disposeTicker = (): void => undefined;
+
+  const setupTicker = (): void => {
+    disposeTicker();
+    const ticker = document.querySelector<HTMLElement>('[data-flap-ticker]');
+    if (!ticker) return;
+    let words: string[] = [];
+    try {
+      words = JSON.parse(ticker.dataset.tickerWords ?? '[]') as string[];
+    } catch {
+      return;
+    }
+    const flaps = Array.from(ticker.querySelectorAll<HTMLElement>('[data-flap]'));
+    if (words.length < 2 || !flaps.length) return;
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let wordIndex = 0;
+    let timer = 0;
+    let disposed = false;
+
+    const parts = (flap: HTMLElement) => ({
+      top: flap.querySelector<HTMLElement>('[data-flap-top]')!,
+      bottom: flap.querySelector<HTMLElement>('[data-flap-bottom]')!,
+      leafTop: flap.querySelector<HTMLElement>('[data-flap-leaf-top]')!,
+      leafBottom: flap.querySelector<HTMLElement>('[data-flap-leaf-bottom]')!,
+    });
+
+    const set = (flap: HTMLElement, glyph: string): void => {
+      const { top, bottom, leafTop, leafBottom } = parts(flap);
+      top.textContent = glyph;
+      bottom.textContent = glyph;
+      leafTop.textContent = glyph;
+      leafBottom.textContent = glyph;
+    };
+
+    // One mechanical step: the upper leaf with the old glyph falls, then the
+    // lower leaf with the new glyph lands over the old lower half.
+    const flipOnce = async (flap: HTMLElement, from: string, to: string): Promise<void> => {
+      const { top, bottom, leafTop, leafBottom } = parts(flap);
+      top.textContent = to;
+      bottom.textContent = from;
+      leafTop.textContent = from;
+      leafBottom.textContent = to;
+      flap.dataset.flipping = 'true';
+      const leafTopElement = leafTop.parentElement!;
+      const leafBottomElement = leafBottom.parentElement!;
+      await leafTopElement.animate(
+        [{ transform: 'rotateX(0deg)' }, { transform: 'rotateX(-90deg)' }],
+        { duration: STEP_MS / 2, easing: 'ease-in', fill: 'forwards' },
+      ).finished.catch(() => undefined);
+      await leafBottomElement.animate(
+        [{ transform: 'rotateX(90deg)' }, { transform: 'rotateX(0deg)' }],
+        { duration: STEP_MS / 2, easing: 'ease-out', fill: 'forwards' },
+      ).finished.catch(() => undefined);
+      bottom.textContent = to;
+      leafTopElement.getAnimations().forEach((animation) => animation.cancel());
+      leafBottomElement.getAnimations().forEach((animation) => animation.cancel());
+      delete flap.dataset.flipping;
+    };
+
+    // Like a real board, a tile only ever turns forward through its set.
+    const flipTo = async (flap: HTMLElement, target: string, delay: number): Promise<void> => {
+      const current = parts(flap).bottom.textContent || ' ';
+      if (current === target) return;
+      await new Promise((resolve) => window.setTimeout(resolve, delay));
+      let position = Math.max(0, ALPHABET.indexOf(current));
+      const goal = Math.max(0, ALPHABET.indexOf(target));
+      while (position !== goal && !disposed) {
+        const next = (position + 1) % ALPHABET.length;
+        await flipOnce(flap, ALPHABET[position]!, ALPHABET[next]!);
+        position = next;
+      }
+    };
+
+    const advance = async (): Promise<void> => {
+      if (disposed) return;
+      if (document.hidden) {
+        timer = window.setTimeout(advance, HOLD_MS);
+        return;
+      }
+      wordIndex = (wordIndex + 1) % words.length;
+      const word = words[wordIndex]!.padEnd(flaps.length, ' ');
+      if (reduced) {
+        flaps.forEach((flap, index) => set(flap, word[index] ?? ' '));
+      } else {
+        await Promise.all(flaps.map((flap, index) => flipTo(flap, word[index] ?? ' ', index * 45)));
+      }
+      if (!disposed) timer = window.setTimeout(advance, reduced ? HOLD_MS * 1.6 : HOLD_MS);
+    };
+
+    timer = window.setTimeout(advance, HOLD_MS);
+    disposeTicker = () => {
+      disposed = true;
+      window.clearTimeout(timer);
+      disposeTicker = () => undefined;
+    };
+  };
+
+  setupTicker();
+  document.addEventListener('astro:page-load', setupTicker);
+  document.addEventListener('astro:before-swap', () => disposeTicker());
+</script>

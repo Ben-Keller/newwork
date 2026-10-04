@@ -4,6 +4,9 @@ export const basePath = configuredBase === '/'
   ? ''
   : `/${configuredBase.replace(/^\/+|\/+$/gu, '')}`;
 
+// Versions share a hostname, but must not share gallery/session preferences.
+export const storagePrefix = basePath ? `${basePath}:` : '';
+
 export function withBase(value: string): string {
   if (!value || /^(?:[a-z][a-z\d+.-]*:|\/\/|#)/iu.test(value)) return value;
   const pathname = value.startsWith('/') ? value : `/${value}`;

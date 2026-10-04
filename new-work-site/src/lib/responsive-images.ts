@@ -88,3 +88,20 @@ export const buildResponsiveSrcset = (source: ImageView): string | undefined => 
   }
   return undefined;
 };
+
+/** One URL near `width` for local derivatives or the Sanity CDN, for places
+ * that need a single source rather than a srcset (canvas, CSS backgrounds). */
+export const pickResponsiveSource = (image: ImageView, width: number): string => {
+  if (image.src.includes('cdn.sanity.io/images/')) {
+    const separator = image.src.includes('?') ? '&' : '?';
+    return `${image.src}${separator}w=${width}&fit=max&auto=format`;
+  }
+  if (/\/media\/images\/.+\.webp$/iu.test(image.src)) {
+    // Local derivatives only exist below the source width (see localWidths).
+    const candidate = LOCAL_RESPONSIVE_IMAGE_WIDTHS
+      .filter((candidateWidth) => candidateWidth < image.width)
+      .find((candidateWidth) => candidateWidth >= width);
+    return candidate ? image.src.replace(/\.webp$/iu, `.w${candidate}.webp`) : image.src;
+  }
+  return image.src;
+};

@@ -1,8 +1,9 @@
 ---
-import BrandLockup from './BrandLockup.astro';
-import type { BrandAssetView, FooterLineView } from '../lib/types';
+import SplitFlapTicker from './SplitFlapTicker.astro';
+import type { BrandAssetView, ProjectView } from '../lib/types';
 import type { WordmarkTone } from './Wordmark.astro';
 import { withBase } from '../lib/base-path';
+import { buildResponsiveSrcset, pickResponsiveSource } from '../lib/responsive-images';
 
 export interface FooterLink {
   href?: string;
@@ -12,94 +13,47 @@ export interface FooterLink {
 
 export interface Props {
   siteName?: string;
-  contactEmail?: string;
-  contactLabel?: string;
-  links?: readonly FooterLink[];
+  featuredProjects?: readonly Pick<ProjectView, 'title' | 'slug' | 'cover'>[];
   people?: readonly FooterLink[];
-  strapline?: readonly FooterLineView[];
-  exploreLinks?: readonly FooterLink[];
   peopleHeading?: string;
-  exploreHeading?: string;
-  connectHeading?: string;
   copyrightLine?: string;
   wordmarkAsset?: BrandAssetView;
   tone?: WordmarkTone;
-  showContact?: boolean;
-  showNotes?: boolean;
   showYear?: boolean;
   class?: string;
 }
 
 const {
   siteName = 'New Work Agency',
-  contactEmail,
-  contactLabel,
-  links = [],
+  featuredProjects = [],
   people = [],
-  strapline = [
-    {text: 'New Work is film.', emphasis: 'New Work'},
-    {text: 'New Work is photography.', emphasis: 'New Work'},
-    {text: 'We make beautiful work.', emphasis: 'beautiful'},
-    {text: 'Come create with us.', emphasis: 'create'},
-  ],
-  exploreLinks: suppliedExploreLinks,
   peopleHeading = 'People',
-  exploreHeading = 'Explore',
-  connectHeading = 'Connect',
   copyrightLine = 'All rights reserved.',
-  wordmarkAsset,
-  tone = 'dark',
-  showContact = true,
-  showNotes = false,
   showYear = true,
   class: className,
 } = Astro.props;
 
 const year = new Date().getFullYear();
-const emailText = contactLabel ?? contactEmail;
-const resolvedLinks = links.flatMap((link) => {
-  const href = link.href ?? link.url;
-  return href ? [{ href, label: link.label }] : [];
-});
+// A project can occupy several gallery tiles. List it once, in the featured
+// gallery order, and keep the footer edit to a maximum of eight projects.
+const featuredLinks = featuredProjects
+  .filter((project, index, projects) => project.slug
+    && projects.findIndex((candidate) => candidate.slug === project.slug) === index)
+  .slice(0, 8)
+  .map((project) => ({
+    href: withBase(`/work/${project.slug}`),
+    label: project.title,
+    image: project.cover.previewPosterOverride || project.cover.poster,
+  }));
 const resolvedPeople = people.flatMap((link) => {
   const href = link.href ?? link.url;
   return href ? [{ href, label: link.label }] : [];
-});
-const defaultExploreLinks = [
-  { href: withBase('/'), label: 'Work' },
-  { href: withBase('/about'), label: 'About' },
-  ...(showNotes ? [{ href: withBase('/notes'), label: 'Notes' }] : []),
-  { href: withBase('/contact'), label: 'Contact' },
-];
-const exploreLinks = suppliedExploreLinks?.length ? suppliedExploreLinks : defaultExploreLinks;
-const connectLinks = [
-  ...(showContact && contactEmail && emailText
-    ? [{ href: `mailto:${contactEmail}`, label: emailText }]
-    : []),
-  ...resolvedLinks,
-];
-const straplineParts = strapline.map((line) => {
-  if (!line.emphasis) return {text: line.text};
-  const index = line.text.indexOf(line.emphasis);
-  if (index < 0) return {text: line.text};
-  return {
-    text: line.text,
-    before: line.text.slice(0, index),
-    emphasis: line.emphasis,
-    after: line.text.slice(index + line.emphasis.length),
-  };
 });
 ---
 
 <footer class:list={['site-footer', className]} data-site-footer>
   <div class="site-footer__inner">
     <div class="site-footer__main">
-      <div class="site-footer__strapline">
-        {straplineParts.map((line) => (
-          <p>{line.emphasis ? <>{line.before}<em>{line.emphasis}</em>{line.after}</> : line.text}</p>
-        ))}
-      </div>
-
       <nav class="site-footer__directory" aria-label="Footer">
         {resolvedPeople.length ? (
           <div class="site-footer__group site-footer__group--people">
@@ -110,42 +64,57 @@ const straplineParts = strapline.map((line) => {
           </div>
         ) : null}
 
-        <div class="site-footer__group site-footer__group--explore">
-          <h2>{exploreHeading}</h2>
-          <ul role="list">
-            {exploreLinks.map((link) => <li><a href={link.href}>{link.label}</a></li>)}
-          </ul>
-        </div>
-
-        {connectLinks.length ? (
-          <div class="site-footer__group site-footer__group--connect">
-            <h2>{connectHeading}</h2>
+        {featuredLinks.length ? (
+          <div class="site-footer__group site-footer__group--featured">
+            <h2>Featured</h2>
             <ul role="list">
-              {connectLinks.map((link) => (
-                <li><a href={link.href} rel={/^https?:/u.test(link.href) ? 'noreferrer' : undefined}>{link.label}</a></li>
+              {featuredLinks.map((link) => (
+                <li>
+                  <a class="site-footer__featured-link" href={link.href}>
+                    <span class="site-footer__featured-label">{link.label}</span>
+                    {link.image.src ? (
+                      <span class="site-footer__preview" aria-hidden="true">
+                        <img
+                          src={pickResponsiveSource(link.image, 480)}
+                          srcset={buildResponsiveSrcset(link.image)}
+                          sizes="(min-width: 1334px) 240px, (min-width: 889px) 18vw, 160px"
+                          width={link.image.width}
+                          height={link.image.height}
+                          alt=""
+                          loading="lazy"
+                          decoding="async"
+                          style={`object-position:${link.image.objectPosition || '50% 50%'}`}
+                        />
+                      </span>
+                    ) : null}
+                  </a>
+                </li>
               ))}
             </ul>
           </div>
         ) : null}
       </nav>
-    </div>
-
-    <div class="site-footer__bottom">
-      <a
-        class="site-footer__brand"
-        href={withBase('/')}
-        aria-label={siteName}
-      >
-        <BrandLockup
-          label={siteName}
-          variant="full"
-          tone={tone}
-          artworkSrc={wordmarkAsset?.src}
-          artworkWidth={wordmarkAsset?.width}
-          artworkHeight={wordmarkAsset?.height}
-        />
-      </a>
-      {showYear && <p class="site-footer__legal">© {year} {siteName}<br />{copyrightLine}</p>}
+      <div class="site-footer__signature">
+        <a
+          class="site-footer__brand"
+          href={withBase('/')}
+          aria-label={siteName}
+        >
+          <span class="site-footer__wordmark" aria-hidden="true">
+            <span class="site-footer__wordmark-outline">new</span>
+            <span>work.</span>
+          </span>
+        </a>
+        <span class="site-footer__discipline">
+          <span>IS</span>
+          <SplitFlapTicker class="site-footer__ticker" size="var(--footer-ticker-height)" />
+        </span>
+      </div>
+      {showYear && (
+        <div class="site-footer__bottom">
+          <p class="site-footer__legal">© {year} {siteName}<br />{copyrightLine}</p>
+        </div>
+      )}
     </div>
   </div>
 </footer>
