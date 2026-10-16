@@ -89,3 +89,8 @@ The production package and revised single publisher are prepared. The automatic 
 ## Splash ticker follow-up — 16 October 2026
 
 C05/C07/C11: Ben reported an intermittent board flash on first load. The homepage board now starts hidden in server-rendered HTML and remains hidden during route cleanup. CSS excludes both home and footer boards until the one shared wordmark has completed its transition into the home layout. This also covers the desktop board after it moves outside the page content into the document body. Returning to the splash removes the boards immediately, including with reduced motion. The no-JavaScript page keeps its static boards because that fallback has no splash. The selected Tall styling and gallery behavior are preserved.
+
+
+## Footer copyright alignment — 16 October 2026
+
+C10: Ben requested the copyright alongside the other footer information rather than in a separate lower row. The legal block now occupies the rightmost column beside Featured. Below 1100px, the logo and train board share the first row, with Featured and copyright beside each other in the next row. At phone widths the project links use one column to keep the legal block readable and prevent overlap. Copyright text, CMS fields and the existing logo/board alignment are unchanged.
