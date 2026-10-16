@@ -1,0 +1,42 @@
+---
+import type { BtsItem } from '../lib/bts';
+import ResponsiveImage from './ResponsiveImage.astro';
+interface Props { items: BtsItem[]; heading?: string; subtitle?: string }
+const { items, heading = 'Behind the scenes', subtitle = 'A closer look' } = Astro.props;
+---
+{items.length > 0 && (
+  <section class="bts" aria-labelledby="bts-heading" data-bts data-bts-layout="mosaic">
+    <header class="bts__header"><h2 id="bts-heading">{heading}</h2>{subtitle && <span aria-hidden="true">{subtitle}</span>}</header>
+    <div class:list={["bts__mosaic", { "bts__mosaic--seven-end": items.length % 8 === 7 }]}>
+      {items.map((item, index) => (
+        <a class:list={['bts__frame', `bts__frame--${index % 8}`]} href={item.href} aria-label={`Explore ${item.project}`}>
+          <ResponsiveImage image={item.image} sizes={index % 8 === 0 || index % 8 === 7 ? "(min-width: 1000px) 34vw, (min-width: 600px) 67vw, 50vw" : "(min-width: 1000px) 17vw, (min-width: 600px) 34vw, 50vw"} />
+          <span class="bts__caption" aria-hidden="true"><span>{String(index + 1).padStart(2, '0')}</span><span>{item.project}</span><span>↗</span></span>
+        </a>
+      ))}
+    </div>
+  </section>
+)}
+<style>
+  .bts { max-width: 1800px; margin: clamp(4rem, 8vw, 9rem) auto; padding: .5rem var(--page-gutter) 0; }
+  .bts__header { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin-bottom: clamp(1.5rem, 3vw, 3rem); padding-bottom: 1rem; border-bottom: 1px solid var(--color-rule); }
+  .bts__header h2 { font-family: var(--font-body); font-size: clamp(2rem, 5vw, 5rem); font-weight: 800; letter-spacing: -.07em; line-height: .95; }
+  .bts__header > span { font-size: .75rem; white-space: nowrap; }
+  .bts__mosaic { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); grid-auto-rows: clamp(120px, 13vw, 200px); grid-auto-flow: dense; gap: clamp(6px, .8vw, 14px); align-items: stretch; }
+  .bts__frame { position: relative; display: block; min-width: 0; aspect-ratio: auto; overflow: hidden; color: white; background: #e9e8e2; transform-origin: center; transition: transform 250ms cubic-bezier(.2,.7,.3,1), box-shadow 250ms; }
+  .bts__frame:nth-child(8n + 1) { grid-column: span 2; grid-row: span 2; }
+  .bts__frame:nth-child(8n) { grid-column: span 2; }
+  .bts__frame :global(.responsive-image) { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .bts__frame :global(picture), .bts__frame :global(img) { display: block; width: 100%; height: 100%; object-fit: cover; }
+  .bts__caption { position: absolute; display: flex; align-items: end; gap: .75rem; inset: auto 0 0; padding: 2rem .8rem .8rem; background: linear-gradient(transparent,#000a); font-size: .7rem; opacity: 0; transition: opacity 180ms; }
+  .bts__caption > :nth-child(2) { flex: 1; }
+  .bts__frame:focus-visible { z-index: 2; outline: 3px solid var(--color-ink); outline-offset: 3px; }
+  .bts__frame:focus-visible .bts__caption { opacity: 1; }
+  @media (hover: hover) and (pointer: fine) { .bts__frame:hover { z-index: 2; transform: scale(1.035); box-shadow: 0 8px 24px #0002; } .bts__frame:hover .bts__caption { opacity: 1; } }
+  @media (min-width: 1000px) { .bts__mosaic--seven-end .bts__frame:nth-last-child(-n + 2) { grid-column: span 2; } }
+  @media (max-width: 999px) { .bts__mosaic { grid-template-columns: repeat(3,minmax(0,1fr)); grid-auto-rows: auto; } .bts__frame:nth-child(n) { grid-column: auto; grid-row: auto; aspect-ratio: 4/5; } }
+  @media (max-width: 599px) { .bts__mosaic { grid-template-columns: repeat(2,minmax(0,1fr)); grid-auto-rows: auto; } .bts__header > span { display: none; } .bts__frame, .bts__frame:nth-child(8n + 1), .bts__frame:nth-child(8n) { grid-column: auto; grid-row: auto; aspect-ratio: 4/5; } }
+  @media (max-width: 599px) { .bts__frame:last-child:nth-child(odd) { grid-column: 1 / -1; aspect-ratio: 2/1; } }
+  @media (hover: none) { .bts__caption { opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { .bts__frame, .bts__caption { transition: none; } .bts__frame:hover { transform: none; } }
+</style>

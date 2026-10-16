@@ -1,0 +1,12 @@
+---
+export interface Props {
+  targetId?: string;
+  label?: string;
+  class?: string;
+}
+
+const { targetId = 'main-content', label = 'Skip to main content', class: className } = Astro.props;
+const normalizedTarget = targetId.startsWith('#') ? targetId : `#${targetId}`;
+---
+
+<a class:list={['skip-link', className]} href={normalizedTarget}>{label}</a>

@@ -16,9 +16,9 @@ export default defineCliConfig({
   },
   typegen: {
     enabled: true,
-    path: '../new-work-site/sanity/**/*.ts',
+    path: '../new-work-oliver-review/sanity/**/*.ts',
     schema: './schema.json',
-    generates: '../new-work-site/src/sanity.types.ts',
+    generates: '../new-work-oliver-review/src/sanity.types.ts',
     overloadClientMethods: true,
   },
 })

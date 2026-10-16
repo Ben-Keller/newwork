@@ -1,0 +1,112 @@
+---
+import ErrorMedia from './ErrorMedia.astro';
+import type { ImageView } from '../lib/types';
+import { buildResponsiveAvifSrcset, buildResponsiveSrcset } from '../lib/responsive-images';
+
+interface Props {
+  image: ImageView;
+  mobileImage?: ImageView;
+  sizes?: string;
+  eager?: boolean;
+  priority?: boolean;
+  galleryPreload?: boolean;
+  class?: string;
+  projectPoster?: boolean;
+}
+
+const {
+  image,
+  mobileImage,
+  sizes = '100vw',
+  eager = false,
+  priority = eager,
+  galleryPreload = false,
+  class: className = '',
+  projectPoster = false,
+} = Astro.props;
+
+const srcset = buildResponsiveSrcset(image);
+const avifSrcset = buildResponsiveAvifSrcset(image);
+const mobileSrcset = mobileImage ? buildResponsiveSrcset(mobileImage) || mobileImage.src : undefined;
+const mobileAvifSrcset = mobileImage ? buildResponsiveAvifSrcset(mobileImage) : undefined;
+// The gallery sits behind the splash. Start every tile's responsive image
+// request from the HTML, without waiting for scrolling or client-side setup.
+const loadImmediately = eager || galleryPreload;
+---
+
+<div class:list={['responsive-image', className]} data-media-frame>
+  {image.src ? (
+    <picture>
+      {mobileAvifSrcset ? <source media="(max-width: 767px)" type="image/avif" srcset={mobileAvifSrcset} sizes={sizes} /> : null}
+      {mobileImage ? <source media="(max-width: 767px)" srcset={mobileSrcset} sizes={sizes} /> : null}
+      {avifSrcset ? <source type="image/avif" srcset={avifSrcset} sizes={sizes} /> : null}
+      <img
+        src={image.src}
+        srcset={srcset}
+        sizes={sizes}
+        width={image.width}
+        height={image.height}
+        alt={image.alt}
+        loading={loadImmediately ? 'eager' : 'lazy'}
+        decoding="async"
+        fetchpriority={priority ? 'high' : 'auto'}
+        style={`--image-position:${image.objectPosition || '50% 50%'};--image-mobile-position:${mobileImage?.objectPosition || image.objectPosition || '50% 50%'}`}
+        data-error-managed
+        data-first-gallery-poster={eager || undefined}
+        data-gallery-image={galleryPreload || undefined}
+        data-project-poster={projectPoster || undefined}
+      />
+    </picture>
+  ) : null}
+  <ErrorMedia message="Image unavailable" visible={!image.src} />
+</div>
+
+<script>
+  const settleGalleryImage = async (image: HTMLImageElement) => {
+    if (image.dataset.galleryImageReady === 'true') return;
+    try {
+      await image.decode();
+    } catch {
+      // A successful load may still reject decode() in older WebKit builds.
+      // In that case naturalWidth remains the reliable readiness signal.
+    }
+    if (image.naturalWidth > 0) {
+      image.dataset.galleryImageReady = 'true';
+      image.closest<HTMLElement>('[data-media-frame]')?.setAttribute('data-media-ready', 'true');
+      image.dispatchEvent(new CustomEvent('new-work:gallery-image-ready', { bubbles: true }));
+    }
+  };
+
+  const setupGalleryImageReadiness = () => {
+    document.querySelectorAll<HTMLImageElement>(
+      'img[data-gallery-image]:not([data-gallery-image-watch])',
+    ).forEach((image) => {
+      image.dataset.galleryImageWatch = 'true';
+      if (image.complete) {
+        void settleGalleryImage(image);
+        return;
+      }
+      image.addEventListener('load', () => { void settleGalleryImage(image); }, { once: true });
+    });
+  };
+
+  const setupImageErrors = () => {
+    document.querySelectorAll<HTMLImageElement>('img[data-error-managed]:not([data-error-ready])').forEach((image) => {
+      image.dataset.errorReady = 'true';
+      const showError = () => {
+        image.hidden = true;
+        const frame = image.closest<HTMLElement>('[data-media-frame]');
+        const error = frame?.querySelector<HTMLElement>('[data-error-media]');
+        if (error) error.hidden = false;
+      };
+      image.addEventListener('error', showError, { once: true });
+      if (image.complete && image.naturalWidth === 0) showError();
+    });
+  };
+  setupImageErrors();
+  setupGalleryImageReadiness();
+  document.addEventListener('astro:page-load', () => {
+    setupImageErrors();
+    setupGalleryImageReadiness();
+  });
+</script>

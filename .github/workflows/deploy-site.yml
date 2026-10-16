@@ -1,104 +1,112 @@
-name: Deploy versioned site
+name: Deploy Oliver revision
 
 on:
   push:
     branches: [main]
     paths:
-      - new-work-site/**
+      - new-work-oliver-review/**
       - hosting/**
-      - versions/v1/**
       - studio-new-work/schemaTypes/**
       - studio-new-work/shared/**
       - studio-new-work/sanity.constants.ts
       - .github/workflows/deploy-site.yml
   workflow_dispatch:
+    inputs:
+      only_if_content_changed:
+        description: Check published CMS content before rebuilding
+        type: boolean
+        default: false
+  schedule:
+    - cron: '7,22,37,52 * * * *'
 
 permissions:
   contents: read
   pages: write
   id-token: write
 
-# A newer Pages build supersedes an older one. Studio deployment has its own
-# concurrency group and is never cancelled by a site build.
 concurrency:
   group: github-pages-production
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
+  content:
+    name: Check published content
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.content.outputs.changed }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - id: content
+        run: node hosting/content-fingerprint.mjs --check-live
+
   build:
-    name: Validate and build V1 and V2
+    needs: content
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && !inputs.only_if_content_changed) || needs.content.outputs.changed == 'true'
+
+    name: Validate Oliver revision and published CMS content
     runs-on: ubuntu-latest
     timeout-minutes: 25
-    env:
-      PAGES_SITE_URL: https://${{ github.repository_owner }}.github.io
-      PAGES_BASE_PATH: /${{ github.event.repository.name }}
     defaults:
       run:
-        working-directory: new-work-site
+        working-directory: new-work-oliver-review
     steps:
-      - name: Check out main
-        uses: actions/checkout@v7
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v6
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
         with:
           version: 11.19.0
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
-          cache-dependency-path: new-work-site/pnpm-lock.yaml
-
-      - name: Configure GitHub Pages
-        uses: actions/configure-pages@v6
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Check types and Astro templates
-        run: pnpm typecheck
-
-      - name: Check source quality
-        run: pnpm lint
-
-      - name: Run coverage gates for code pushes
-        if: github.event_name == 'push'
-        run: pnpm test:coverage
-
-      - name: Test Pages packaging and version isolation
-        run: node --test ../hosting/hosting.test.mjs
-
-      - name: Build the isolated versions and root redirect
-        run: node ../hosting/build.mjs
-
-      - name: Verify every versioned route and local asset
-        run: node ../hosting/verify.mjs
-
-      - name: Install the Pages smoke-test browser
-        run: pnpm exec playwright install --with-deps chromium
-
-      - name: Verify both versions on their actual Pages paths
-        run: >-
-          pnpm exec playwright test --config playwright.pages.config.ts
-          --project=desktop-chromium
-          --project=mobile-chromium
-          --workers=2
-
-      - name: Upload GitHub Pages artifact
+          cache-dependency-path: new-work-oliver-review/pnpm-lock.yaml
+      - uses: actions/configure-pages@v6
+      - run: pnpm install --frozen-lockfile
+      - name: Check source, types and content rules
+        run: npm run typecheck && npm run lint && npm run test:coverage
+      - name: Check release packaging and preserved baseline
+        run: |
+          node --test ../hosting/hosting.test.mjs ../hosting/root-release.test.mjs ../hosting/content-fingerprint.test.mjs
+          node ../hosting/check-review-baseline.mjs --source-only
+      - name: Build the client review from published Sanity content
+        run: |
+          node ../hosting/root-release.mjs --production --review
+          node ../hosting/verify-root-release.mjs --production --review
+      - name: Verify packaged routes, legacy bookmarks and CMS presentation
+        run: |
+          ./node_modules/.bin/playwright install --with-deps chromium
+          PAGES_REVIEW=1 ./node_modules/.bin/playwright test --config=playwright.pages.config.ts --project=desktop-chromium --project=mobile-chromium --workers=1
+      - name: Retain a recovery artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: oliver-production-${{ github.sha }}-${{ github.run_id }}
+          path: review-release-dist
+          retention-days: 30
+      - name: Upload the validated review site
         uses: actions/upload-pages-artifact@v5
         with:
-          path: pages-dist
+          path: review-release-dist
 
   deploy:
-    name: Publish GitHub Pages
+    name: Publish the validated Oliver revision
+    needs: build
+    runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    needs: build
     steps:
-      - name: Deploy verified site
+      - uses: actions/checkout@v7
+      - name: Require the approved review address
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          configured_domain=$(gh api "repos/${GITHUB_REPOSITORY}/pages" --jq '.cname // ""')
+          if [ -n "$configured_domain" ]; then
+            echo "::error::This publisher targets the approved /newwork review address. Switch to the root release profile before a custom-domain launch."
+            exit 1
+          fi
+      - name: Publish GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5

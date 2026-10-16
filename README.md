@@ -1,11 +1,35 @@
+# New Work — Oliver revision
+
+Edit `new-work-oliver-review/` on `main`. Preserve `new-work-site/` for parallel comparison.
+
+| View | Address | Source/content |
+|---|---|---|
+| Project Studio / Oliver review | http://127.0.0.1:4327/ | Revision, prototype content |
+| Existing version | http://127.0.0.1:4325/ | Preserved baseline |
+| Side-by-side comparison | http://127.0.0.1:4328/ | `node hosting/review.mjs` |
+| Live CMS development | http://127.0.0.1:4329/ | `npm run dev:cms` in the revision |
+| Production release preview | http://127.0.0.1:4330/ | `node hosting/serve.mjs --root-release` |
+| Online client review | https://ben-keller.github.io/newwork/ | Oliver revision, published CMS content |
+| Client CMS | https://new-work.sanity.studio/ | Published Sanity Studio |
+
+The `deploy-site.yml` publisher builds the Oliver revision from published Sanity content at the existing GitHub Pages review address. It checks for CMS changes every 15 minutes and rebuilds only when needed. The review stays `noindex`; newworkagency.com and its DNS are unchanged. Studio uses the approved New Work artwork, a custom theme, a client overview and direct editing links. Contact placeholders remain intentionally editable. See DEPLOYMENT.md for operational details.
+
+- [Release and CMS publishing workflow](DEPLOYMENT.md)
+- [Domain cutover and rollback](hosting/ROOT_RELEASE.md)
+- [Client editing guide](studio-new-work/CLIENT_GUIDE.md)
+- [Oliver comment register](reviews/oliver-2026-10/README.md) and [editing rules](reviews/oliver-2026-10/EDITING.md)
+
+## Historical project handoff
+
+The material below records the original brief. Current editing, CMS, publication and rights-workflow rules are in `AGENTS.md`, `DEPLOYMENT.md` and the review register; later user decisions supersede this original brief.
+
 # New Work website — single-run build package
 
 This archive is the implementation handoff for a complete New Work portfolio website. It combines the agreed product direction, an executable build brief, provisional CMS content, reference research, and a representative media library assembled from Oliver Hamilton's and Michael's public portfolios.
 
 The current GitHub, Sanity Studio, webhook, local content, and no-merge release process is documented in [`DEPLOYMENT.md`](DEPLOYMENT.md).
 
-For the isolated `/v1` archive and active `/v2` GitHub Pages release, use the
-[versioned hosting guide](hosting/README.md). The main address opens V2.
+The old versioned package remains a recovery tool documented in [hosting/README.md](hosting/README.md). It is no longer the source of the prepared publisher.
 
 ## Start here
 

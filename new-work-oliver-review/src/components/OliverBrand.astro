@@ -1,0 +1,20 @@
+---
+import type { BrandAssetView } from '../lib/types';
+import horizontal from '../../public/media/brand/oliver-horizontal.svg?raw';
+import stacked from '../../public/media/brand/oliver-stacked.svg?raw';
+import compact from '../../public/media/brand/oliver-compact.svg?raw';
+interface Props { variant?: 'horizontal' | 'stacked' | 'compact'; class?: string; asset?: BrandAssetView }
+const { variant = 'horizontal', class: className, asset } = Astro.props;
+const artwork = { horizontal, stacked, compact }[variant];
+const ratios = { horizontal: 842.76171875 / 188.29412841796875, stacked: 146.2734375 / 72.24310302734375, compact: 101.99609375 / 100.609375 };
+const ratio = asset?.width && asset?.height ? asset.width / asset.height : ratios[variant];
+---
+<span class:list={['oliver-brand', `oliver-brand--${variant}`, className]} aria-hidden="true">
+  {asset ? <img class="oliver-brand__asset" src={asset.src} alt="" width={Math.round(asset.width || 1000)} height={Math.round(asset.height || 1000 / ratio)} style={{aspectRatio: String(ratio)}} decoding="async" /> : <Fragment set:html={artwork} />}
+</span>
+<style>
+  /* Ordinary images work with Sanity file assets without cross-origin mask permission. */
+  .oliver-brand__asset { display: block; width: 100%; height: auto; object-fit: contain; filter: brightness(0) invert(var(--brand-asset-invert, 0)); }
+  .oliver-brand { display: block; color: inherit; }
+  .oliver-brand :global(svg) { display: block; width: 100%; height: auto; overflow: visible; }
+</style>

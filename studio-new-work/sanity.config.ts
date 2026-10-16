@@ -7,16 +7,19 @@ import {schemaTypes} from './schemaTypes'
 import {presentationResolve} from './presentation'
 import {structure} from './structure'
 import {SANITY_DATASET, SANITY_PROJECT_ID} from './sanity.constants'
+import {theme} from './theme'
+import {WEBSITE_URL} from './website'
 
 const SINGLETONS = ['siteSettings', 'workPage', 'aboutPage', 'contactPage', 'footerSettings']
 const CLIENT_HIDDEN_TYPES = ['note']
 const CONFIGURED_PREVIEW_ORIGIN = process.env.SANITY_STUDIO_PREVIEW_ORIGIN
-const PREVIEW_ORIGIN = CONFIGURED_PREVIEW_ORIGIN || (process.env.NODE_ENV === 'development' ? 'http://localhost:4321' : undefined)
+const PREVIEW_ORIGIN = CONFIGURED_PREVIEW_ORIGIN || (process.env.NODE_ENV === 'development' ? 'http://127.0.0.1:4329' : undefined)
 
 export default defineConfig({
   name: 'new-work',
   title: 'New Work',
   icon: NewWorkIcon,
+  theme,
 
   projectId: SANITY_PROJECT_ID,
   dataset: SANITY_DATASET,
@@ -111,6 +114,11 @@ export default defineConfig({
   },
 
   document: {
+    productionUrl: async (_previous, {document}) => {
+      const slug = (document.slug as {current?: string} | undefined)?.current
+      if (document._type === 'work' && slug) return `${WEBSITE_URL}work/${encodeURIComponent(slug)}`
+      return document._type === 'contactPage' ? `${WEBSITE_URL}contact` : WEBSITE_URL
+    },
     comments: {enabled: false},
     newDocumentOptions: (previous, {creationContext}) =>
       creationContext.type === 'global'

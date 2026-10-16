@@ -1,0 +1,17 @@
+---
+import type { TextNoteBlock } from '../../lib/types';
+import RichText from '../RichText.astro';
+import MediaCaption from './MediaCaption.astro';
+interface Props { block: TextNoteBlock }
+const { block } = Astro.props;
+---
+<div class="media-block text-note-block">
+  <aside class:list={[
+    'text-note',
+    `text-note--${block.alignment || 'left'}`,
+    `text-note-width--${block.maxWidth || 'medium'}`,
+  ]}>
+    {block.richText ? <RichText value={block.richText} /> : <p>{block.text}</p>}
+  </aside>
+  <MediaCaption caption={block.caption} credit={block.credit} />
+</div>

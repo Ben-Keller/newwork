@@ -1,6 +1,12 @@
-# Versioned GitHub Pages
+# Hosting
 
-The repository Pages site serves two independent versions:
+The active publisher builds the Oliver revision from published Sanity content at https://ben-keller.github.io/newwork/. It uses `root-release.mjs --production --review`, validates `review-release-dist/` and preserves noindex and old V1/V2 bookmarks. Published CMS revisions are checked every 15 minutes, with builds only when needed.
+
+`deploy-site.yml` is the sole public publisher. `prepare-root-release.yml` produces future-domain artifacts only. No workflow migrates CMS content. See [DEPLOYMENT.md](../DEPLOYMENT.md) for verification and recovery, and [ROOT_RELEASE.md](ROOT_RELEASE.md) for a later domain cutover.
+
+## Legacy versioned package — recovery only
+
+The previous publisher used this package. The scripts remain available for recovery and historical comparison:
 
 - `/newwork/` redirects to `/newwork/v2/`, preserving query strings and fragments.
 - `/newwork/v1/` serves the frozen version previously live at `/newwork/`.
@@ -21,15 +27,16 @@ node hosting/verify.mjs
 node hosting/serve.mjs
 ```
 
-Open `http://127.0.0.1:4326/newwork/`. The regular Project Studio preview remains
-at `http://127.0.0.1:4325/` and continues to use the active checkout directly.
+Open `http://127.0.0.1:4326/newwork/` for this legacy versioned package.
+Project Studio now opens the Oliver revision at `http://127.0.0.1:4327/`;
+the preserved original stays at `http://127.0.0.1:4325/`.
 The generated `pages-dist/` directory is ignored by Git and uploaded as the
 single Pages artifact. It contains `v1/`, `v2/`, a root redirect, a 404 page, and
 small compatibility redirects from existing unversioned V1 page URLs.
 
 `hosting/config.json` controls the default version and whether V1 is included.
 `PAGES_SITE_URL` and `PAGES_BASE_PATH` can override the host and repository path.
-The deployment workflow derives those from the GitHub repository.
+These overrides apply only to the legacy builder; the prepared publisher uses `root-release.json`.
 
 V2 deliberately uses `prototype` content mode to publish exactly the local
 version under review, including its 20 gallery tiles. It retains `noindex` and
@@ -60,9 +67,6 @@ exports CMS records. It refuses to overwrite a completed archive.
 The clean build automatically removes V1 and its legacy URL redirects from
 the artifact. V2 source, media, links, and build commands require no changes.
 
-## Publish
+## Legacy publishing
 
-The GitHub Actions workflow validates the app, builds the combined artifact,
-checks isolation and browser navigation on the actual versioned paths, and
-uploads `pages-dist/`. Only a subsequent explicit push or manual deployment
-publishes it. Preparing or previewing these files does not alter the live site.
+No current workflow uploads this package. Publishing it would require an explicit recovery decision and updating the single Pages publisher. Do not add a second publisher or overwrite the preserved app.

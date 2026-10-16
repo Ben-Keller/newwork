@@ -1,0 +1,378 @@
+---
+import ErrorMedia from './ErrorMedia.astro';
+
+interface Props {
+  source: string;
+  poster: string;
+  mobilePoster?: string;
+  title: string;
+  placeholder?: boolean;
+}
+
+const { source, poster, mobilePoster, title, placeholder = false } = Astro.props;
+---
+
+<div class="preview-video" data-preview-shell>
+  <video
+    muted
+    loop
+    playsinline
+    preload="none"
+    aria-hidden="true"
+    tabindex="-1"
+    data-preview-video
+    data-source={source}
+    data-poster={poster}
+    data-mobile-poster={mobilePoster}
+    data-placeholder={placeholder ? 'true' : 'false'}
+  ></video>
+  <ErrorMedia message={`Preview unavailable for ${title}`} />
+</div>
+
+<script>
+  type PreviewState = {
+    active: HTMLVideoElement[];
+    warm: HTMLVideoElement[];
+    preloadTimer?: number;
+    refreshFrame?: number;
+    refreshTimers: number[];
+    visibility: Map<HTMLVideoElement, number>;
+  };
+
+  declare global {
+    interface Window { __newWorkPreviews?: PreviewState }
+  }
+
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)');
+  const saveData = Boolean((navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData);
+
+  const state: PreviewState = window.__newWorkPreviews || {
+    active: [],
+    warm: [],
+    refreshTimers: [],
+    visibility: new Map(),
+  };
+  state.warm ||= [];
+  state.refreshTimers ||= [];
+  state.visibility ||= new Map();
+  window.__newWorkPreviews = state;
+  const activePreviewVideos = (selector = '[data-preview-video]'): HTMLVideoElement[] => (
+    [...document.querySelectorAll<HTMLVideoElement>(selector)]
+      .filter((video) => !video.closest('[data-gallery-layer-state="background"]'))
+  );
+
+  const holdsRouteContinuity = (video: HTMLVideoElement) => (
+    Number(video.dataset.routeContinuityUntil || 0) > performance.now()
+  );
+
+  const pause = (video: HTMLVideoElement) => {
+    if (holdsRouteContinuity(video)) return;
+    video.pause();
+    video.removeAttribute('data-playing');
+    video.removeAttribute('data-preview-frame-pending');
+    state.active = state.active.filter((item) => item !== video);
+  };
+
+  const detachSource = (video: HTMLVideoElement) => {
+    if (holdsRouteContinuity(video)) return;
+    pause(video);
+    if (video.hasAttribute('src')) {
+      video.removeAttribute('src');
+      video.load();
+    }
+    video.preload = 'none';
+    video.removeAttribute('data-preview-preloaded');
+    video.removeAttribute('poster');
+    state.warm = state.warm.filter((item) => item !== video);
+  };
+
+  const verticalVisibility = (video: HTMLVideoElement) => {
+    const bounds = video.getBoundingClientRect();
+    if (bounds.height <= 0) return 0;
+    const visibleHeight = Math.max(
+      0,
+      Math.min(bounds.bottom, window.innerHeight) - Math.max(bounds.top, 0),
+    );
+    return Math.min(1, visibleHeight / bounds.height);
+  };
+
+  const refreshPoster = (video: HTMLVideoElement) => {
+    const responsivePoster = video.closest<HTMLElement>('[data-card-media]')
+      ?.querySelector<HTMLImageElement>('.responsive-image img')?.currentSrc;
+    const poster = responsivePoster || (
+      window.matchMedia('(max-width: 767px)').matches && video.dataset.mobilePoster
+        ? video.dataset.mobilePoster
+        : video.dataset.poster
+    );
+    if (poster && video.poster !== new URL(poster, window.location.href).href) video.poster = poster;
+  };
+
+  const previewPosterImage = (video: HTMLVideoElement) => video.closest<HTMLElement>('[data-card-media]')
+    ?.querySelector<HTMLImageElement>('img[data-gallery-image]');
+
+  const posterIsStable = (video: HTMLVideoElement) => {
+    const image = previewPosterImage(video);
+    return !image || (
+      image.dataset.galleryImageReady === 'true'
+      && image.complete
+      && image.naturalWidth > 0
+    );
+  };
+
+  const waitForStablePoster = async (video: HTMLVideoElement) => {
+    const image = previewPosterImage(video);
+    if (!image || posterIsStable(video)) return true;
+    if (!image.complete) {
+      await new Promise<void>((resolve) => {
+        const settle = () => {
+          image.removeEventListener('load', settle);
+          image.removeEventListener('error', settle);
+          resolve();
+        };
+        image.addEventListener('load', settle, { once: true });
+        image.addEventListener('error', settle, { once: true });
+      });
+    }
+    if (image.naturalWidth <= 0) return false;
+    try {
+      await image.decode();
+    } catch {
+      // naturalWidth confirms the browser still has a usable decoded image.
+    }
+    if (image.naturalWidth <= 0) return false;
+    image.dataset.galleryImageReady = 'true';
+    image.closest<HTMLElement>('[data-media-frame]')?.setAttribute('data-media-ready', 'true');
+    refreshPoster(video);
+    return true;
+  };
+
+  const attachSource = (video: HTMLVideoElement) => {
+    if (video.hasAttribute('src') || reducedMotion.matches || saveData || !posterIsStable(video)) return false;
+    const source = video.dataset.source;
+    if (!source) return false;
+    refreshPoster(video);
+    video.preload = 'auto';
+    video.src = source;
+    video.dataset.previewPreloaded = 'true';
+    video.load();
+    return true;
+  };
+
+  const warmApproachingPreviews = (videos: HTMLVideoElement[]) => {
+    if (reducedMotion.matches || saveData) return;
+    const approachDistance = Math.max(640, window.innerHeight * 1.25);
+    const active = new Set(state.active.filter((video) => video.isConnected));
+    const approachLimit = finePointer.matches ? 2 : 1;
+    const viewportCenter = window.innerHeight / 2;
+    const inApproachBand = (video: HTMLVideoElement) => {
+      const bounds = video.getBoundingClientRect();
+      return bounds.height > 0
+        && bounds.top <= window.innerHeight + approachDistance
+        && bounds.bottom >= -approachDistance;
+    };
+    const retainedWarm = state.warm.filter((video) =>
+      video.isConnected && !active.has(video) && inApproachBand(video));
+    const retainedWarmSet = new Set(retainedWarm);
+    const entrants = videos
+      .filter((video) => {
+        if (active.has(video) || retainedWarmSet.has(video) || !posterIsStable(video)) return false;
+        return inApproachBand(video);
+      })
+      .sort((left, right) => {
+        const leftBounds = left.getBoundingClientRect();
+        const rightBounds = right.getBoundingClientRect();
+        const leftDistance = Math.abs((leftBounds.top + leftBounds.bottom) / 2 - viewportCenter);
+        const rightDistance = Math.abs((rightBounds.top + rightBounds.bottom) / 2 - viewportCenter);
+        return leftDistance - rightDistance;
+      })
+      .slice(0, Math.max(0, approachLimit - retainedWarm.length));
+    state.warm = [...retainedWarm, ...entrants].slice(0, approachLimit);
+    const retained = new Set([...active, ...state.warm]);
+
+    // Keep only a very small warm pool. Previously every preview within the
+    // approach band opened a full video request and could delay sharper poster
+    // candidates for several seconds on hosted builds.
+    videos.forEach((video) => {
+      if (!retained.has(video) && video.hasAttribute('src')) detachSource(video);
+    });
+    state.warm.forEach((video) => attachSource(video));
+  };
+
+  const revealCurrentFrame = (video: HTMLVideoElement) => {
+    video.dataset.previewFramePending = 'true';
+    const reveal = () => {
+      video.removeAttribute('data-preview-frame-pending');
+      if (state.active.includes(video) && !video.paused && video.isConnected) {
+        video.dataset.playing = 'true';
+      }
+    };
+
+    if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+      if ('requestVideoFrameCallback' in video) video.requestVideoFrameCallback(() => reveal());
+      else window.requestAnimationFrame(reveal);
+      return;
+    }
+    video.addEventListener('loadeddata', reveal, { once: true });
+  };
+
+  const play = async (video: HTMLVideoElement) => {
+    if (
+      reducedMotion.matches
+      || saveData
+      || document.hidden
+      || video.dataset.previewStarting === 'true'
+      || video.dataset.previewFramePending === 'true'
+      || (video.dataset.playing === 'true' && !video.paused)
+    ) return;
+    video.dataset.previewStarting = 'true';
+    try {
+      if (!await waitForStablePoster(video)) return;
+      if (!state.active.includes(video) || !video.isConnected || document.hidden) return;
+      attachSource(video);
+      if (!video.hasAttribute('src')) return;
+      await video.play();
+      if (!state.active.includes(video)) {
+        video.pause();
+        video.removeAttribute('data-playing');
+        return;
+      }
+      // Keep the still poster visible until an actual decoded video frame is
+      // ready. This avoids exposing the browser's empty video surface.
+      revealCurrentFrame(video);
+    } catch {
+      pause(video);
+    } finally {
+      video.removeAttribute('data-preview-starting');
+    }
+  };
+
+  const reconcilePreviews = (videos: HTMLVideoElement[]) => {
+    const connectedActive = state.active.filter((video) => video.isConnected);
+    // Once a preview starts, retain it until it is mostly out of view. The
+    // separate enter/exit thresholds prevent tiny geometry changes from
+    // continuously swapping videos around the activation boundary.
+    const retained = connectedActive.filter((video) =>
+      (state.visibility.get(video) ?? verticalVisibility(video)) > 0.35);
+    const retainedSet = new Set(retained);
+    const entrants = videos
+      .filter((video) => !retainedSet.has(video) && (state.visibility.get(video) ?? 0) >= 0.7)
+      .sort((left, right) =>
+        (state.visibility.get(right) ?? 0) - (state.visibility.get(left) ?? 0)
+        || videos.indexOf(left) - videos.indexOf(right));
+    // Every substantially visible motion tile should play. The previous
+    // one/two-video cap allowed earlier cards to monopolize playback and left
+    // other fully visible cards frozen on their posters. Network pressure is
+    // still bounded by the visibility gate above and the small off-screen
+    // warm pool in warmApproachingPreviews().
+    const selected = [...retained, ...entrants];
+    const selectedSet = new Set(selected);
+
+    connectedActive.forEach((video) => {
+      if (selectedSet.has(video)) return;
+      if (finePointer.matches) pause(video);
+      else detachSource(video);
+    });
+    state.active = selected;
+    selected.forEach((video) => { void play(video); });
+  };
+
+  const refreshPreviews = () => {
+    state.refreshFrame = 0;
+    const videos = activePreviewVideos();
+    state.visibility.clear();
+    videos.forEach((video) => state.visibility.set(video, verticalVisibility(video)));
+    reconcilePreviews(videos);
+    // Give active playback its network head start, then prepare every preview
+    // in the approach zone. A single scheduled task remains responsive during
+    // continuous scrolling without opening a burst of competing requests.
+    if (!state.preloadTimer) {
+      state.preloadTimer = window.setTimeout(() => {
+        state.preloadTimer = 0;
+        warmApproachingPreviews(videos.filter((video) => video.isConnected));
+      }, 140);
+    }
+  };
+
+  const requestPreviewRefresh = () => {
+    if (state.refreshFrame) return;
+    state.refreshFrame = window.requestAnimationFrame(refreshPreviews);
+  };
+
+  const requestSettledRefreshes = () => {
+    state.refreshTimers.forEach((timer) => window.clearTimeout(timer));
+    state.refreshTimers = [180, 700, 1_900].map((delay) =>
+      window.setTimeout(requestPreviewRefresh, delay));
+  };
+
+  const setupPreviews = () => {
+    const videos = activePreviewVideos();
+    videos.forEach((video) => {
+      if (video.dataset.previewReady) return;
+      video.dataset.previewReady = 'true';
+      video.addEventListener('error', () => {
+        pause(video);
+        video.hidden = true;
+        const error = video.parentElement?.querySelector<HTMLElement>('[data-error-media]');
+        if (error) error.hidden = false;
+      });
+    });
+    requestPreviewRefresh();
+    requestSettledRefreshes();
+  };
+
+  reducedMotion.addEventListener('change', () => {
+    if (reducedMotion.matches) state.active.slice().forEach(detachSource);
+    else setupPreviews();
+  });
+  // Refresh on vertical viewport changes instead of observing the transformed
+  // video nodes. IntersectionObserver also reacts to the gallery's horizontal
+  // pointer-follow transform, which previously churned the active pool while
+  // the page itself was stationary.
+  window.addEventListener('scroll', () => {
+    requestPreviewRefresh();
+    requestSettledRefreshes();
+  }, { passive: true });
+  window.addEventListener('resize', () => {
+    activePreviewVideos('[data-preview-video][src]').forEach(refreshPoster);
+    requestPreviewRefresh();
+    requestSettledRefreshes();
+  }, { passive: true });
+  document.addEventListener('new-work:gallery-image-ready', requestPreviewRefresh);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) state.active.slice().forEach(pause);
+    else setupPreviews();
+  });
+  document.addEventListener('astro:before-swap', () => {
+    if (state.refreshFrame) window.cancelAnimationFrame(state.refreshFrame);
+    state.refreshFrame = 0;
+    if (state.preloadTimer) window.clearTimeout(state.preloadTimer);
+    state.preloadTimer = 0;
+    state.refreshTimers.forEach((timer) => window.clearTimeout(timer));
+    state.refreshTimers = [];
+    const routeDirection = document.documentElement.dataset.workProjectTransition;
+    const preservesGallery = routeDirection === 'to-project' || routeDirection === 'to-gallery';
+    const continuityUntil = String(performance.now() + 2_000);
+    document.querySelectorAll<HTMLVideoElement>('[data-preview-video]').forEach((video) => {
+      // The selected route preview remains alive until the browser captures the
+      // outgoing transition frame. Gallery videos also remain alive while the
+      // gallery is retained behind a project, so returning does not briefly
+      // repaint video cards as empty/still surfaces before the preview manager
+      // restarts them.
+      if (
+        video.dataset.routeTransitionActive === 'true'
+        || (preservesGallery && video.closest('[data-route-gallery-layer]'))
+      ) {
+        video.dataset.routeContinuityUntil = continuityUntil;
+        return;
+      }
+      detachSource(video);
+    });
+    state.active = preservesGallery
+      ? state.active.filter((video) => video.isConnected && video.closest('[data-route-gallery-layer]'))
+      : [];
+    state.visibility.clear();
+  });
+  setupPreviews();
+  document.addEventListener('astro:page-load', setupPreviews);
+</script>

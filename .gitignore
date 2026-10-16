@@ -68,3 +68,9 @@
 .vscode/
 *.swp
 *.swo
+
+# Isolated October review and root-domain candidate output
+/release-dist/
+/review-release-dist/
+/output/
+/reviews/oliver-2026-10/captures/

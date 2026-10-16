@@ -1,0 +1,379 @@
+---
+import NavigationLabel from './NavigationLabel.astro';
+import type { NavItem } from './DesktopNav.astro';
+import { withBase, withoutBase } from '../lib/base-path';
+
+export interface Props {
+  items?: readonly NavItem[];
+  currentPath?: string;
+  ariaLabel?: string;
+  menuLabel?: string;
+  closeLabel?: string;
+  instanceId?: string;
+  class?: string;
+}
+
+const {
+  items = [
+    { href: withBase('/#work-gallery'), label: 'Work', match: 'section' },
+    { href: withBase('/contact'), label: 'Contact', match: 'section' },
+  ],
+  currentPath = withoutBase(Astro.url.pathname),
+  ariaLabel = 'Mobile navigation',
+  menuLabel = 'Menu',
+  closeLabel = 'Close menu',
+  instanceId = 'site-mobile-menu',
+  class: className,
+} = Astro.props;
+
+const panelId = `${instanceId}-panel`;
+
+const normalizePath = (path: string): string => {
+  const pathname = path.split(/[?#]/u, 1)[0] || '/';
+  if (pathname === '/') return pathname;
+  return pathname.replace(/\/+$/, '');
+};
+
+const activePath = normalizePath(withoutBase(currentPath));
+const isExactPage = (item: NavItem): boolean => activePath === normalizePath(withoutBase(item.href));
+const isCurrent = (item: NavItem): boolean => {
+  const href = normalizePath(withoutBase(item.href));
+
+  if (href === '/') {
+    return activePath === '/' || (item.match === 'section' && activePath.startsWith('/work/'));
+  }
+
+  return item.match === 'exact'
+    ? activePath === href
+    : activePath === href || activePath.startsWith(`${href}/`);
+};
+---
+
+<div role="navigation" class:list={['mobile-menu', className]} aria-label={ariaLabel} data-mobile-menu-root>
+  <details class="mobile-menu__disclosure" data-mobile-menu>
+    <summary
+      class="mobile-menu__trigger"
+      role="button"
+      aria-controls={panelId}
+      aria-expanded="false"
+      aria-label={menuLabel}
+      data-open-label={menuLabel}
+      data-close-label={closeLabel}
+      tabindex="0"
+      data-menu-trigger
+    >
+      <span class="mobile-menu__labels" aria-hidden="true">
+        <span class="mobile-menu__open-label">{menuLabel}</span>
+        <span class="mobile-menu__summary-close-label">Close</span>
+      </span>
+      <span class="mobile-menu__lines" aria-hidden="true"><span></span><span></span></span>
+    </summary>
+
+    <div
+      class="mobile-menu__panel"
+      id={panelId}
+      tabindex="-1"
+      data-menu-panel
+    >
+      <div class="mobile-menu__panel-inner">
+        <ul class="mobile-menu__list" role="list">
+          {
+            items.map((item) => (
+              <li class="mobile-menu__item">
+                <a
+                  class:list={['mobile-menu__link', { 'is-current': isCurrent(item) }]}
+                  href={item.href}
+                  aria-label={item.label}
+                  aria-current={isExactPage(item) ? 'page' : undefined}
+                  data-menu-link
+                  data-work-navigation={normalizePath(withoutBase(item.href)) === '/' ? '' : undefined}
+                >
+                  <NavigationLabel label={item.label} />
+                </a>
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+    </div>
+  </details>
+</div>
+
+<script>
+  interface LockedElement {
+    element: HTMLElement;
+    wasInert: boolean;
+  }
+
+  interface BodyStyleSnapshot {
+    position: string;
+    insetBlockStart: string;
+    insetInlineStart: string;
+    inlineSize: string;
+    overflow: string;
+  }
+
+  const focusableSelector = [
+    'a[href]',
+    'button:not([disabled])',
+    'input:not([disabled])',
+    'select:not([disabled])',
+    'textarea:not([disabled])',
+    '[tabindex]:not([tabindex="-1"])',
+  ].join(',');
+
+  let mobileMenuRouteController = new AbortController();
+
+  const disposeMobileMenuRoute = (): void => {
+    mobileMenuRouteController.abort();
+    mobileMenuRouteController = new AbortController();
+  };
+
+  document.addEventListener('astro:before-swap', disposeMobileMenuRoute);
+
+  const initializeMobileMenus = (): void => {
+    const roots = document.querySelectorAll<HTMLElement>('[data-mobile-menu-root]');
+
+    roots.forEach((root) => {
+      if (root.dataset.menuReady === 'true') return;
+
+      const details = root.querySelector<HTMLDetailsElement>('[data-mobile-menu]');
+      const trigger = root.querySelector<HTMLElement>('[data-menu-trigger]');
+      const panel = root.querySelector<HTMLElement>('[data-menu-panel]');
+
+      if (!details || !trigger || !panel) return;
+
+      const routeSignal = mobileMenuRouteController.signal;
+      if (routeSignal.aborted) return;
+
+      root.dataset.menuReady = 'true';
+      root.classList.add('is-enhanced');
+
+      let isOpen = false;
+      let previousFocus: HTMLElement | null = null;
+      let lockedElements: LockedElement[] = [];
+      let lockedScrollY = 0;
+      let bodyStyles: BodyStyleSnapshot | null = null;
+      let menuAnimations: Animation[] = [];
+      let isClosing = false;
+      const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+      const cancelMenuAnimations = (): void => {
+        menuAnimations.forEach((animation) => animation.cancel());
+        menuAnimations = [];
+        isClosing = false;
+      };
+
+      const getFocusableElements = (): HTMLElement[] =>
+        Array.from(root.querySelectorAll<HTMLElement>(focusableSelector)).filter(
+          (element) =>
+            !element.hasAttribute('disabled') &&
+            element.getClientRects().length > 0,
+        );
+
+      const lockBackground = (): void => {
+        lockedElements = [];
+
+        let branch: HTMLElement | null = root;
+        while (branch && branch !== document.body) {
+          const parent: HTMLElement | null = branch.parentElement;
+          if (!parent) break;
+
+          Array.from(parent.children).forEach((candidate) => {
+            if (!(candidate instanceof HTMLElement) || candidate === branch) return;
+
+            lockedElements.push({ element: candidate, wasInert: candidate.inert });
+            candidate.inert = true;
+          });
+
+          branch = parent;
+        }
+
+        lockedScrollY = window.scrollY;
+        bodyStyles = {
+          position: document.body.style.position,
+          insetBlockStart: document.body.style.insetBlockStart,
+          insetInlineStart: document.body.style.insetInlineStart,
+          inlineSize: document.body.style.inlineSize,
+          overflow: document.body.style.overflow,
+        };
+
+        document.body.classList.add('has-open-mobile-menu');
+        document.body.style.position = 'fixed';
+        document.body.style.insetBlockStart = `-${lockedScrollY}px`;
+        document.body.style.insetInlineStart = '0';
+        document.body.style.inlineSize = '100%';
+        document.body.style.overflow = 'hidden';
+      };
+
+      const unlockBackground = (restoreScroll = true): void => {
+        lockedElements.reverse().forEach(({ element, wasInert }) => {
+          element.inert = wasInert;
+        });
+        lockedElements = [];
+
+        if (bodyStyles) {
+          document.body.style.position = bodyStyles.position;
+          document.body.style.insetBlockStart = bodyStyles.insetBlockStart;
+          document.body.style.insetInlineStart = bodyStyles.insetInlineStart;
+          document.body.style.inlineSize = bodyStyles.inlineSize;
+          document.body.style.overflow = bodyStyles.overflow;
+          bodyStyles = null;
+        }
+
+        document.body.classList.remove('has-open-mobile-menu');
+        if (restoreScroll) window.scrollTo(0, lockedScrollY);
+      };
+
+      const closeMenu = (restoreFocus = true, restoreScroll = true): void => {
+        cancelMenuAnimations();
+        if (!isOpen) {
+          trigger.setAttribute('aria-expanded', 'false');
+          root.setAttribute('role', 'navigation');
+          root.removeAttribute('aria-modal');
+          return;
+        }
+
+        isOpen = false;
+        trigger.setAttribute('aria-expanded', 'false');
+        trigger.setAttribute('aria-label', trigger.dataset.openLabel || 'Menu');
+        root.setAttribute('role', 'navigation');
+        root.removeAttribute('aria-modal');
+        unlockBackground(restoreScroll);
+
+        if (restoreFocus && previousFocus?.isConnected) {
+          previousFocus.focus({ preventScroll: true });
+        }
+        previousFocus = null;
+      };
+
+      const requestClose = (restoreFocus = true, restoreScroll = true): void => {
+        if (isClosing && restoreFocus) return;
+        const finish = (): void => {
+          closeMenu(false, restoreScroll);
+          details.open = false;
+          if (restoreFocus && !routeSignal.aborted) trigger.focus({ preventScroll: true });
+        };
+        // Route changes and breakpoint changes close immediately. Only an
+        // intentional dismissal keeps the focus trap through the exit motion.
+        if (!isOpen || !restoreFocus || reducedMotion.matches) {
+          finish();
+          return;
+        }
+        const { opacity } = getComputedStyle(panel);
+        cancelMenuAnimations();
+        isClosing = true;
+        const exit = panel.animate([
+          { opacity },
+          { opacity: 0 },
+        ], { duration: 180, easing: 'cubic-bezier(.4, 0, 1, 1)', fill: 'both' });
+        menuAnimations.push(exit);
+        void exit.finished.then(finish, () => undefined);
+      };
+
+      const openMenu = (): void => {
+        if (isOpen && !isClosing) return;
+        const alreadyLocked = isOpen;
+        const opacity = isClosing ? getComputedStyle(panel).opacity : '0';
+        cancelMenuAnimations();
+        isOpen = true;
+        if (!alreadyLocked) previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : trigger;
+        trigger.setAttribute('aria-expanded', 'true');
+        trigger.setAttribute('aria-label', trigger.dataset.closeLabel || 'Close menu');
+        root.setAttribute('role', 'dialog');
+        root.setAttribute('aria-modal', 'true');
+        if (!alreadyLocked) lockBackground();
+
+        if (!reducedMotion.matches) {
+          menuAnimations.push(panel.animate([
+            { opacity },
+            { opacity: 1 },
+          ], { duration: 300, easing: 'cubic-bezier(.22, 1, .36, 1)' }));
+          root.querySelectorAll<HTMLElement>('.mobile-menu__item').forEach((item, index) => {
+            menuAnimations.push(item.animate([
+              { opacity: 0, transform: 'translateY(18px)' },
+              { opacity: 1, transform: 'translateY(0)' },
+            ], {
+              duration: 420,
+              delay: 60 + index * 60,
+              easing: 'cubic-bezier(.22, 1, .36, 1)',
+              fill: 'backwards',
+            }));
+          });
+        }
+
+        // This control is already visible. Deferring focus by a frame can
+        // steal it back after a fast Tab press moves into the menu.
+        trigger.focus({ preventScroll: true });
+      };
+
+      const handleKeydown = (event: KeyboardEvent): void => {
+        if (!isOpen) return;
+
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          requestClose(true);
+          return;
+        }
+
+        if (event.key !== 'Tab') return;
+
+        const focusableElements = getFocusableElements();
+        const first = focusableElements[0];
+        const last = focusableElements.at(-1);
+        if (!first || !last) {
+          event.preventDefault();
+          panel.focus();
+          return;
+        }
+
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      };
+
+      details.addEventListener('toggle', () => {
+        if (details.open) openMenu();
+        else closeMenu(true);
+      });
+
+      // The same summary is the close control. Prevent native closing so the
+      // panel can finish its exit while the stationary header stays visible.
+      trigger.addEventListener('click', event => {
+        event.preventDefault();
+        if (isClosing) openMenu();
+        else if (details.open) requestClose(true);
+        else details.open = true;
+      });
+      root.addEventListener('keydown', handleKeydown);
+
+      panel.addEventListener('click', (event) => {
+        if (event.target === panel) requestClose(true);
+      });
+
+      root.querySelectorAll<HTMLElement>('[data-menu-link]').forEach((link) => {
+        link.addEventListener('click', () => requestClose(false, false));
+      });
+
+      const desktopNavigation = window.matchMedia('(min-width: 48rem)');
+      const handleDesktopNavigation = (event: MediaQueryListEvent): void => {
+        if (event.matches && details.open) requestClose(false);
+      };
+      desktopNavigation.addEventListener('change', handleDesktopNavigation);
+      routeSignal.addEventListener('abort', () => {
+        desktopNavigation.removeEventListener('change', handleDesktopNavigation);
+        closeMenu(false);
+      }, { once: true });
+
+      if (details.open) openMenu();
+      else closeMenu(false);
+    });
+  };
+
+  initializeMobileMenus();
+  document.addEventListener('astro:page-load', initializeMobileMenus);
+</script>

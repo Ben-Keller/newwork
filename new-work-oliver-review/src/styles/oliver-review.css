@@ -1,0 +1,59 @@
+/* Oliver review, October 2026. Intentionally scoped to this independent app. */
+/* Keep adjacent content outside the 100px column-lag limit in motion/tokens.ts. */
+:root { --gallery-motion-clearance: 100px; }
+.site-header__mark.oliver-brand { width: clamp(32px, 3.2vw, 46px); }
+.site-header__descriptor { margin: 0 clamp(1rem, 3vw, 3.5rem) 0 0; font-size: clamp(.68rem,.85vw,.875rem); line-height: 1.12; letter-spacing: -.02em; }
+.site-header__actions { align-items: center; }
+.logo-work-page__title { min-width: 0; }
+.work-index {
+  --gallery-title-overlap: 0px;
+  --gallery-pointer-limit: max(0px, calc(var(--page-gutter) - 4px));
+  --gallery-safe-pointer-x: clamp(calc(-1 * var(--gallery-pointer-limit)), var(--gallery-pointer-x), var(--gallery-pointer-limit));
+  margin-top: 0;
+  /* Scroll momentum carries the first row above the section's layout edge.
+     Contain horizontal movement without cutting off those moving cards. */
+  overflow-x: clip;
+  overflow-y: visible;
+}
+/* The first gallery row and Work anchor share the same edge. */
+.project-grid > .project-card[data-desktop-column][data-tablet-column] { --column-entry-offset: 0px; --column-lift: 0px; }
+.project-grid { padding-block-end: max(var(--gallery-motion-clearance), clamp(4rem, 12vh, 9rem)); }
+.site-footer__main { grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 3rem clamp(2rem,5vw,6rem); }
+.site-footer__directory { width: 100%; min-width: 0; grid-auto-flow: row; }
+.site-footer__group--featured ul { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: .6rem 1.5rem; }
+.site-footer__group.site-footer__group--featured a { white-space: normal; overflow-wrap: anywhere; font-size: .875rem; line-height: 1.4; }
+/* Keep the board beside the artwork, with both bottom edges aligned.
+   The logo can shrink within narrow columns without wrapping the board. */
+.site-footer__signature { align-self: start; align-items: flex-end; flex-flow: row nowrap; gap: clamp(.75rem,2vw,2rem); }
+.site-footer__brand { flex: 0 1 clamp(170px,24vw,340px); }
+.site-footer__wordmark.oliver-brand { width: 100%; }
+.site-footer__discipline { --footer-ticker-height: clamp(1.4rem,2vw,2rem); flex: 0 0 auto; margin: 0; }
+.site-footer__bottom { margin-top: 1.5rem; }
+.contact-page .contact-content { max-width: 1440px; padding: clamp(8rem,14vh,11rem) var(--page-gutter) clamp(5rem,10vh,9rem); margin-inline: auto; }
+.contact-page .contact-content h1 { max-width: 11ch; margin: 1.5rem 0 3rem; font-family: var(--font-body); font-size: clamp(3.5rem,8vw,8rem); line-height: .95; letter-spacing: -.075em; font-weight: 800; }
+.contact-page .contact-email { display: flex; align-items: center; justify-content: space-between; gap: 1rem; max-width: 100%; padding: 1.4rem 0; border-block: 1px solid var(--color-rule); font-size: clamp(1.25rem,3.4vw,3rem); line-height: 1.2; letter-spacing: -.04em; }
+.contact-page .contact-email > span:first-child { overflow-wrap: anywhere; }
+.contact-page .contact-email__arrow { font-size: .8em; flex-shrink: 0; }
+.contact-page .contact-details-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 2rem; padding-top: 2rem; }
+.contact-page .contact-details-grid h2 { font-family: var(--font-body); font-size: .7rem; letter-spacing: .08em; text-transform: uppercase; margin-bottom: .8rem; }
+.contact-page .contact-location { white-space: pre-line; font-size: 1rem; line-height: 1.5; }
+.contact-page .social-list { display: flex; flex-wrap: wrap; gap: .75rem 1.5rem; margin: 0; font-size: 1rem; }
+.contact-page .contact-introduction { max-width: 42rem; font-size: 1.2rem; line-height: 1.5; margin-bottom: 1.5rem; }
+@media (hover: hover) and (pointer: fine) and (min-width: 1000px) { .home-page .project-card__label--overlay { visibility: hidden; } }
+@media (hover: none) { .project-card__label--overlay { opacity: 1; transform: none; } .project-card__label-mask > span { transform: none; } }
+@media (max-width: 767px) {
+  .site-header__descriptor { font-size: .625rem; margin-right: .75rem; }
+  .site-footer__main { grid-template-columns: 1fr; gap: 2.5rem; }
+  .site-footer__signature { grid-column: 1; grid-row: 1; }
+  .site-footer__directory { grid-column: 1; grid-row: 2; }
+  .site-footer__bottom { grid-column: 1; grid-row: 3; margin: 0; }
+  .contact-page .contact-details-grid { gap: 1.5rem; }
+}
+@media (max-width: 360px) { .site-header__descriptor { max-width: 85px; } .contact-page .contact-details-grid { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) { .home-identity { transition: none !important; } }
+.work-index { --gallery-outer-bleed: 0px; --gallery-vertical-bleed: 0px; padding-top: 0; padding-inline: var(--page-gutter); }
+.contact-page .contact-email { margin: 0; color: var(--color-ink); background: transparent; font-family: var(--font-body); }
+.contact-page .contact-content { min-height: 70vh; }
+
+.site-header { background: var(--page-background, var(--color-canvas)); }
+.site-footer__group--featured li:nth-child(even) .site-footer__preview { inset-inline-start: auto; inset-inline-end: 0; }

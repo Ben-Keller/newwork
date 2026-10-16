@@ -1,0 +1,27 @@
+---
+import type { Credit } from '../lib/types';
+interface Props { credits: Credit[]; whatWeDid?: string[] }
+const { credits, whatWeDid = [] } = Astro.props;
+const safeCredits = credits.filter((credit) => credit.label.trim() && credit.value.trim());
+const safeWhatWeDid = whatWeDid.filter((item) => item.trim());
+---
+{safeCredits.length || safeWhatWeDid.length ? (
+  <section class="project-disclosures" aria-label="Project details">
+    {safeCredits.length ? (
+      <details>
+        <summary>Credits <span aria-hidden="true">+</span></summary>
+        <dl>
+          {safeCredits.map((credit) => (
+            <><dt>{credit.label}</dt><dd>{credit.url ? <a href={credit.url}>{credit.value}</a> : credit.value}</dd></>
+          ))}
+        </dl>
+      </details>
+    ) : null}
+    {safeWhatWeDid.length ? (
+      <details>
+        <summary>What we did <span aria-hidden="true">+</span></summary>
+        <ul>{safeWhatWeDid.map((item) => <li>{item}</li>)}</ul>
+      </details>
+    ) : null}
+  </section>
+) : null}

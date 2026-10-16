@@ -14,6 +14,7 @@ export const contactPage = defineType({
     hiddenAllFieldsGroup,
   ],
   fields: [
+    defineField({name: 'oliverRevision', title: 'Revision migration', type: 'string', hidden: true, readOnly: true}),
     defineField({name: 'heading', title: 'Page heading', type: 'string', group: 'content', initialValue: 'Contact', validation: (Rule) => Rule.required().max(80)}),
     defineField({name: 'introduction', title: 'Introduction', type: 'portableText', group: 'content'}),
     defineField({
@@ -21,12 +22,14 @@ export const contactPage = defineType({
       title: 'Contact email',
       type: 'string',
       group: 'content',
-      validation: (Rule) => Rule.required().email(),
+      description: 'Public inbox linked from Contact. The current placeholder may stay until your real inbox is ready.',
+      validation: (Rule) => [Rule.required().email(), Rule.custom((value) => value?.endsWith('@lorem.ipsum') ? 'Replace this placeholder when your public inbox is ready.' : true).warning()],
     }),
-    defineField({name: 'location', title: 'Location', type: 'string', group: 'content', validation: (Rule) => Rule.max(120)}),
+    defineField({name: 'location', title: 'Location or public address', type: 'text', rows: 3, group: 'content', description: 'Optional. Enter a city or approved public address, using line breaks as needed. Clear it to hide Location.', validation: (Rule) => Rule.max(240)}),
     defineField({
       name: 'socialLinks',
       title: 'Social links',
+      description: 'Replace each placeholder label and URL, or remove links you do not want to show.',
       type: 'array',
       group: 'content',
       of: [defineArrayMember({type: 'socialLink'})],

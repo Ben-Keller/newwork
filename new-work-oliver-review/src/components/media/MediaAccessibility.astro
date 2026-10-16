@@ -1,0 +1,23 @@
+---
+interface Props {
+  transcript?: string;
+  captionsFile?: string;
+}
+
+const { transcript, captionsFile } = Astro.props;
+const paragraphs = transcript?.split(/\n{2,}/u).map((paragraph) => paragraph.trim()).filter(Boolean) || [];
+---
+
+{transcript || captionsFile ? (
+  <div class="media-accessibility-options">
+    {captionsFile ? (
+      <a href={captionsFile} target="_blank" rel="noreferrer">Open captions (WebVTT)</a>
+    ) : null}
+    {transcript ? (
+      <details class="media-transcript">
+        <summary>Transcript</summary>
+        {paragraphs.map((paragraph) => <p>{paragraph}</p>)}
+      </details>
+    ) : null}
+  </div>
+) : null}

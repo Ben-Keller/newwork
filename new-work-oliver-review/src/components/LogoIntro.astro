@@ -1,0 +1,78 @@
+---
+import OliverBrand from './OliverBrand.astro';
+import { inferVideoMimeType } from './media/video-mime';
+import { splashRendition } from '../lib/media/splash-renditions';
+import { wordmarkGlyphs, wordmarkViewBox, usesApprovedWordmark } from '../lib/brand/wordmark-artwork';
+import type { BrandAssetView, ProjectView } from '../lib/types';
+
+interface Props { asset?: BrandAssetView; projects?: ProjectView[] }
+const { asset, projects = [] } = Astro.props;
+const approved = usesApprovedWordmark(asset);
+const assignments = [
+  'mercury-an-unexpected-life', 'native-cucumber-mint-stop-motion', 'cradlewise',
+  'tour-de-france-x-toyota', 'specialized-globe', 'brava', 'olympics-toyota-in-due-time',
+];
+const mediaProjects = projects.filter(project => project.cover.poster);
+const letterProjects = assignments.map((slug, index) => projects.find(project => project.slug === slug)
+  || mediaProjects[(index + 1) % Math.max(1, mediaProjects.length)]);
+const splashProject = letterProjects.find(project => project?.cover.previewVideo) || mediaProjects[0];
+const hd = splashRendition(splashProject?.cover.previewVideo);
+const splashVideo = hd?.video || splashProject?.cover.previewVideo;
+const splashPoster = hd?.poster || splashProject?.cover.previewPosterOverride?.src || splashProject?.cover.poster.src;
+const [, , width, height] = wordmarkViewBox.split(' ').map(Number);
+const ratio = !approved && asset?.width && asset.height ? asset.width / asset.height : width! / height!;
+---
+<!-- One instance lives in HomeIdentity. The page moves this instance; only
+     whole words change arrangement. No font metrics or alternate title exist. -->
+<div class="logo-intro" data-logo-intro data-logo-mask-experience data-title-state="splash"
+  data-title-motion="settled" data-title-source={approved ? 'oliver-native-svg' : 'cms-image'}
+  data-logo-reveal="2" data-logo-reveal-ready="false" data-logo-reveal-phase="background" data-state="settled"
+  style={{ aspectRatio: String(ratio) }}>
+  <div class="logo-intro__placement" data-logo-stage-morph>
+    <div class="logo-intro__stage" data-logo-stage>
+      <div class="logo-intro__art" data-title-measure>
+        {approved ? <>
+          <svg class="logo-intro__svg" data-wordmark-art viewBox={wordmarkViewBox} aria-hidden="true">
+            {wordmarkGlyphs.map(({ glyph, word, path }, index) => <path d={path} fill="currentColor"
+              data-wordmark-glyph={index} data-glyph={glyph} data-word={word}
+              data-type-letter={index < 7 ? index : undefined} />)}
+          </svg>
+          <canvas class="logo-intro__media" data-wordmark-canvas aria-hidden="true"></canvas>
+        </> : <OliverBrand asset={asset} />}
+      </div>
+    </div>
+  </div>
+  {approved && <div class="logo-intro__sources" aria-hidden="true">
+    {splashPoster && <img src={splashPoster} alt="" data-splash-image decoding="async" />}
+    {splashVideo && <video data-splash-video muted loop playsinline preload="none">
+      <source data-src={splashVideo} type={inferVideoMimeType(splashVideo)} />
+    </video>}
+    {letterProjects.map((project, index) => <div data-letter-media={index}>
+      {project && <img data-letter-image data-src={project.cover.previewPosterOverride?.src || project.cover.poster.src} alt="" decoding="async" />}
+      {project?.cover.previewVideo && <video data-letter-video muted loop playsinline preload="none">
+        <source data-src={project.cover.previewVideo} type={inferVideoMimeType(project.cover.previewVideo)} />
+      </video>}
+    </div>)}
+  </div>}
+</div>
+<style>
+  /* Reserve the horizontal home footprint even while the stacked artwork moves. */
+  .logo-intro { position: relative; width: 100%; color: #050505; }
+  .logo-intro__placement { position: absolute; top: 0; left: 0; width: 100%; transform-origin: 0 0; }
+  .logo-intro__stage { width: 100%; }
+  .logo-intro__art { position: relative; width: 100%; }
+  .logo-intro__svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .logo-intro__svg path { pointer-events: visiblePainted; }
+  .logo-intro__media { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  .logo-intro__sources { position: fixed; width: 1px; height: 1px; overflow: hidden; opacity: 0; pointer-events: none; }
+  .logo-intro__sources :is(img, video) { width: 1px; height: 1px; }
+  :global([data-logo-page-ready]) .logo-intro[data-logo-reveal-ready="false"] .logo-intro__stage { opacity: 0; }
+  .logo-intro[data-logo-reveal-ready="true"] .logo-intro__stage { animation: logo-reveal-diagonal 1100ms cubic-bezier(.2,.8,.2,1) both; }
+  .logo-intro[data-title-state="home"] .logo-intro__stage { animation: none; opacity: 1; }
+  @keyframes logo-reveal-diagonal {
+    from { opacity: 0; clip-path: polygon(0 0, 0 0, -20% 100%, -20% 100%); transform: translateX(-4%) skewX(-3deg); }
+    to { opacity: 1; clip-path: polygon(0 0, 120% 0, 100% 100%, 0 100%); transform: none; }
+  }
+  @media (prefers-reduced-motion: reduce) { .logo-intro[data-logo-reveal-ready="true"] .logo-intro__stage { animation: none; } }
+  @media (forced-colors: active) { .logo-intro { color: CanvasText; } .logo-intro__media { display: none; } }
+</style>

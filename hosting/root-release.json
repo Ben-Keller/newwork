@@ -1,0 +1,13 @@
+{
+  "source": "new-work-oliver-review",
+  "site": "https://newworkagency.com",
+  "base": "/",
+  "output": "release-dist",
+  "legacyPrefixes": [
+    "v1",
+    "v2",
+    "newwork",
+    "newwork/v1",
+    "newwork/v2"
+  ]
+}

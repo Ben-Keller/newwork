@@ -1,0 +1,122 @@
+---
+import SplitFlapTicker from './SplitFlapTicker.astro';
+import OliverBrand from './OliverBrand.astro';
+import type { BrandAssetView, ProjectView } from '../lib/types';
+import type { WordmarkTone } from './Wordmark.astro';
+import { withBase } from '../lib/base-path';
+import { buildResponsiveSrcset, pickResponsiveSource } from '../lib/responsive-images';
+
+export interface FooterLink {
+  href?: string;
+  url?: string;
+  label: string;
+}
+
+export interface Props {
+  tickerWords?: string[];
+  featuredHeading?: string;
+  siteName?: string;
+  featuredProjects?: readonly Pick<ProjectView, 'title' | 'slug' | 'cover'>[];
+  people?: readonly FooterLink[];
+  peopleHeading?: string;
+  copyrightLine?: string;
+  wordmarkAsset?: BrandAssetView;
+  tone?: WordmarkTone;
+  showYear?: boolean;
+  class?: string;
+}
+
+const {
+  siteName = 'New Work Agency',
+  tickerWords = ['Arriving', 'In transit', 'Departing', 'Early'],
+  featuredHeading = 'Featured',
+  wordmarkAsset,
+  featuredProjects = [],
+  people = [],
+  peopleHeading = 'People',
+  copyrightLine = 'All rights reserved.',
+  showYear = true,
+  class: className,
+} = Astro.props;
+
+const year = new Date().getFullYear();
+// A project can occupy several gallery tiles. List it once, in the featured
+// gallery order, and keep the footer edit to a maximum of eight projects.
+const featuredLinks = featuredProjects
+  .filter((project, index, projects) => project.slug
+    && projects.findIndex((candidate) => candidate.slug === project.slug) === index)
+  .slice(0, 8)
+  .map((project) => ({
+    href: withBase(`/work/${project.slug}`),
+    label: project.title,
+    image: project.cover.previewPosterOverride || project.cover.poster,
+  }));
+const resolvedPeople = people.flatMap((link) => {
+  const href = link.href ?? link.url;
+  return href ? [{ href, label: link.label }] : [];
+});
+---
+
+<footer class:list={['site-footer', className]} data-site-footer>
+  <div class="site-footer__inner">
+    <div class="site-footer__main">
+      <nav class="site-footer__directory" aria-label="Footer">
+        {resolvedPeople.length ? (
+          <div class="site-footer__group site-footer__group--people">
+            <h2>{peopleHeading}</h2>
+            <ul role="list">
+              {resolvedPeople.map((link) => <li><a href={link.href}>{link.label}</a></li>)}
+            </ul>
+          </div>
+        ) : null}
+
+        {featuredLinks.length ? (
+          <div class="site-footer__group site-footer__group--featured">
+            <h2>{featuredHeading}</h2>
+            <ul role="list">
+              {featuredLinks.map((link) => (
+                <li>
+                  <a class="site-footer__featured-link" href={link.href}>
+                    <span class="site-footer__featured-label">{link.label}</span>
+                    {link.image.src ? (
+                      <span class="site-footer__preview" aria-hidden="true">
+                        <img
+                          src={pickResponsiveSource(link.image, 480)}
+                          srcset={buildResponsiveSrcset(link.image)}
+                          sizes="(min-width: 1334px) 240px, (min-width: 889px) 18vw, 160px"
+                          width={link.image.width}
+                          height={link.image.height}
+                          alt=""
+                          loading="lazy"
+                          decoding="async"
+                          style={`object-position:${link.image.objectPosition || '50% 50%'}`}
+                        />
+                      </span>
+                    ) : null}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+      </nav>
+      <div class="site-footer__signature">
+        <a
+          class="site-footer__brand"
+          href={withBase('/')}
+          aria-label={siteName}
+        >
+          <OliverBrand variant="stacked" asset={wordmarkAsset} class="site-footer__wordmark" />
+        </a>
+        <span class="site-footer__discipline">
+          <SplitFlapTicker words={tickerWords} cells={10} class="site-footer__ticker" size="var(--footer-ticker-height)" label={tickerWords.join('. ')} />
+        </span>
+      </div>
+      {showYear && (
+        <div class="site-footer__bottom">
+          <p class="site-footer__legal">© {year} {siteName}<br />{copyrightLine}</p>
+        </div>
+      )}
+    </div>
+  </div>
+</footer>

@@ -1,0 +1,32 @@
+---
+import WorkDetailPage from '../../../components/WorkDetailPage.astro';
+import { getSiteContent } from '../../../lib/content';
+import type { ProjectView, SiteContent } from '../../../lib/types';
+
+export async function getStaticPaths() {
+  const content = await getSiteContent();
+  return content.projects.flatMap((work) => {
+    const assetRoutes = work.assets.map((asset) => ({
+      params: {slug: work.slug, asset: asset.slug},
+      props: {work, selectedAssetId: asset.id, content},
+    }));
+    const prototypePhotoRoutes = work.assets.length === 0 && work.template === 'photo'
+      ? work.photos.map((photo) => ({
+          params: {slug: work.slug, asset: photo.id},
+          props: {work, selectedAssetId: photo.id, content},
+        }))
+      : [];
+    return [...assetRoutes, ...prototypePhotoRoutes];
+  });
+}
+
+interface Props {
+  work: ProjectView;
+  selectedAssetId: string;
+  content: SiteContent;
+}
+
+const { work, selectedAssetId, content } = Astro.props;
+---
+
+<WorkDetailPage work={work} selectedAssetId={selectedAssetId} content={content} />

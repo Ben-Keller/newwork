@@ -1,0 +1,21 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="3017.0 0 724.64 834" color="#1a1a1a" role="img" aria-label="O">
+  <defs>
+    <style>
+      .cls-1 { fill-rule: evenodd; }
+      .cls-1, .cls-2 { fill: currentColor; }
+      .nw-letter {
+        transform-box: fill-box;
+        transform-origin: center;
+        will-change: transform, opacity;
+      }
+      .nw-letter__part {
+        transform-box: fill-box;
+        transform-origin: center;
+      }
+    </style>
+  </defs>
+  <g id="nw-letter-05-o" class="nw-letter nw-letter--o nw-letter--work" data-nw-letter="O" data-letter="O" data-letter-index="4" data-word="work" data-word-index="1" aria-label="O">
+    <path id="nw-letter-05-o__part-1" class="cls-1 nw-letter__part" d="M3379.32,17c223.42,0,350.32,155,350.32,400s-126.9,400-350.32,400-350.32-155-350.32-400,126.9-400,350.32-400ZM3374,48c-130,0-206,145-206,369s76,369,206,369,206-145,206-369-76-369-206-369Z" data-nw-part="1" />
+  </g>
+</svg>

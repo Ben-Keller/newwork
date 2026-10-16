@@ -7,7 +7,9 @@ These instructions apply to the entire repository.
 ## Repository map
 
 - `studio-new-work/` is the standalone Sanity Studio for project `7un4plyu`, dataset `production`.
-- `new-work-site/` is the Astro website built from published Sanity content.
+- `new-work-oliver-review/` is the active Astro website. Production builds use published Sanity content; local review defaults to prototype content.
+- `new-work-site/` is the preserved 13 October comparison baseline. Do not edit it. Run `node hosting/check-review-baseline.mjs`; never regenerate the manifest to conceal changes.
+- Work directly on `main` in this checkout. Do not create a branch or checkout unless requested.
 - `.github/workflows/deploy-studio.yml` deploys Studio code and its schema.
 - `.github/workflows/deploy-site.yml` validates and deploys the public site.
 - `DEPLOYMENT.md` is the detailed source of truth for release, webhook, recovery, and rollback procedures.
@@ -42,7 +44,7 @@ These instructions apply to the entire repository.
 - Let Sanity generate IDs for ordinary documents; explicit IDs are reserved for controlled singletons.
 - After changing a schema or a GROQ query, regenerate and review both:
   - `studio-new-work/schema.json`
-  - `new-work-site/src/sanity.types.ts`
+  - `new-work-oliver-review/src/sanity.types.ts`
 - Query only the fields needed by the frontend. Include image dimensions, crop/hotspot data, and LQIP only where the UI uses them.
 - Request appropriately sized Sanity image CDN URLs rather than serving original-resolution images.
 - Do not use raw Sanity file assets for production video playback at scale. Use adaptive streaming through Sanity Media Library/Mux or another dedicated video provider.
@@ -55,7 +57,7 @@ For Studio/schema changes, run from `studio-new-work/`:
 npm run deploy:check
 ```
 
-For website changes, run from `new-work-site/` as appropriate to the risk:
+For website changes, run from `new-work-oliver-review/` as appropriate to the risk:
 
 ```sh
 pnpm sanity:audit
@@ -72,7 +74,9 @@ Use focused tests while iterating, then run the complete relevant gate before ha
 
 - A local commit alone does not deploy; the reviewed commit must be pushed to GitHub `main`.
 - Relevant pushes to `main` trigger the Studio and/or site GitHub Actions automatically.
-- Publishing eligible content in Sanity should trigger only the site rebuild through the configured webhook; it does not deploy Studio code or write to Git.
+- The site publisher builds `review-release-dist/` from the Oliver revision in production CMS mode at `https://ben-keller.github.io/newwork/`, with noindex. The domain remains on Squarespace. The separate root-domain profile is preparation only.
+- GitHub Actions checks published CMS revisions every 15 minutes and rebuilds only when content or code differs from the live release. Scheduling can be delayed. The old Sanity webhook remains disabled and is not required for this flow. Do not copy a broad personal GitHub token into Sanity.
+- Contact placeholders are explicitly permitted by Ben (16 October 2026). The client can replace them in the Contact page editor. Do not reintroduce a placeholder launch gate.
 - Match the GitHub Actions commit SHA to the pushed commit before treating a green run as proof.
 - Failed deployment verification should be fixed at its source and rerun, not bypassed.
 

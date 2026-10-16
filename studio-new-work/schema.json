@@ -2361,10 +2361,6 @@
               },
               {
                 "type": "string",
-                "value": "about"
-              },
-              {
-                "type": "string",
                 "value": "contact"
               }
             ]
@@ -3024,6 +3020,20 @@
             "type": "string",
             "value": "brandAsset"
           }
+        },
+        "width": {
+          "type": "objectAttribute",
+          "value": {
+            "type": "number"
+          },
+          "optional": true
+        },
+        "height": {
+          "type": "objectAttribute",
+          "value": {
+            "type": "number"
+          },
+          "optional": true
         },
         "format": {
           "type": "objectAttribute",
@@ -4624,6 +4634,37 @@
           "type": "string"
         }
       },
+      "oliverRevision": {
+        "type": "objectAttribute",
+        "value": {
+          "type": "string"
+        },
+        "optional": true
+      },
+      "calloutText": {
+        "type": "objectAttribute",
+        "value": {
+          "type": "string"
+        },
+        "optional": false
+      },
+      "tickerWords": {
+        "type": "objectAttribute",
+        "value": {
+          "type": "array",
+          "of": {
+            "type": "string"
+          }
+        },
+        "optional": true
+      },
+      "featuredHeading": {
+        "type": "objectAttribute",
+        "value": {
+          "type": "string"
+        },
+        "optional": true
+      },
       "strapline": {
         "type": "objectAttribute",
         "value": {
@@ -4746,6 +4787,13 @@
         "value": {
           "type": "string"
         }
+      },
+      "oliverRevision": {
+        "type": "objectAttribute",
+        "value": {
+          "type": "string"
+        },
+        "optional": true
       },
       "heading": {
         "type": "objectAttribute",
@@ -5003,6 +5051,13 @@
           "type": "string"
         }
       },
+      "oliverRevision": {
+        "type": "objectAttribute",
+        "value": {
+          "type": "string"
+        },
+        "optional": true
+      },
       "introName": {
         "type": "objectAttribute",
         "value": {
@@ -5038,6 +5093,98 @@
           }
         },
         "optional": false
+      },
+      "galleryReserve": {
+        "type": "objectAttribute",
+        "value": {
+          "type": "array",
+          "of": {
+            "type": "object",
+            "attributes": {
+              "_key": {
+                "type": "objectAttribute",
+                "value": {
+                  "type": "string"
+                }
+              }
+            },
+            "rest": {
+              "type": "inline",
+              "name": "workPlacement"
+            }
+          }
+        },
+        "optional": true
+      },
+      "tickerWords": {
+        "type": "objectAttribute",
+        "value": {
+          "type": "array",
+          "of": {
+            "type": "string"
+          }
+        },
+        "optional": true
+      },
+      "tickerCities": {
+        "type": "objectAttribute",
+        "value": {
+          "type": "array",
+          "of": {
+            "type": "union",
+            "of": [
+              {
+                "type": "string",
+                "value": "sf"
+              },
+              {
+                "type": "string",
+                "value": "la"
+              },
+              {
+                "type": "string",
+                "value": "nyc"
+              }
+            ]
+          }
+        },
+        "optional": true
+      },
+      "btsHeading": {
+        "type": "objectAttribute",
+        "value": {
+          "type": "string"
+        },
+        "optional": true
+      },
+      "btsSubtitle": {
+        "type": "objectAttribute",
+        "value": {
+          "type": "string"
+        },
+        "optional": true
+      },
+      "behindTheScenes": {
+        "type": "objectAttribute",
+        "value": {
+          "type": "array",
+          "of": {
+            "type": "object",
+            "attributes": {
+              "_key": {
+                "type": "objectAttribute",
+                "value": {
+                  "type": "string"
+                }
+              }
+            },
+            "rest": {
+              "type": "inline",
+              "name": "workPlacement"
+            }
+          }
+        },
+        "optional": true
       },
       "reel": {
         "type": "objectAttribute",
@@ -5099,6 +5246,13 @@
           "type": "string"
         }
       },
+      "oliverRevision": {
+        "type": "objectAttribute",
+        "value": {
+          "type": "string"
+        },
+        "optional": true
+      },
       "siteName": {
         "type": "objectAttribute",
         "value": {
@@ -5111,6 +5265,21 @@
         "value": {
           "type": "inline",
           "name": "brandAsset"
+        },
+        "optional": true
+      },
+      "stackedWordmark": {
+        "type": "objectAttribute",
+        "value": {
+          "type": "inline",
+          "name": "brandAsset"
+        },
+        "optional": true
+      },
+      "headerDescriptor": {
+        "type": "objectAttribute",
+        "value": {
+          "type": "string"
         },
         "optional": true
       },

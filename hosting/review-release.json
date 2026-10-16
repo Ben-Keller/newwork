@@ -1,0 +1,8 @@
+{
+  "source": "new-work-oliver-review",
+  "site": "https://ben-keller.github.io",
+  "base": "/newwork",
+  "output": "review-release-dist",
+  "indexable": false,
+  "legacyPrefixes": ["v1", "v2"]
+}

@@ -1,0 +1,108 @@
+---
+/**
+ * Brand asset seam.
+ *
+ * The launch build deliberately falls back to live text. Approved artwork can
+ * arrive as path data or as the reviewed Sanity image/SVG URL carried through
+ * `artworkSrc`; no header or layout changes are required. Keep the visible name
+ * in `label` so every version shares the same accessible name.
+ */
+/**
+ * `stacked` is the review round 1 mark: the lowercase n and w lifted straight
+ * out of the home title and set one above the other, drawn as live text in the
+ * title face rather than as artwork, so the mark and the title can never drift
+ * apart. The outline/solid split mirrors the title's own "new" over "work".
+ */
+export type WordmarkVariant = 'full' | 'compact' | 'stacked';
+export type WordmarkTone = 'dark' | 'light';
+
+export interface WordmarkPath {
+  d: string;
+  fillRule?: 'nonzero' | 'evenodd';
+  clipRule?: 'nonzero' | 'evenodd';
+}
+
+export interface Props {
+  label?: string;
+  variant?: WordmarkVariant;
+  tone?: WordmarkTone;
+  paths?: readonly (string | WordmarkPath)[];
+  viewBox?: string;
+  artworkSrc?: string;
+  artworkWidth?: number;
+  artworkHeight?: number;
+  decorative?: boolean;
+  class?: string;
+}
+
+const {
+  label = 'New Work',
+  variant = 'full',
+  tone = 'dark',
+  paths = [],
+  viewBox = variant === 'compact' ? '0 0 64 32' : '0 0 180 32',
+  artworkSrc,
+  artworkWidth,
+  artworkHeight,
+  decorative = false,
+  class: className,
+} = Astro.props;
+
+const fallbackText = variant === 'compact' ? 'NW' : label;
+// The stacked mark is always drawn from type, so supplied artwork is ignored
+// for that variant rather than silently winning over it.
+const hasArtwork = variant !== 'stacked' && (Boolean(artworkSrc) || paths.length > 0);
+---
+
+<span
+  class:list={[
+    'wordmark',
+    `wordmark--${variant}`,
+    `wordmark--${tone}`,
+    { 'wordmark--artwork': hasArtwork },
+    className,
+  ]}
+  data-wordmark={variant}
+  aria-hidden={decorative ? 'true' : undefined}
+>
+  {
+    variant === 'stacked' ? (
+      <span class="wordmark__stack" aria-hidden="true">
+        <span class="wordmark__stack-line wordmark__stack-line--outline">n</span>
+        <span class="wordmark__stack-line wordmark__stack-line--solid">w</span>
+      </span>
+    ) : artworkSrc ? (
+      <img
+        class="wordmark__image"
+        src={artworkSrc}
+        width={artworkWidth}
+        height={artworkHeight}
+        alt={decorative ? '' : label}
+        loading="eager"
+        decoding="async"
+      />
+    ) : hasArtwork ? (
+      <svg
+        class="wordmark__artwork"
+        viewBox={viewBox}
+        role={decorative ? undefined : 'img'}
+        aria-label={decorative ? undefined : label}
+        focusable="false"
+      >
+        {paths.map((path) => {
+          const definition: WordmarkPath = typeof path === 'string' ? { d: path } : path;
+
+          return (
+            <path
+              d={definition.d}
+              fill-rule={definition.fillRule}
+              clip-rule={definition.clipRule}
+            />
+          );
+        })}
+      </svg>
+    ) : (
+      <span class="wordmark__text">{fallbackText}</span>
+    )
+  }
+</span>

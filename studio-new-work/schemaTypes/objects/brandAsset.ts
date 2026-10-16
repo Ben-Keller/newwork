@@ -8,6 +8,8 @@ export const brandAsset = defineType({
   type: 'object',
   icon: ImageIcon,
   fields: [
+    defineField({name: 'width', title: 'Artwork width', type: 'number', description: 'For SVG files, use the viewBox width to preserve the logo proportions.', validation: (Rule) => Rule.positive()}),
+    defineField({name: 'height', title: 'Artwork height', type: 'number', description: 'For SVG files, use the viewBox height.', validation: (Rule) => Rule.positive()}),
     defineField({
       name: 'format',
       title: 'Format',

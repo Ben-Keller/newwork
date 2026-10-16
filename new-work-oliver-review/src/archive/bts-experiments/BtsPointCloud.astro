@@ -1,0 +1,218 @@
+---
+import type { BtsItem } from './types';
+
+interface Props {
+  items: BtsItem[];
+}
+const { items } = Astro.props;
+const first = items[0];
+---
+
+<div class="bts-pc" data-bts-point-cloud data-pc-state="loading">
+  <div class="bts-pc__stage" data-pc-stage>
+    <img class="bts-pc__fallback" data-pc-fallback src={first?.large} alt="" decoding="async" loading="lazy" />
+    <canvas class="bts-pc__canvas" data-pc-canvas aria-hidden="true"></canvas>
+    <div class="bts-pc__hud" aria-live="polite">
+      <p class="bts-pc__counter"><b data-pc-counter>01</b> / {String(items.length).padStart(2, '0')}</p>
+      <p class="bts-pc__meta"><span data-pc-time>{first?.time}</span> · <span data-pc-department>{first?.department}</span></p>
+      <p class="bts-pc__note" data-pc-note>{first?.note}</p>
+      <a class="bts-pc__project" data-pc-link href={first?.href}>{first?.project}</a>
+    </div>
+    <div class="bts-pc__progress" aria-hidden="true"><i data-pc-progress></i></div>
+    <p class="bts-pc__hint" aria-hidden="true">Move through it · drag to turn · click for the next frame</p>
+  </div>
+  <ol class="bts-pc__rail" aria-label="Frames">
+    {items.map((item, index) => (
+      <li>
+        <button type="button" data-pc-frame={index} aria-current={index === 0 ? 'true' : undefined} aria-label={`${item.time}, ${item.note}, ${item.project}`}>
+          <img src={item.thumb} alt="" loading="lazy" decoding="async" width={item.image.width} height={item.image.height} />
+        </button>
+      </li>
+    ))}
+  </ol>
+</div>
+
+<style>
+  .bts-pc {
+    --pc-bg: #0b0b0c;
+    --pc-ink: #f3f0e8;
+    max-width: 1800px;
+    margin-inline: auto;
+    padding-inline: var(--page-gutter);
+  }
+
+  .bts-pc__stage {
+    position: relative;
+    height: min(82vh, 56vw);
+    min-height: 420px;
+    overflow: hidden;
+    border-radius: 4px;
+    color: var(--pc-ink);
+    background:
+      radial-gradient(ellipse 60% 55% at 50% 48%, rgb(255 255 255 / 5%), transparent 70%),
+      var(--pc-bg);
+  }
+
+  .bts-pc__canvas,
+  .bts-pc__fallback {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .bts-pc__canvas {
+    opacity: 0;
+    transition: opacity 700ms ease;
+    touch-action: pan-y;
+    cursor: grab;
+  }
+
+  .bts-pc__canvas[data-dragging='true'] {
+    cursor: grabbing;
+  }
+
+  .bts-pc[data-pc-state='ready'] .bts-pc__canvas {
+    opacity: 1;
+  }
+
+  .bts-pc__fallback {
+    object-fit: cover;
+    opacity: .9;
+  }
+
+  .bts-pc:not([data-pc-state='fallback']) .bts-pc__fallback {
+    visibility: hidden;
+  }
+
+  /* A low scrim so the caption holds up over bright frames. */
+  .bts-pc__stage::after {
+    position: absolute;
+    inset: 55% 0 0;
+    background: linear-gradient(transparent, rgb(8 8 9 / 78%));
+    content: '';
+    pointer-events: none;
+  }
+
+  .bts-pc__hud,
+  .bts-pc__hint {
+    z-index: 1;
+  }
+
+  .bts-pc__hud {
+    position: absolute;
+    bottom: clamp(1rem, 4vh, 2.5rem);
+    left: clamp(1rem, 2.4vw, 2.5rem);
+    display: grid;
+    gap: .35rem;
+    max-width: min(30rem, 80%);
+    pointer-events: none;
+    text-shadow: 0 1px 12px rgb(0 0 0 / 60%);
+  }
+
+  .bts-pc__counter,
+  .bts-pc__meta,
+  .bts-pc__hint {
+    font-size: var(--text-xs);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+  }
+
+  .bts-pc__counter b {
+    color: #7ee0ff;
+  }
+
+  .bts-pc__note {
+    font-family: var(--font-display);
+    font-size: clamp(1.6rem, 1rem + 2.4vw, 3.6rem);
+    font-weight: 900;
+    letter-spacing: -.04em;
+    line-height: .92;
+  }
+
+  .bts-pc__project {
+    justify-self: start;
+    color: var(--pc-ink);
+    font-size: var(--text-xs);
+    letter-spacing: .08em;
+    text-decoration: none;
+    text-transform: uppercase;
+    border-bottom: 1px solid rgb(243 240 232 / 45%);
+    pointer-events: auto;
+  }
+
+  .bts-pc__progress {
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+    height: 2px;
+    background: rgb(255 255 255 / 8%);
+  }
+
+  .bts-pc__progress i {
+    display: block;
+    width: 100%;
+    height: 100%;
+    background: #7ee0ff;
+    transform: scaleX(0);
+    transform-origin: 0 50%;
+  }
+
+  .bts-pc__hint {
+    position: absolute;
+    right: clamp(1rem, 2.4vw, 2.5rem);
+    bottom: clamp(1rem, 4vh, 2.5rem);
+    opacity: .5;
+    pointer-events: none;
+  }
+
+  .bts-pc__rail {
+    display: flex;
+    gap: 6px;
+    margin: .75rem 0 0;
+    padding: 0;
+    overflow-x: auto;
+    list-style: none;
+    scrollbar-width: none;
+  }
+
+  .bts-pc__rail button {
+    display: block;
+    width: 84px;
+    aspect-ratio: 16 / 9;
+    padding: 0;
+    overflow: hidden;
+    border: 2px solid transparent;
+    border-radius: 2px;
+    background: #000;
+    opacity: .55;
+    transition: opacity 200ms ease, border-color 200ms ease;
+  }
+
+  .bts-pc__rail button:is(:hover, :focus-visible, [aria-current='true']) {
+    opacity: 1;
+  }
+
+  .bts-pc__rail button[aria-current='true'] {
+    border-color: #7ee0ff;
+  }
+
+  .bts-pc__rail img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  @media (max-width: 767px) {
+    .bts-pc__stage {
+      height: 70vh;
+      min-height: 360px;
+    }
+
+    .bts-pc__hint {
+      display: none;
+    }
+  }
+</style>

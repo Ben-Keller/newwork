@@ -1,0 +1,23 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="4482.0 0 652.06 834" color="#1a1a1a" role="img" aria-label="K">
+  <defs>
+    <style>
+      .cls-1 { fill-rule: evenodd; }
+      .cls-1, .cls-2 { fill: currentColor; }
+      .nw-letter {
+        transform-box: fill-box;
+        transform-origin: center;
+        will-change: transform, opacity;
+      }
+      .nw-letter__part {
+        transform-box: fill-box;
+        transform-origin: center;
+      }
+    </style>
+  </defs>
+  <g id="nw-letter-07-k" class="nw-letter nw-letter--k nw-letter--work" data-nw-letter="K" data-letter="K" data-letter-index="6" data-word="work" data-word-index="1" aria-label="K">
+    <path id="nw-letter-07-k__part-1" class="cls-2 nw-letter__part" d="M4494,24h245c-42,60-53.67,129-53.67,226v330c0,97,11.67,169,53.67,230h-245c42-63,54.44-136,54.44-230V250c0-94-12.44-165-54.44-226Z" data-nw-part="1" />
+    <path id="nw-letter-07-k__part-2" class="cls-2 nw-letter__part" d="M4583.17,513.65l313.65-395.84c36.3-46.03,36.3-72.49-3.72-87.45h228.96c-53.98,25.32-104.24,66.74-154.5,128.88l-253.15,317.59-131.23,36.82Z" data-nw-part="2" />
+    <path id="nw-letter-07-k__part-3" class="cls-2 nw-letter__part" d="M4782.47,362.25l339.58,447.75h-229.42l-223.63-345.16,113.47-102.59Z" data-nw-part="3" />
+  </g>
+</svg>

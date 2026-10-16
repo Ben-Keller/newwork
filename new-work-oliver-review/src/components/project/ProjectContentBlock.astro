@@ -1,0 +1,53 @@
+---
+import type { ContentBlockView, ContentMode } from '../../lib/types';
+import Caption from '../media/Caption.astro';
+import ContainedImage from '../media/ContainedImage.astro';
+import FullBleedImage from '../media/FullBleedImage.astro';
+import HeroImage from '../media/HeroImage.astro';
+import HeroVideo from '../media/HeroVideo.astro';
+import ImageGrid from '../media/ImageGrid.astro';
+import ImagePair from '../media/ImagePair.astro';
+import ShortLoop from '../media/ShortLoop.astro';
+import TextNote from '../media/TextNote.astro';
+import Video from '../media/Video.astro';
+
+interface Props {
+  block: ContentBlockView;
+  mode: ContentMode;
+  projectTitle: string;
+  eager?: boolean;
+  sizes?: string;
+  captionId?: string;
+}
+
+const {
+  block,
+  mode,
+  projectTitle,
+  eager = false,
+  sizes,
+  captionId = `media-caption-${block._key.replace(/[^A-Za-z0-9_-]/gu, '-')}`,
+} = Astro.props;
+---
+
+{block._type === 'heroImage' ? (
+  <HeroImage block={block} eager={eager} sizes={sizes} />
+) : block._type === 'heroVideo' ? (
+  <HeroVideo block={block} mode={mode} projectTitle={projectTitle} eager={eager} sizes={sizes} />
+) : block._type === 'fullBleedImage' ? (
+  <FullBleedImage block={block} eager={eager} sizes={sizes} />
+) : block._type === 'containedImage' ? (
+  <ContainedImage block={block} eager={eager} sizes={sizes} />
+) : block._type === 'imagePair' ? (
+  <ImagePair block={block} eager={eager} sizes={sizes} />
+) : block._type === 'imageGrid' ? (
+  <ImageGrid block={block} eager={eager} sizes={sizes} />
+) : block._type === 'video' ? (
+  <Video block={block} mode={mode} projectTitle={projectTitle} eager={eager} sizes={sizes} />
+) : block._type === 'shortLoop' ? (
+  <ShortLoop block={block} projectTitle={projectTitle} eager={eager} sizes={sizes} />
+) : block._type === 'textNote' ? (
+  <TextNote block={block} />
+) : (
+  <Caption block={block} id={captionId} />
+)}

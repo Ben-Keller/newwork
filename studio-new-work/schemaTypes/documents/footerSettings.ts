@@ -8,14 +8,18 @@ export const footerSettings = defineType({
   type: 'document',
   icon: ControlsIcon,
   groups: [
-    {name: 'strapline', title: 'Strapline', default: true},
+    {name: 'strapline', title: 'Callout & ticker', default: true},
     {name: 'directory', title: 'Link columns'},
     {name: 'legal', title: 'Legal line'},
     hiddenAllFieldsGroup,
   ],
   fields: [
+    defineField({name: 'oliverRevision', title: 'Revision migration', type: 'string', hidden: true, readOnly: true}),
+    defineField({name: 'calloutText', title: 'Contact callout', type: 'string', group: 'strapline', initialValue: 'Looking to create something impactful?', validation: (Rule) => Rule.required().max(120)}),
+    defineField({name: 'tickerWords', title: 'Footer ticker messages', type: 'array', group: 'strapline', description: 'Independent from the homepage ticker. Long messages page across the single-line board.', of: [defineArrayMember({type: 'string', validation: (Rule) => Rule.required().max(60)})], initialValue: ['Arriving', 'In transit', 'Departing', 'Early'], validation: (Rule) => Rule.min(1).max(12)}),
+    defineField({name: 'featuredHeading', title: 'Featured projects heading', type: 'string', group: 'directory', initialValue: 'Featured', description: 'Links follow the front-gallery project order, with each project listed once (up to eight).', validation: (Rule) => Rule.max(40)}),
     defineField({
-      name: 'strapline',
+      name: 'strapline', hidden: true, readOnly: true, deprecated: {reason: 'Retained for the previous footer; use the callout, ticker and Featured fields.'},
       title: 'Strapline lines',
       type: 'array',
       group: 'strapline',
@@ -23,11 +27,11 @@ export const footerSettings = defineType({
       of: [defineArrayMember({type: 'footerLine'})],
       validation: (Rule) => Rule.required().min(1).max(6),
     }),
-    defineField({name: 'peopleHeading', title: 'People column heading', type: 'string', group: 'directory', initialValue: 'People', validation: (Rule) => Rule.required().max(40)}),
-    defineField({name: 'exploreHeading', title: 'Explore column heading', type: 'string', group: 'directory', initialValue: 'Explore', validation: (Rule) => Rule.required().max(40)}),
-    defineField({name: 'connectHeading', title: 'Connect column heading', type: 'string', group: 'directory', initialValue: 'Connect', validation: (Rule) => Rule.required().max(40)}),
+    defineField({name: 'peopleHeading', hidden: true, readOnly: true, deprecated: {reason: 'Retained for the previous footer; use the callout, ticker and Featured fields.'}, title: 'People column heading', type: 'string', group: 'directory', initialValue: 'People', validation: (Rule) => Rule.required().max(40)}),
+    defineField({name: 'exploreHeading', hidden: true, readOnly: true, deprecated: {reason: 'Retained for the previous footer; use the callout, ticker and Featured fields.'}, title: 'Explore column heading', type: 'string', group: 'directory', initialValue: 'Explore', validation: (Rule) => Rule.required().max(40)}),
+    defineField({name: 'connectHeading', hidden: true, readOnly: true, deprecated: {reason: 'Retained for the previous footer; use the callout, ticker and Featured fields.'}, title: 'Connect column heading', type: 'string', group: 'directory', initialValue: 'Connect', validation: (Rule) => Rule.required().max(40)}),
     defineField({
-      name: 'exploreLinks',
+      name: 'exploreLinks', hidden: true, readOnly: true, deprecated: {reason: 'Retained for the previous footer; use the callout, ticker and Featured fields.'},
       title: 'Explore links',
       type: 'array',
       group: 'directory',
@@ -35,7 +39,7 @@ export const footerSettings = defineType({
       validation: (Rule) => Rule.required().min(1),
     }),
     defineField({
-      name: 'contactLabel',
+      name: 'contactLabel', hidden: true, readOnly: true, deprecated: {reason: 'Retained for the previous footer; use the callout, ticker and Featured fields.'},
       title: 'Email link label',
       type: 'string',
       group: 'directory',
@@ -71,5 +75,5 @@ export const footerSettings = defineType({
     copyrightLine: 'All rights reserved.',
     showYear: true,
   },
-  preview: {prepare: () => ({title: 'Footer', subtitle: 'Strapline, columns and legal copy'})},
+  preview: {prepare: () => ({title: 'Footer', subtitle: 'Contact callout, ticker, Featured links and legal copy'})},
 })

@@ -1,0 +1,201 @@
+---
+import BtsReel from './BtsReel.astro';
+import BtsVideoVillage from './BtsVideoVillage.astro';
+import BtsViewfinder from './BtsViewfinder.astro';
+import BtsPointCloud from './BtsPointCloud.astro';
+import { BTS_VARIANTS, type BtsItem } from './types';
+
+interface Props {
+  items: BtsItem[];
+}
+const { items } = Astro.props;
+// Shared by the client modules; `<` is escaped so no value can close the tag.
+const itemsJson = JSON.stringify(items).replace(/</gu, '\\u003c');
+---
+
+{items.length ? (
+  <section class="bts" aria-labelledby="bts-heading" data-bts-experiments data-bts-variant={BTS_VARIANTS[0].id}>
+    <header class="bts__header">
+      <h2 id="bts-heading">Behind the scenes</h2>
+      <!-- Review tool: several directions for the same material. Remove the
+           switcher and the unused panels once one is chosen. -->
+      <div class="bts__switch" role="group" aria-label="BTS presentation version">
+        {BTS_VARIANTS.map((variant, index) => (
+          <button
+            type="button"
+            data-bts-switch={variant.id}
+            aria-pressed={index === 0 ? 'true' : 'false'}
+          >
+            <span class="bts__switch-index">{variant.number}</span>
+            {variant.label}
+          </button>
+        ))}
+      </div>
+    </header>
+    <script is:inline type="application/json" data-bts-items set:html={itemsJson}></script>
+    <div class="bts__panel" data-bts-panel="reel">
+      <BtsReel items={items} />
+    </div>
+    <div class="bts__panel" data-bts-panel="video-village" hidden>
+      <BtsVideoVillage items={items} />
+    </div>
+    <div class="bts__panel" data-bts-panel="viewfinder" hidden>
+      <BtsViewfinder items={items} />
+    </div>
+    <div class="bts__panel" data-bts-panel="point-cloud" hidden>
+      <BtsPointCloud items={items} />
+    </div>
+  </section>
+) : null}
+
+<style>
+  .bts {
+    position: relative;
+    padding-bottom: clamp(5rem, 10vw, 10rem);
+  }
+
+  .bts__header {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .75rem 1.5rem;
+    justify-content: space-between;
+    align-items: baseline;
+    max-width: 1800px;
+    margin: 0 auto .75rem;
+    padding-inline: var(--page-gutter);
+  }
+
+  .bts__header h2 {
+    font: 700 var(--text-sm) / 1 var(--font-body);
+    letter-spacing: 0;
+    text-transform: uppercase;
+  }
+
+  .bts__switch {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    padding: 2px;
+    border: 1px solid var(--color-rule);
+    font-size: var(--text-xs);
+  }
+
+  .bts__switch button {
+    display: inline-flex;
+    gap: .45em;
+    align-items: baseline;
+    min-height: 36px;
+    padding: .45rem .7rem;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--color-ink);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+  }
+
+  .bts__switch button[aria-pressed='true'] {
+    background: var(--color-ink);
+    color: var(--color-canvas);
+  }
+
+  .bts__switch-index {
+    font-variant-numeric: tabular-nums;
+    opacity: .55;
+  }
+
+  .bts__panel[hidden] {
+    display: none;
+  }
+</style>
+
+<script>
+  import type { BtsVariantId } from './types';
+  // Storage can be unavailable (private windows, blocked site data); the
+  // switcher simply stops remembering the choice.
+  const readStorageValue = (_area: 'local', key: string): string | null => {
+    try { return window.localStorage.getItem(key); } catch { return null; }
+  };
+  const writeStorageValue = (_area: 'local', key: string, value: string): void => {
+    try { window.localStorage.setItem(key, value); } catch { /* not remembered */ }
+  };
+
+  const STORAGE_KEY = 'new-work:bts-variant';
+  const mounters: Record<BtsVariantId, () => Promise<(root: HTMLElement) => () => void>> = {
+    reel: () => import('./lib/reel').then((module) => module.mountReel),
+    'video-village': () => import('./lib/video-village').then((module) => module.mountVideoVillage),
+    viewfinder: () => import('./lib/viewfinder').then((module) => module.mountViewfinder),
+    'point-cloud': () => import('./lib/point-cloud').then((module) => module.mountPointCloud),
+  };
+  const isVariant = (value: unknown): value is BtsVariantId => (
+    typeof value === 'string' && value in mounters
+  );
+
+  let disposeSection = (): void => undefined;
+
+  const setupBts = (): void => {
+    disposeSection();
+    const section = document.querySelector<HTMLElement>('[data-bts-experiments]');
+    if (!section) return;
+    let disposeVariant = (): void => undefined;
+    let mountToken = 0;
+
+    const select = async (variant: BtsVariantId, persist: boolean): Promise<void> => {
+      const token = ++mountToken;
+      disposeVariant();
+      disposeVariant = () => undefined;
+      section.dataset.btsVariant = variant;
+      section.querySelectorAll<HTMLButtonElement>('[data-bts-switch]').forEach((button) => {
+        button.setAttribute('aria-pressed', String(button.dataset.btsSwitch === variant));
+      });
+      section.querySelectorAll<HTMLElement>('[data-bts-panel]').forEach((panel) => {
+        panel.hidden = panel.dataset.btsPanel !== variant;
+      });
+      if (persist) {
+        writeStorageValue('local', STORAGE_KEY, variant);
+        const url = new URL(window.location.href);
+        url.searchParams.set('bts', variant);
+        history.replaceState(history.state, '', url);
+      }
+      const panel = section.querySelector<HTMLElement>(`[data-bts-panel="${variant}"]`);
+      const root = panel?.firstElementChild;
+      if (!(root instanceof HTMLElement)) return;
+      const mount = await mounters[variant]();
+      if (token !== mountToken || !section.isConnected) return;
+      disposeVariant = mount(root);
+    };
+
+    const controller = new AbortController();
+    section.querySelectorAll<HTMLButtonElement>('[data-bts-switch]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const variant = button.dataset.btsSwitch;
+        if (isVariant(variant) && variant !== section.dataset.btsVariant) void select(variant, true);
+      }, { signal: controller.signal });
+    });
+
+    const fromUrl = new URL(window.location.href).searchParams.get('bts');
+    const stored = readStorageValue('local', STORAGE_KEY);
+    const fallback = section.dataset.btsVariant;
+    const initial = isVariant(fromUrl) ? fromUrl : isVariant(stored) ? stored : isVariant(fallback) ? fallback : 'reel';
+
+    // Nothing heavy is fetched until the section is close to the viewport.
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry?.isIntersecting) return;
+      observer.disconnect();
+      void select(initial, false);
+    }, { rootMargin: '100% 0px' });
+    observer.observe(section);
+
+    disposeSection = () => {
+      mountToken += 1;
+      observer.disconnect();
+      controller.abort();
+      disposeVariant();
+      disposeSection = () => undefined;
+    };
+  };
+
+  setupBts();
+  document.addEventListener('astro:page-load', setupBts);
+  document.addEventListener('astro:before-swap', () => disposeSection());
+</script>

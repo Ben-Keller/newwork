@@ -1,0 +1,51 @@
+name: Prepare reviewed root-domain candidate
+on:
+  workflow_dispatch:
+    inputs:
+      content_mode:
+        description: Content source for this candidate
+        type: choice
+        options: [prototype, production]
+        default: prototype
+permissions:
+  contents: read
+jobs:
+  candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: new-work-oliver-review
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11.19.0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: new-work-oliver-review/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: npm run typecheck && npm run lint && npm test
+      - run: node --test ../hosting/root-release.test.mjs && node ../hosting/check-review-baseline.mjs --source-only
+      - name: Prepare the root-domain artifact
+        env:
+          CONTENT_MODE: ${{ inputs.content_mode }}
+        run: |
+          if [ "$CONTENT_MODE" = production ]; then
+            node ../hosting/root-release.mjs --production
+          else
+            node ../hosting/root-release.mjs
+          fi
+          node ../hosting/verify-root-release.mjs
+      - name: Test the packaged root routes
+        run: |
+          ./node_modules/.bin/playwright install --with-deps chromium
+          ./node_modules/.bin/playwright test --config=playwright.pages.config.ts --project=desktop-chromium --project=mobile-chromium
+      - uses: actions/upload-artifact@v6
+        with:
+          name: newworkagency-root-candidate
+          path: release-dist
+          retention-days: 14
+# Intentionally has no deployment job. Promotion is a separate launch action.

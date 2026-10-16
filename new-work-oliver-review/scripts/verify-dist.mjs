@@ -1,0 +1,125 @@
+import {readdir, readFile, stat} from 'node:fs/promises';
+import path from 'node:path';
+
+const root = path.resolve('dist');
+const base = (process.env.PUBLIC_BASE_PATH || '/').replace(/\/$/u, '');
+const failures = [];
+
+async function filesWithin(directory) {
+  const entries = await readdir(directory, {withFileTypes: true});
+  const files = await Promise.all(entries.map((entry) => {
+    const target = path.join(directory, entry.name);
+    return entry.isDirectory() ? filesWithin(target) : [target];
+  }));
+  return files.flat();
+}
+
+const files = await filesWithin(root);
+const htmlFiles = files.filter((file) => file.endsWith('.html'));
+const inspectableFiles = files.filter((file) =>
+  /\.(?:css|html|js|json|map|txt|xml)$/u.test(file) || ['_headers', '_redirects'].includes(path.basename(file)),
+);
+if (!htmlFiles.length) failures.push('No HTML output was generated.');
+
+const prohibited = [
+  'SANITY_WRITE_TOKEN',
+  'SANITY_PREVIEW_TOKEN',
+  'manifestNotes',
+  'manifestAssetId',
+  'assetRightsApprovalEvidence',
+  'assetRightsTerritories',
+  'rightsApprovalEvidence',
+  'rightsApprovedAt',
+  'sourcePage',
+  'sourcePath',
+  'sha256',
+  'source_media_url',
+];
+
+for (const file of inspectableFiles) {
+  const contents = await readFile(file, 'utf8');
+  for (const token of prohibited) {
+    const exactIdentifier = new RegExp(`(?<![\\p{L}\\p{N}_])${token}(?![\\p{L}\\p{N}_])`, 'u');
+    if (exactIdentifier.test(contents)) {
+      failures.push(`${path.relative(root, file)} leaks prohibited token ${token}.`);
+    }
+  }
+}
+
+for (const file of htmlFiles) {
+  const html = await readFile(file, 'utf8');
+  const imageSources = [...html.matchAll(/(?:src|srcset)="([^"]+)"/giu)].flatMap((match) =>
+    match[1].split(',').map((value) => value.trim().split(/\s+/u)[0])
+      .filter((value) => value.startsWith('/media/') || value.startsWith(`${base}/media/`)),
+  );
+  for (const source of imageSources) {
+    if (base && !source.startsWith(base + '/')) {
+      failures.push(`${path.relative(root, file)} escapes its base path with ${source}.`);
+      continue;
+    }
+    const pathname = decodeURIComponent(source.split(/[?#]/u)[0]).slice(base.length);
+    const target = path.resolve(root, `.${pathname}`);
+    if (!target.startsWith(`${root}${path.sep}`)) {
+      failures.push(`${path.relative(root, file)} references an unsafe asset path ${pathname}.`);
+      continue;
+    }
+    try {
+      await stat(target);
+    } catch {
+      failures.push(`${path.relative(root, file)} references missing asset ${pathname}.`);
+    }
+  }
+}
+
+const headers = await readFile(path.join(root, '_headers'), 'utf8');
+if (!headers.includes("default-src 'self'")) failures.push('Generated security headers are missing the CSP.');
+if (!process.env.PUBLIC_CLOUDFLARE_ANALYTICS_TOKEN && headers.includes('static.cloudflareinsights.com')) {
+  failures.push('Analytics hosts are present without an analytics token.');
+}
+
+const mode = process.env.PUBLIC_CONTENT_MODE || 'prototype';
+if (mode === 'production') {
+  const legacyGalleryPages = htmlFiles.filter((file) =>
+    path.relative(root, file).split(path.sep)[0] === 'gallery',
+  );
+  if (legacyGalleryPages.length) {
+    failures.push(`Production output contains ${legacyGalleryPages.length} prototype-only gallery redirects.`);
+  }
+
+  const homeHtml = await readFile(path.join(root, 'index.html'), 'utf8');
+  const workHrefs = [...homeHtml.matchAll(/href="([^"?#]*\/work\/[^"?#]+)"/giu)]
+    .map((match) => match[1]);
+  if (!workHrefs.length) failures.push('Production home output has no Work links.');
+  for (const href of new Set(workHrefs)) {
+    const workIndex = href.indexOf('/work/');
+    const route = workIndex >= 0 ? href.slice(workIndex + 1).replace(/\/$/u, '') : '';
+    const target = path.resolve(root, route, 'index.html');
+    if (!route || !target.startsWith(`${root}${path.sep}`)) {
+      failures.push(`Production home output contains an unsafe Work link ${href}.`);
+      continue;
+    }
+    try {
+      await stat(target);
+    } catch {
+      failures.push(`Production home output links to missing route ${href}.`);
+    }
+  }
+}
+if (mode !== 'production') {
+  for (const file of htmlFiles) {
+    const html = await readFile(file, 'utf8');
+    if (!/name="robots" content="[^"]*\bnoindex\b[^"]*"/iu.test(html)) {
+      failures.push(`${path.relative(root, file)} is not noindex outside production.`);
+    }
+  }
+  if (files.some((file) => path.basename(file) === 'sitemap-index.xml' || path.basename(file) === 'sitemap-0.xml')) {
+    failures.push('A sitemap was emitted outside production mode.');
+  }
+}
+
+if (failures.length) {
+  console.error(failures.join('\n'));
+  process.exitCode = 1;
+} else {
+  console.log(`Verified ${htmlFiles.length} HTML pages and ${files.length} built files.`);
+}

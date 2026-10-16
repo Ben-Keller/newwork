@@ -4,7 +4,6 @@ import {EnvelopeIcon} from '@sanity/icons/Envelope'
 import {HomeIcon} from '@sanity/icons/Home'
 import {ImagesIcon} from '@sanity/icons/Images'
 import {ProjectsIcon} from '@sanity/icons/Projects'
-import {PlayIcon} from '@sanity/icons/Play'
 import type {ComponentType} from 'react'
 import type {StructureBuilder, StructureResolver} from 'sanity/structure'
 import {ClientDashboard} from './components/ClientDashboard'
@@ -27,12 +26,11 @@ export const structure: StructureResolver = (S) =>
     .items([
       S.listItem()
         .id('start-here')
-        .title('Start here')
+        .title('Overview')
         .icon(DashboardIcon)
-        .child(S.component(ClientDashboard).id('client-dashboard').title('Start here')),
+        .child(S.component(ClientDashboard).id('client-dashboard').title('Overview')),
       S.divider(),
       singleton(S, 'workPage', 'Work page', HomeIcon),
-      singleton(S, 'aboutPage', 'About page', PlayIcon),
       S.listItem()
         .id('work')
         .title('Projects')

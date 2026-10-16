@@ -1,0 +1,401 @@
+---
+import DesktopNav from './DesktopNav.astro';
+import type { NavItem } from './DesktopNav.astro';
+import MobileMenu from './MobileMenu.astro';
+import OliverBrand from './OliverBrand.astro';
+import type { WordmarkPath, WordmarkTone, WordmarkVariant } from './Wordmark.astro';
+import type { BrandAssetView } from '../lib/types';
+import { withBase, withoutBase } from '../lib/base-path';
+
+export interface Props {
+  currentPath?: string;
+  showNotes?: boolean;
+  siteName?: string;
+  descriptor?: string;
+  navItems?: readonly NavItem[];
+  /* Asset metadata remains available to route transitions. */
+  logoVariant?: WordmarkVariant;
+  tone?: WordmarkTone;
+  wordmarkPaths?: readonly (string | WordmarkPath)[];
+  wordmarkViewBox?: string;
+  wordmarkAsset?: BrandAssetView;
+  compactMarkAsset?: BrandAssetView;
+  galleryEditing?: boolean;
+  sticky?: boolean;
+  id?: string;
+  class?: string;
+}
+
+const {
+  currentPath = withoutBase(Astro.url.pathname),
+  showNotes = false,
+  siteName = 'New Work Agency',
+  descriptor = 'film + photo\nproduction agency',
+  navItems,
+  wordmarkAsset,
+  compactMarkAsset,
+  galleryEditing = false,
+  sticky = false,
+  id = 'site-header',
+  class: className,
+} = Astro.props;
+
+const defaultItems: NavItem[] = [
+  { href: withBase('/#work-gallery'), label: 'Work', match: 'section' },
+  ...(showNotes ? [{ href: withBase('/notes'), label: 'Notes', match: 'section' as const }] : []),
+  { href: withBase('/contact'), label: 'Contact', match: 'section' },
+];
+const items = navItems ?? defaultItems;
+const showGalleryTools = galleryEditing && currentPath === '/';
+---
+
+<header
+  class:list={['site-header', { 'site-header--sticky': sticky }, className]}
+  id={id}
+  data-site-header
+  data-default-logo-src={wordmarkAsset?.src}
+  data-default-logo-width={wordmarkAsset?.width}
+  data-default-logo-height={wordmarkAsset?.height}
+>
+  <div class="site-header__inner">
+    <a
+      href={withBase('/')}
+      class:list={['site-header__brand', compactMarkAsset && 'site-header__brand--has-compact']}
+      aria-label={siteName}
+    >
+      <OliverBrand variant="compact" asset={compactMarkAsset} class="site-header__mark" />
+    </a>
+
+    <div class="site-header__actions">
+      <p class="site-header__descriptor" style="white-space: pre-line">{descriptor}</p>
+      {showGalleryTools ? (
+        <div class="gallery-order-tools" data-gallery-order-tools hidden>
+          <button type="button" data-gallery-shuffle aria-label="Shuffle gallery order">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M16 3h5v5M4 6h3.5c4.5 0 4.5 12 9 12H21M16 21h5v-5M4 18h3.5c1.5 0 2.6-1.3 3.6-3M13 9c1-1.7 2-3 3.5-3H21" />
+            </svg>
+            <span>Shuffle</span>
+          </button>
+          <button type="button" data-gallery-save aria-label="Save gallery order">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M5 3h12l2 2v16H5zM8 3v6h8V3M8 21v-7h8v7" />
+            </svg>
+            <span data-gallery-save-label>Save</span>
+          </button>
+          <button type="button" data-gallery-restore hidden aria-label="Restore removed gallery items">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 8V3m0 0h5M4 3l4 4a8 8 0 1 1-2 8" />
+            </svg>
+            <span>Restore</span>
+          </button>
+          <span class="sr-only" aria-live="polite" data-gallery-order-status></span>
+        </div>
+      ) : null}
+      <DesktopNav items={items} currentPath={currentPath} />
+      <MobileMenu
+        items={items}
+        currentPath={currentPath}
+        instanceId={`${id}-mobile-navigation`}
+      />
+    </div>
+  </div>
+</header>
+
+<script>
+  import {
+    readStorageValue,
+    removeStorageValue,
+    writeStorageValue,
+  } from '../lib/browser-storage';
+
+  declare global {
+    interface Window {
+      __newWorkGalleryToolsFeedbackCleanup?: () => void;
+      __newWorkEntryStaticRevealsUntil?: number;
+    }
+  }
+
+  const LEGACY_TITLE_MASK_KEY = 'new-work:title-mask';
+  const LEGACY_TITLE_ALIGNMENT_KEY = 'new-work:title-alignment';
+  const LEGACY_HEADER_LOGO_KEY = 'new-work:header-logo';
+  const GALLERY_RESTORE_REQUEST_KEY = 'new-work-restore-requested';
+  const WORK_NAVIGATION_ENTRY_KEY = 'new-work:work-navigation-entry';
+
+  const handleWorkNavigation = (event: MouseEvent): void => {
+    if (
+      event.button !== 0
+      || event.metaKey
+      || event.ctrlKey
+      || event.shiftKey
+      || event.altKey
+    ) return;
+
+    const target = event.target instanceof Element ? event.target : null;
+    const link = target?.closest<HTMLAnchorElement>('a[data-work-navigation]');
+    if (!link || link.target === '_blank') return;
+
+    removeStorageValue('session', GALLERY_RESTORE_REQUEST_KEY);
+
+    const destination = new URL(link.href, window.location.href);
+    if (destination.origin !== window.location.origin) return;
+    if (destination.pathname !== window.location.pathname) {
+      writeStorageValue('session', WORK_NAVIGATION_ENTRY_KEY, 'true');
+      history.scrollRestoration = 'manual';
+      window.__newWorkEntryStaticRevealsUntil = performance.now() + 5000;
+      return;
+    }
+
+    event.preventDefault();
+    removeStorageValue('session', WORK_NAVIGATION_ENTRY_KEY);
+    delete document.documentElement.dataset.workNavigationTransition;
+    history.scrollRestoration = 'auto';
+    showWorkNavigationState(document);
+    window.history.replaceState(
+      window.history.state,
+      '',
+      `${destination.pathname}${destination.search}${destination.hash}`,
+    );
+    window.queueMicrotask(() => window.dispatchEvent(new Event('new-work:work-navigation')));
+  };
+
+  const resetHeaderPreviewState = (): void => {
+    const header = document.querySelector<HTMLElement>('[data-site-header]');
+    if (!header) return;
+    header.removeAttribute('data-header-logo');
+    delete document.documentElement.dataset.titleAlign;
+    delete document.documentElement.dataset.titleMask;
+    removeStorageValue('local', LEGACY_TITLE_ALIGNMENT_KEY);
+    removeStorageValue('local', LEGACY_TITLE_MASK_KEY);
+    removeStorageValue('local', LEGACY_HEADER_LOGO_KEY);
+    const defaultSrc = header.dataset.defaultLogoSrc;
+    const defaultWidth = Number(header.dataset.defaultLogoWidth);
+    const defaultHeight = Number(header.dataset.defaultLogoHeight);
+    if (defaultSrc) {
+      header.querySelectorAll<HTMLImageElement>('.site-header__full-mark .wordmark__image').forEach((image) => {
+        image.src = defaultSrc;
+        if (Number.isFinite(defaultWidth)) image.width = defaultWidth;
+        if (Number.isFinite(defaultHeight)) image.height = defaultHeight;
+      });
+    }
+  };
+
+  const workEntryIsActive = (): boolean => (
+    readStorageValue('session', WORK_NAVIGATION_ENTRY_KEY) === 'true'
+  );
+
+  const showWorkNavigationState = (targetDocument: Document): void => {
+    targetDocument
+      .querySelectorAll<HTMLAnchorElement>('[data-desktop-nav] a, [data-mobile-menu-root] [data-menu-link]')
+      .forEach((navLink) => {
+        const isWorkLink = navLink.hasAttribute('data-work-navigation');
+        navLink.classList.toggle('is-current', isWorkLink);
+        if (isWorkLink) navLink.setAttribute('aria-current', 'page');
+        else navLink.removeAttribute('aria-current');
+      });
+  };
+
+  const markGalleryImageReady = (image: HTMLImageElement): void => {
+    image.dataset.galleryImageReady = 'true';
+    image.closest<HTMLElement>('[data-media-frame]')?.setAttribute('data-media-ready', 'true');
+  };
+
+  const warmWorkEntryGalleryImage = (image: HTMLImageElement): void => {
+    image.loading = 'eager';
+    image.fetchPriority = 'high';
+    image.dataset.galleryWorkEntryWarmed = 'true';
+  };
+
+  const firstMatchingSource = (image: HTMLImageElement): HTMLSourceElement | undefined => {
+    const sources = Array.from(
+      image.closest('picture')?.querySelectorAll<HTMLSourceElement>('source') ?? [],
+    );
+    return sources.find((source) => (
+      source.type === 'image/avif'
+      && (!source.media || window.matchMedia(source.media).matches)
+    )) ?? sources.find((source) => (
+      !source.media || window.matchMedia(source.media).matches
+    ));
+  };
+
+  const decodeGalleryImage = async (
+    sourceImage: HTMLImageElement,
+    signal: AbortSignal | undefined,
+  ): Promise<void> => {
+    if (signal?.aborted) return;
+    warmWorkEntryGalleryImage(sourceImage);
+    const preferredSource = firstMatchingSource(sourceImage);
+    const preload = new Image();
+    preload.alt = '';
+    preload.decoding = 'async';
+    preload.fetchPriority = 'high';
+    preload.sizes = preferredSource?.sizes || sourceImage.sizes;
+    preload.srcset = preferredSource?.srcset || sourceImage.srcset;
+    preload.src = sourceImage.src;
+    try {
+      await preload.decode();
+    } catch {
+      if (preload.complete || signal?.aborted) return;
+      await new Promise<void>((resolve) => {
+        const settle = () => resolve();
+        preload.addEventListener('load', settle, {once: true});
+        preload.addEventListener('error', settle, {once: true});
+        signal?.addEventListener('abort', settle, {once: true});
+      });
+    }
+    if (
+      !signal?.aborted
+      && preload.naturalWidth > 0
+      && sourceImage.ownerDocument === document
+    ) {
+      markGalleryImageReady(sourceImage);
+    }
+  };
+
+  const decodeWorkEntryGalleryImages = async (
+    targetDocument: Document | undefined,
+    signal: AbortSignal | undefined,
+  ): Promise<void> => {
+    if (!targetDocument || signal?.aborted) return;
+    const images = Array.from(
+      targetDocument.querySelectorAll<HTMLImageElement>('img[data-gallery-image]'),
+    ).slice(0, 16);
+    if (!images.length) return;
+    images.forEach(warmWorkEntryGalleryImage);
+    await Promise.race([
+      Promise.allSettled(images.map((image) => decodeGalleryImage(image, signal))),
+      new Promise((resolve) => window.setTimeout(resolve, 1_200)),
+    ]);
+  };
+
+  const prepareWorkDocumentForDirectEntry = (targetDocument: Document | undefined): void => {
+    if (!targetDocument) return;
+
+    targetDocument.documentElement.setAttribute(
+      'data-work-navigation-transition',
+      'true',
+    );
+    showWorkNavigationState(targetDocument);
+    const incomingBody = targetDocument.body;
+    if (incomingBody) incomingBody.dataset.logoHeaderVisible = 'true';
+    const incomingWorkPage = targetDocument.querySelector<HTMLElement>('[data-logo-work-page]');
+    const incomingGallery = targetDocument.querySelector<HTMLElement>('[data-work-gallery]');
+    const incomingEntrance = incomingGallery?.querySelector<HTMLElement>('[data-gallery-entrance]');
+    if (incomingWorkPage) {
+      incomingWorkPage.dataset.handoff = 'true';
+    }
+    targetDocument.querySelector<HTMLElement>('[data-logo-work-hero]')?.setAttribute('data-faded', 'true');
+    targetDocument.querySelector<HTMLElement>('[data-logo-work-content]')?.setAttribute('aria-hidden', 'false');
+    if (incomingGallery) {
+      incomingGallery.dataset.galleryEntrancePlayed = 'true';
+      incomingGallery.dataset.galleryEntryReveals = 'static';
+      incomingGallery.querySelectorAll<HTMLElement>('[data-motion-reveal]')
+        .forEach((element) => { element.dataset.motionRevealSkip = 'work-entry'; });
+    }
+    if (incomingEntrance) {
+      incomingEntrance.dataset.galleryEntranceState = 'settled';
+      incomingEntrance.style.removeProperty('transform');
+      incomingEntrance.style.removeProperty('will-change');
+    }
+  };
+
+  const prepareWorkNavigationLoad = (rawEvent: Event): void => {
+    const event = rawEvent as Event & {
+      loader?: () => Promise<void>;
+      newDocument?: Document;
+      signal?: AbortSignal;
+      sourceElement?: Element;
+      to?: URL;
+    };
+    if (!workEntryIsActive()) return;
+    const originalLoader = event.loader;
+    if (typeof originalLoader !== 'function') return;
+    event.loader = async () => {
+      await originalLoader();
+      if (event.signal?.aborted) return;
+      await decodeWorkEntryGalleryImages(event.newDocument, event.signal);
+      prepareWorkDocumentForDirectEntry(event.newDocument);
+    };
+  };
+
+  const prepareWorkNavigationSwap = (rawEvent: Event): void => {
+    if (!workEntryIsActive()) return;
+    const event = rawEvent as Event & {
+      newDocument?: Document;
+      viewTransition?: ViewTransition;
+    };
+    prepareWorkDocumentForDirectEntry(event.newDocument);
+    void event.viewTransition?.ready.catch(() => undefined);
+    void event.viewTransition?.updateCallbackDone.catch(() => undefined);
+    void event.viewTransition?.finished.catch(() => undefined);
+    try {
+      event.viewTransition?.skipTransition();
+    } catch {
+      // A superseded navigation may already have completed or skipped it.
+    }
+  };
+
+  const finishWorkNavigationSwap = (): void => {
+    if (!workEntryIsActive()) return;
+    history.scrollRestoration = 'manual';
+    document.documentElement.dataset.workNavigationTransition = 'true';
+    window.__newWorkEntryStaticRevealsUntil = performance.now() + 5000;
+    document.body.dataset.logoHeaderVisible = 'true';
+    prepareWorkDocumentForDirectEntry(document);
+  };
+
+  const setupGalleryOrderTools = (): void => {
+    const tools = document.querySelector<HTMLElement>('[data-gallery-order-tools]');
+    if (!tools || !document.querySelector('[data-project-grid]')) return;
+    tools.hidden = false;
+    if (tools.dataset.orderToolsReady === 'true') return;
+    tools.dataset.orderToolsReady = 'true';
+
+    const saveLabel = tools.querySelector<HTMLElement>('[data-gallery-save-label]');
+    const restore = tools.querySelector<HTMLButtonElement>('[data-gallery-restore]');
+    const status = tools.querySelector<HTMLElement>('[data-gallery-order-status]');
+    tools.querySelector<HTMLButtonElement>('[data-gallery-shuffle]')?.addEventListener('click', () => {
+      document.dispatchEvent(new CustomEvent('new-work:gallery-shuffle'));
+      if (saveLabel) saveLabel.textContent = 'Save';
+      tools.dataset.orderState = 'unsaved';
+    });
+    tools.querySelector<HTMLButtonElement>('[data-gallery-save]')?.addEventListener('click', () => {
+      document.dispatchEvent(new CustomEvent('new-work:gallery-save'));
+    });
+    restore?.addEventListener('click', () => {
+      document.dispatchEvent(new CustomEvent('new-work:gallery-restore-all'));
+    });
+    window.__newWorkGalleryToolsFeedbackCleanup?.();
+    const onGalleryOrderFeedback = ((event: CustomEvent<{ action: string }>) => {
+      if (event.detail.action === 'saved') {
+        if (saveLabel) saveLabel.textContent = 'Saved';
+        if (status) status.textContent = 'Gallery order saved.';
+        tools.dataset.orderState = 'saved';
+        window.setTimeout(() => {
+          if (saveLabel) saveLabel.textContent = 'Save';
+        }, 1_500);
+      } else if (event.detail.action === 'shuffled') {
+        if (status) status.textContent = 'Gallery shuffled. Save this order if you like it.';
+      } else if (event.detail.action === 'removed') {
+        if (restore) restore.hidden = false;
+        if (status) status.textContent = 'Gallery item removed. Use Restore to bring removed items back.';
+      } else if (event.detail.action === 'error') {
+        if (status) status.textContent = 'This gallery order could not be saved.';
+      }
+    }) as EventListener;
+    document.addEventListener('new-work:gallery-order-feedback', onGalleryOrderFeedback);
+    window.__newWorkGalleryToolsFeedbackCleanup = () => {
+      document.removeEventListener('new-work:gallery-order-feedback', onGalleryOrderFeedback);
+      delete window.__newWorkGalleryToolsFeedbackCleanup;
+    };
+  };
+
+  setupGalleryOrderTools();
+  resetHeaderPreviewState();
+  document.addEventListener('click', handleWorkNavigation, { capture: true });
+  document.addEventListener('astro:before-preparation', prepareWorkNavigationLoad);
+  document.addEventListener('astro:before-swap', prepareWorkNavigationSwap);
+  document.addEventListener('astro:after-swap', finishWorkNavigationSwap);
+  document.addEventListener('astro:page-load', setupGalleryOrderTools);
+  document.addEventListener('astro:page-load', resetHeaderPreviewState);
+  document.addEventListener('astro:before-swap', () => window.__newWorkGalleryToolsFeedbackCleanup?.());
+</script>

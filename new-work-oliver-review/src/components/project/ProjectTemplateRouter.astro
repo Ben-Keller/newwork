@@ -1,0 +1,43 @@
+---
+import type { ContentMode, ProjectView } from '../../lib/types';
+import {
+  renderableProjectBlocks,
+  resolveProjectPresentation,
+  splitProjectContent,
+} from '../../lib/project-layout';
+import CampaignProject from './CampaignProject.astro';
+import CinematicProject from './CinematicProject.astro';
+import PhotoEssayProject from './PhotoEssayProject.astro';
+import '../../styles/project-templates.css';
+
+interface Props {
+  project: ProjectView;
+  mode: ContentMode;
+  previous?: ProjectView;
+  next?: ProjectView;
+  routeTransitionId?: string;
+}
+
+const { project, mode, previous, next, routeTransitionId } = Astro.props;
+const presentation = resolveProjectPresentation(project);
+const blocks = renderableProjectBlocks(project.contentBlocks);
+const { heroBlock, heroCaptions, bodyBlocks } = splitProjectContent(project, blocks);
+const templates = {
+  photo: PhotoEssayProject,
+  video: CinematicProject,
+  featured: CampaignProject,
+};
+const Template = templates[project.template];
+---
+
+<Template
+  project={project}
+  mode={mode}
+  heroBlock={heroBlock}
+  heroCaptions={heroCaptions}
+  blocks={bodyBlocks}
+  presentation={presentation}
+  routeTransitionId={routeTransitionId}
+  previous={previous}
+  next={next}
+/>

@@ -1,0 +1,40 @@
+---
+/**
+ * Header mark: the home title's own lowercase n and w side by side, the n
+ * outlined and the w solid, as in "new" over "work". Decorative; the
+ * enclosing link carries the accessible site name.
+ */
+interface Props {
+  class?: string;
+}
+const { class: className } = Astro.props;
+---
+
+<span class:list={['nw-mark', className]} data-nw-mark aria-hidden="true"><span class="nw-mark__n">n</span><span class="nw-mark__w">w</span></span>
+
+<style>
+  .nw-mark {
+    display: inline-block;
+    font-family: var(--font-title);
+    font-size: clamp(2rem, 2.95vw, 3rem);
+    font-weight: 900;
+    letter-spacing: var(--title-tracking);
+    line-height: .8;
+    text-transform: lowercase;
+  }
+
+  /* Only the fill is cleared. Clearing `color` instead would also clear the
+     stroke, since the stroke is drawn in currentColor. */
+  .nw-mark__n {
+    -webkit-text-fill-color: transparent;
+    -webkit-text-stroke: max(1px, .045em) currentColor;
+    paint-order: stroke fill;
+  }
+
+  @media (forced-colors: active) {
+    .nw-mark__n {
+      -webkit-text-fill-color: CanvasText;
+      -webkit-text-stroke-width: 0;
+    }
+  }
+</style>

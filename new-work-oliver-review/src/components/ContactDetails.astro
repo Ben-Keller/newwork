@@ -1,0 +1,22 @@
+---
+import type { SiteSettingsView } from '../lib/types';
+import RichText from './RichText.astro';
+interface Props { settings: SiteSettingsView }
+const { settings } = Astro.props;
+---
+<section class="utility-content contact-content" aria-labelledby="contact-heading">
+  <p class="eyebrow" data-motion-reveal="fade">{settings.workIntroName}</p>
+  <h1 id="contact-heading" data-motion-split="words">{settings.contactHeading}</h1>
+  {settings.contactIntroduction ? (
+    <RichText value={settings.contactIntroduction} class="contact-introduction" />
+  ) : null}
+  {settings.contactEmail ? (
+    <a class="contact-email" href={`mailto:${settings.contactEmail}`} data-motion-reveal="up">
+      <span>{settings.contactEmail}</span><span class="contact-email__arrow" aria-hidden="true">↗</span>
+    </a>
+  ) : null}
+  <div class="contact-details-grid">
+    {settings.location ? <div><h2>Location</h2><p class="contact-location">{settings.location}</p></div> : null}
+    {settings.socialLinks.length ? <div><h2>Elsewhere</h2><ul class="social-list">{settings.socialLinks.map((item) => <li><a href={item.url} rel="noreferrer">{item.label} ↗</a></li>)}</ul></div> : null}
+  </div>
+</section>

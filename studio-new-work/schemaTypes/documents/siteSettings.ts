@@ -15,6 +15,7 @@ export const siteSettings = defineType({
     hiddenAllFieldsGroup,
   ],
   fields: [
+    defineField({name: 'oliverRevision', title: 'Revision migration', type: 'string', hidden: true, readOnly: true}),
     defineField({
       name: 'siteName',
       title: 'Site name',
@@ -23,7 +24,9 @@ export const siteSettings = defineType({
       initialValue: 'New Work Agency',
       validation: (Rule) => Rule.required().max(80),
     }),
-    defineField({name: 'wordmark', title: 'Wordmark', type: 'brandAsset', group: 'brand'}),
+    defineField({name: 'wordmark', title: 'Horizontal homepage wordmark', type: 'brandAsset', group: 'brand'}),
+    defineField({name: 'stackedWordmark', title: 'Stacked footer wordmark', type: 'brandAsset', group: 'brand'}),
+    defineField({name: 'headerDescriptor', title: 'Header description', type: 'text', rows: 2, group: 'brand', initialValue: 'film + photo\nproduction agency', description: 'Use a line break to control the two-line header description.', validation: (Rule) => Rule.max(90)}),
     defineField({name: 'compactMark', title: 'Compact mark', type: 'brandAsset', group: 'brand'}),
     defineField({
       name: 'navigation',
@@ -63,7 +66,6 @@ export const siteSettings = defineType({
     siteName: 'New Work Agency',
     navigation: [
       {_type: 'navigationItem', _key: 'work', label: 'Work', destination: 'work', visible: true},
-      {_type: 'navigationItem', _key: 'about', label: 'About', destination: 'about', visible: true},
       {_type: 'navigationItem', _key: 'contact', label: 'Contact', destination: 'contact', visible: true},
     ],
     defaultSeo: {noIndex: false},
@@ -74,6 +76,7 @@ export const siteSettings = defineType({
       const publicAssets = {
         wordmark: value.wordmark,
         compactMark: value.compactMark,
+        stackedWordmark: value.stackedWordmark,
         defaultSeo: value.defaultSeo,
       }
       const blockers = collectBlockingSafetyFlags(publicAssets)

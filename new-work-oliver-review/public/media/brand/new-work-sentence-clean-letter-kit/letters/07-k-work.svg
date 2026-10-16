@@ -1,0 +1,27 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="3424.25 0.0 523.23 785.25" style="color:#1a1a1a" role="img" aria-label="k">
+  <defs>
+    <style>
+      .st0, .cls-1 { fill-rule: evenodd; }
+      .st0, .st1, .cls-1, .cls-2 { fill: currentColor; }
+      .nw-letter {
+        transform-box: fill-box;
+        transform-origin: center;
+        will-change: transform, opacity;
+      }
+      .nw-letter__part {
+        transform-box: fill-box;
+        transform-origin: center;
+      }
+    </style>
+  </defs>
+  <g id="nw-sentence-letter-07-k" class="nw-letter nw-letter--k nw-letter--work" data-nw-letter="k" data-letter="k" data-letter-index="6" data-word="work" data-word-index="1" aria-label="k">
+    <path id="nw-sentence-letter-07-k__part-1" class="cls-2 nw-letter__part" d="M3436.25,169.1h194.75c-33.39,47.03-42.66,101.12-42.66,177.16v258.69c0,76.04,9.27,132.48,42.66,180.3h-194.75c33.39-49.39,43.28-106.61,43.28-180.3v-258.69c0-73.69-9.89-129.34-43.28-177.16Z" data-nw-part="1" />
+    <polygon class="cls-2 nw-letter__part" points="3588.42 451.76 3507.13 552.93 3588.42 530.44 3588.42 451.76" id="nw-sentence-letter-07-k__part-2" data-nw-part="2" />
+    <path class="cls-2 nw-letter__part" d="M3753.49,174.08c17.51,6.45,25.37,15.64,24.1,28.61,1.18,7.6,1.07,15.23-1.62,22.75-4.18,11.71-11.09,22.61-16.67,33.69-9.44,18.75-19.27,37.27-30.68,54.82-2.07,3.92-4.18,7.83-6.36,11.69-.9,2.52-1.84,5.01-2.82,7.47,7.34-3.52,14.75-6.89,22.21-10.13,24.23-13.3,47.83-27.55,68.87-45.22l2.15-2.66c39.95-48.71,79.9-81.18,122.81-101.03h-181.99Z" id="nw-sentence-letter-07-k__part-3" data-nw-part="3" />
+    <path class="cls-2 nw-letter__part" d="M3613.02,466.84c-.22,0-.45,0-.67-.04v3.86c.22-1.28.44-2.55.67-3.82Z" id="nw-sentence-letter-07-k__part-4" data-nw-part="4" />
+    <polygon class="cls-2 nw-letter__part" points="3588.42 503.02 3575.36 514.67 3588.42 534.56 3588.42 503.02" id="nw-sentence-letter-07-k__part-5" data-nw-part="5" />
+    <path class="cls-2 nw-letter__part" d="M3688.39,465.85c-.07.56-.17,1.12-.25,1.68.65-.46,1.29-.93,1.94-1.39l-1.87-2.44c.21.61.29,1.32.19,2.14Z" id="nw-sentence-letter-07-k__part-6" data-nw-part="6" />
+    <path class="cls-2 nw-letter__part" d="M3698.35,476.9s-.03.04-.05.07c-26.31,30.39-39.8,69.77-68.24,98.57-1.03,1.05-2.27,1.47-3.49,1.43-1.29,3.41-2.47,6.85-3.5,10.33l130.05,197.95h182.36l-237.13-308.35Z" id="nw-sentence-letter-07-k__part-7" data-nw-part="7" />
+  </g>
+</svg>

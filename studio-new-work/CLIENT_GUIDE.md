@@ -1,60 +1,48 @@
-# New Work Studio client guide
+# Editing the Oliver website
 
-The Studio is organized around the jobs you perform on the website. Open **Start here** for shortcuts and live review counts, use **Website preview** to browse the site, and use **Website content** to edit it.
+Open [New Work Studio](https://new-work.sanity.studio/) and choose **Website content**. The Overview screen has direct links to the main editing areas.
 
-## Work page
+| Change | Where to edit |
+|---|---|
+| Public email | Contact page → Contact details → Contact email |
+| City or multiline address | Contact page → Contact details → Location or public address |
+| Social destinations | Contact page → Contact details → Social links; change the label and URL or remove an entry |
+| Homepage tiles | Work page → Front gallery; select and order 16 placements for the four-row desktop layout |
+| Keep unused placements | Work page → Front gallery → Reserve gallery assets; these do not appear on the site |
+| Homepage train-board messages | Work page → Homepage ticker → Ticker messages |
+| City/time entries | Work page → Homepage ticker → City clocks; select SF, LA and/or NYC, or clear all for messages only |
+| BTS title, subtitle and pictures | Work page → Behind the scenes; selected Assets retain their order |
+| “Looking to create something impactful?” | Footer → Callout & ticker → Contact callout |
+| Footer train-board words | Footer → Callout & ticker → Footer ticker messages |
+| Featured heading and copyright | Footer → Link columns / Legal line |
+| Horizontal, stacked and compact logos | Brand & navigation → Brand; each placement has its own field |
+| Header “film + photo…” wording | Brand & navigation → Brand → Header description |
 
-- **Page copy** controls the opening name and Work-page statement.
-- **Front gallery** controls which Assets appear on the front page and their order. Every selected Asset links to its Project. Images and videos follow the same placement workflow. Drag rows to reorder them, then open a row to choose Standard, Tall, Large, or Wide feature.
-- **Homepage reel preview** controls the optional film embedded on the Work page. It is separate from the motion-led About page.
-- **Search & sharing** controls the Work page in search engines and social previews.
+Contact placeholders are intentionally retained. Replace them whenever the real details are ready; no code change is needed. Clear the address to hide Location. Remove all social entries to hide Elsewhere. The email should be a valid public inbox. Placeholder email warnings are reminders and do not prevent publishing.
 
-## About page
+Ticker styling is fixed to the selected Tall train board. Longer phrases cycle across a single line. City times update automatically using the correct local timezone, including daylight saving time. No manual daily time editing is needed.
 
-- **Opening** controls the first words visitors see while the reel loads.
-- **Accessible version** supplies the reduced-motion and no-WebGL introduction. Keep it concise and descriptive.
-- **Closing action** controls the final message and whether the button returns to Work or opens Contact.
-- **Search & sharing** controls the About page in search engines and social previews.
+Gallery placement changes do not delete underlying projects or assets. Keep 16 placements to preserve the selected layout; the editor warns if the count differs. Extra placements can be kept in Gallery reserve. The frontend uses up to the first 16 eligible placements.
 
-Turn on **Show the About page** only when the motion media has been reviewed for publication. The About tab then appears between Work and Contact. The visual sequence and media package remain code-controlled during the prototype, so the client sees only the decisions that are safe and useful to edit.
+For BTS, use the Asset library to upload a photograph, add its image description and connect it to the relevant approved Project. Publish that Asset and choose it under Work page → Behind the scenes. An empty BTS selection keeps the current portfolio-derived placeholder mosaic. Real BTS photos have not been supplied yet.
 
-## Projects
+Use transparent SVG logo artwork where available; supply its width and height (viewBox dimensions) to preserve its proportions. PNG images are also supported, but use transparency because the site renders these logos in black. Clearing an optional logo field falls back to the approved local artwork. The opening and homepage share one wordmark implementation. The approved horizontal artwork keeps its individual-letter media treatment; custom replacement artwork displays as a single image.
 
-Create a Project using the Photo, Video, or Featured starter. The selected template controls the public page layout:
+## Save and publish
 
-1. **Photo** — a photography-led Project page.
-2. **Video** — a film-led page with a cinematic opening.
-3. **Featured** — the longer editorial page for larger campaigns and mixed-media stories.
+Edits save as drafts. Press **Publish** when the change is ready. If you created a new Project/Asset, publish it as well as the page that selects it. Existing legacy fields are retained privately for recovery and are not part of the revised editor.
 
-Complete the tabs from left to right:
+The website at [the client review address](https://ben-keller.github.io/newwork/) is built from published content. Published changes are checked every 15 minutes; a changed document triggers a validated rebuild and deployment. Allow the build to finish, then refresh the site. GitHub can occasionally delay scheduled checks. The Overview screen shows the latest website build time and whether newer published edits are waiting.
 
-1. Project details
-2. Work-page card
-3. Project page
-4. Credits
-5. Approval & publishing
-6. Search & sharing
+You do not need a deployment token. Draft edits never trigger publication. If the site has not updated after an hour, contact Ben so he can inspect the publishing run. The current review address stays out of search indexes. newworkagency.com remains separate until the agreed domain launch.
 
-Link Assets to the Project from the Asset library and set their Project order. Use **Project page sections** for any authored supporting sequence. Drag sections to reorder them. Keep the Project as **Draft** while editing, then choose **Approved for website** when it is complete.
+Oliver and Michael already have Studio invitations. Accept the existing invitation and use that same email to sign in.
+For developer-assisted local review, the CMS preview runs on port 4329 and the production package on 4330. The ordinary design review on 4327 deliberately uses fixed prototype content, so it does not reflect CMS edits.
 
-## Asset library
+Final project titles, copy and metadata still deserve editorial review. Rights approval remains the client's responsibility and is not an added CMS publication gate.
 
-Every photo, video, or file is one independent Asset record with one canonical description, caption, and credit. Optionally link an Asset to a Project and set its order within that Project. Global brand Assets can remain unlinked. Any complete Project image or video can be selected directly in the Front gallery.
+## Projects and assets
 
-Production films should use Vimeo or YouTube. Sanity file uploads are intended only for small preview clips, posters, documents, and images.
+Create a Project with the Photo, Video or Featured starter. Complete Project details, Work-page card, Project page, Credits, Approval & publishing and Search & sharing. Add supporting Assets with a Project reference and Project order. Choose **Approved for website** when the Project is ready, then Publish. Draft or incomplete Projects do not appear just because a page references them.
 
-## Pages and footer
-
-- **Contact page** controls the contact heading, introduction, email, location, and social links.
-- **Footer** controls the strapline, column headings, Explore links, contact label, and legal wording.
-- **Brand & navigation** controls the site name, brand artwork, main navigation, and default SEO.
-
-## Publishing checklist
-
-- Preview the page.
-- Resolve validation messages and accessibility descriptions.
-- Confirm credits and media.
-- Set the Project to Approved for website.
-- Select Publish in Sanity.
-
-The Page style tab contains optional art-direction controls. Imported technical details are kept in collapsed sections and most routine edits do not require them.
+Every image, video or file has one Asset record with its description, caption and credit. Brand files may remain unlinked. Use Vimeo or YouTube for full films; small Sanity video uploads are for preview clips. Use meaningful image descriptions or an intentional decorative setting. Project page sections control authored supporting sequences.

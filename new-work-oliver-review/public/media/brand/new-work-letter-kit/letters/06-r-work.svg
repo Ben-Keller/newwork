@@ -1,0 +1,22 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="3723.0 0 723.04 834" color="#1a1a1a" role="img" aria-label="R">
+  <defs>
+    <style>
+      .cls-1 { fill-rule: evenodd; }
+      .cls-1, .cls-2 { fill: currentColor; }
+      .nw-letter {
+        transform-box: fill-box;
+        transform-origin: center;
+        will-change: transform, opacity;
+      }
+      .nw-letter__part {
+        transform-box: fill-box;
+        transform-origin: center;
+      }
+    </style>
+  </defs>
+  <g id="nw-letter-06-r" class="nw-letter nw-letter--r nw-letter--work" data-nw-letter="R" data-letter="R" data-letter-index="5" data-word="work" data-word-index="1" aria-label="R">
+    <path id="nw-letter-06-r__part-1" class="cls-2 nw-letter__part" d="M3735,24h247c-41.94,58-54.37,129-54.37,226v330c0,98,12.43,171,54.37,230h-247c42.72-66,55.15-139,55.15-230V250c0-91-12.43-162-55.15-226Z" data-nw-part="1" />
+    <path id="nw-letter-06-r__part-2" class="cls-1 nw-letter__part" d="M3814,24h246.96c194.04,0,305.17,73,305.17,211s-96.14,204-266.36,216c127.89,23,186.1,112,240.78,230,24.7,53,55.57,100,93.49,129h-232.85c-29.99-33-58.21-84-84.67-151l-50.27-128c-26.46-66-67.03-90-128.77-90h-123.48V24ZM3912,50v365h127c138,0,213-63,213-181s-75-184-213-184h-127Z" data-nw-part="2" />
+  </g>
+</svg>

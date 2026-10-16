@@ -1,0 +1,345 @@
+---
+import { withBase } from '../../lib/base-path';
+import type { ProjectView } from '../../lib/types';
+
+interface Props {
+  projectSlug: string;
+  projectTitle: string;
+  projects: ProjectView[];
+}
+
+const { projectSlug, projectTitle, projects } = Astro.props;
+const backdropProjects = [...projects]
+  .filter((project) => project.slug !== projectSlug && project.cover.poster.src)
+  .sort((left, right) => (left.homeOrder ?? 999) - (right.homeOrder ?? 999))
+  .slice(0, 12);
+---
+
+<div class="project-overlay" data-project-overlay data-project-slug={projectSlug}>
+  <div class="project-overlay__backdrop" data-project-overlay-backdrop aria-hidden="true">
+    <div class="project-overlay__fallback" data-project-overlay-fallback>
+      {backdropProjects.map((project) => (
+        <div class="project-overlay__tile">
+          <img
+            src={project.cover.poster.src}
+            width={project.cover.poster.width}
+            height={project.cover.poster.height}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            fetchpriority="low"
+            style={`object-position:${project.cover.poster.objectPosition || '50% 50%'}`}
+          />
+        </div>
+      ))}
+    </div>
+    <div class="project-overlay__snapshot" data-project-overlay-snapshot></div>
+  </div>
+
+  <a
+    href={withBase('/')}
+    class="project-overlay__edge-close"
+    aria-label={`Close ${projectTitle} and return to the gallery`}
+    data-project-overlay-edge-close
+    data-project-return
+    data-restore-work-scroll
+    tabindex="-1"
+  ></a>
+
+  <div class="project-overlay__panel" data-project-overlay-panel>
+    <nav class="project-overlay__toolbar" aria-label="Project controls">
+      <a
+        href={withBase('/')}
+        class="project-overlay__return"
+        data-project-overlay-return
+        data-project-return
+        data-restore-work-scroll
+      >
+        <svg viewBox="0 0 28 14" aria-hidden="true">
+          <path d="M27 7H2M8 1 2 7l6 6" />
+        </svg>
+        <span>Return to gallery</span>
+      </a>
+    </nav>
+    <slot />
+  </div>
+</div>
+
+
+<script>
+  import {readStorageJson, removeStorageValue} from '../../lib/browser-storage';
+
+  interface GalleryBackdropItem {
+    src: string;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    objectPosition?: string;
+  }
+
+  interface GalleryBackdropSnapshot {
+    destination?: string;
+    items?: GalleryBackdropItem[];
+  }
+
+  const backdropStorageKey = 'new-work:gallery-backdrop:v1';
+
+  const setupProjectBackdrop = (): void => {
+    document.querySelectorAll<HTMLElement>('[data-project-overlay]:not([data-overlay-ready])')
+      .forEach((overlay) => {
+        overlay.dataset.overlayReady = 'true';
+        if (document.querySelector('[data-route-gallery-layer] [data-work-gallery]')) {
+          overlay.dataset.overlayBackdrop = 'retained';
+          return;
+        }
+        const destination = overlay.dataset.projectSlug;
+        const snapshotLayer = overlay.querySelector<HTMLElement>('[data-project-overlay-snapshot]');
+        if (!snapshotLayer) return;
+
+        try {
+          const storedSnapshot = readStorageJson('session', backdropStorageKey);
+          const snapshot = storedSnapshot && typeof storedSnapshot === 'object'
+            ? storedSnapshot as GalleryBackdropSnapshot
+            : {};
+          if (snapshot.destination !== destination || !Array.isArray(snapshot.items)) return;
+
+          snapshot.items.slice(0, 20).forEach((item) => {
+            if (
+              typeof item.src !== 'string'
+              || !Number.isFinite(item.x)
+              || !Number.isFinite(item.y)
+              || !Number.isFinite(item.width)
+              || !Number.isFinite(item.height)
+            ) return;
+            const source = new URL(item.src, window.location.href);
+            if (source.origin !== window.location.origin && source.hostname !== 'cdn.sanity.io') return;
+
+            const image = document.createElement('img');
+            image.src = source.href;
+            image.alt = '';
+            image.decoding = 'async';
+            image.loading = 'eager';
+            image.setAttribute('aria-hidden', 'true');
+            image.style.left = `${item.x * 100}%`;
+            image.style.top = `${item.y * 100}%`;
+            image.style.width = `${item.width * 100}%`;
+            image.style.height = `${item.height * 100}%`;
+            image.style.objectPosition = item.objectPosition || '50% 50%';
+            snapshotLayer.append(image);
+          });
+
+          if (snapshotLayer.childElementCount > 0) overlay.dataset.overlayBackdrop = 'snapshot';
+        } catch {
+          removeStorageValue('session', backdropStorageKey);
+        }
+      });
+  };
+
+  setupProjectBackdrop();
+  document.addEventListener('astro:page-load', setupProjectBackdrop);
+</script>
+
+<style>
+  :global(body.project-page) {
+    --project-overlay-edge: clamp(12px, 3.4vw, 64px);
+    --project-overlay-footer-gap: clamp(28px, 4vw, 72px);
+  }
+
+  .project-overlay {
+    position: relative;
+    z-index: 1;
+    isolation: isolate;
+    padding: clamp(18px, 2.4vw, 42px) var(--project-overlay-edge) var(--project-overlay-footer-gap);
+  }
+
+  .project-overlay__backdrop {
+    position: fixed;
+    z-index: 0;
+    inset: 0;
+    overflow: hidden;
+    background: var(--color-canvas, #f3f0e8);
+    pointer-events: none;
+  }
+
+  .project-overlay__backdrop::after {
+    position: absolute;
+    inset: 0;
+    background: rgb(243 240 232 / 36%);
+    content: '';
+  }
+
+  :global(body.project-page:has([data-route-gallery-layer] [data-work-gallery]))
+  .project-overlay__backdrop {
+    background: rgb(243 240 232 / 42%);
+    backdrop-filter: blur(clamp(12px, 1.45vw, 22px)) saturate(.78);
+  }
+
+  .project-overlay[data-overlay-backdrop="retained"] .project-overlay__backdrop {
+    background: rgb(243 240 232 / 42%);
+    backdrop-filter: blur(clamp(12px, 1.45vw, 22px)) saturate(.78);
+  }
+
+  :global(body.project-page:has([data-route-gallery-layer] [data-work-gallery]))
+  .project-overlay__backdrop::after {
+    background: rgb(243 240 232 / 18%);
+  }
+
+  .project-overlay[data-overlay-backdrop="retained"] .project-overlay__backdrop::after {
+    background: rgb(243 240 232 / 18%);
+  }
+
+  :global(body.project-page:has([data-route-gallery-layer] [data-work-gallery]))
+  .project-overlay__fallback,
+  :global(body.project-page:has([data-route-gallery-layer] [data-work-gallery]))
+  .project-overlay__snapshot,
+  .project-overlay[data-overlay-backdrop="retained"] .project-overlay__fallback,
+  .project-overlay[data-overlay-backdrop="retained"] .project-overlay__snapshot {
+    display: none;
+  }
+
+  .project-overlay__fallback,
+  .project-overlay__snapshot {
+    position: absolute;
+    filter: blur(clamp(14px, 1.8vw, 28px)) saturate(.72);
+    opacity: .72;
+    transform: scale(1.045);
+    transform-origin: center;
+  }
+
+  .project-overlay__fallback {
+    inset: -5%;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-auto-rows: minmax(24vh, 1fr);
+    gap: clamp(5px, .7vw, 12px);
+  }
+
+  .project-overlay__tile { min-width: 0; overflow: hidden; }
+  .project-overlay__tile:nth-child(4n + 1) { transform: translateY(7vh); }
+  .project-overlay__tile:nth-child(4n + 2) { transform: translateY(-4vh); }
+  .project-overlay__tile:nth-child(4n + 3) { transform: translateY(2vh); }
+  .project-overlay__tile:nth-child(4n) { transform: translateY(-7vh); }
+
+  .project-overlay__tile img,
+  .project-overlay__snapshot :global(img) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .project-overlay__snapshot { inset: 0; opacity: 0; transition: opacity 420ms ease-out; }
+  .project-overlay__snapshot :global(img) { position: absolute; }
+  .project-overlay[data-overlay-backdrop="snapshot"] .project-overlay__snapshot { opacity: .78; }
+  .project-overlay[data-overlay-backdrop="snapshot"] .project-overlay__fallback { opacity: .14; }
+
+  .project-overlay__edge-close {
+    position: fixed;
+    z-index: 1;
+    inset: 0;
+    cursor: pointer;
+  }
+
+  .project-overlay__panel {
+    position: relative;
+    z-index: 2;
+    width: min(100%, 1720px);
+    margin-inline: auto;
+    background: var(--page-background, var(--color-project, #e8e8e4));
+    border: 1px solid color-mix(in srgb, var(--color-ink, #101010) 14%, transparent);
+    box-shadow: 0 22px 80px rgb(16 16 16 / 18%);
+  }
+
+  .project-overlay__toolbar {
+    position: relative;
+    z-index: 30;
+    display: flex;
+    min-height: 4rem;
+    align-items: center;
+    padding-inline: clamp(1rem, 2vw, 2rem);
+    border-bottom: 1px solid color-mix(in srgb, var(--color-ink, #101010) 20%, transparent);
+    background: transparent;
+  }
+
+  .project-overlay__return {
+    position: relative;
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    gap: .7rem;
+    color: inherit;
+    font-family: var(--font-body);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    letter-spacing: .015em;
+    text-decoration: none;
+  }
+
+  .project-overlay__return::after {
+    position: absolute;
+    right: 0;
+    bottom: .35rem;
+    left: 2.15rem;
+    height: 1px;
+    background: currentColor;
+    content: '';
+    transform: scaleX(0);
+    transform-origin: right;
+    transition: transform 420ms cubic-bezier(.22, 1, .36, 1);
+  }
+
+  .project-overlay__return svg {
+    width: 1.45rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: square;
+    stroke-width: 1.5;
+    transition: transform 420ms cubic-bezier(.22, 1, .36, 1);
+  }
+
+  .project-overlay__return:is(:hover, :focus-visible)::after {
+    transform: scaleX(1);
+    transform-origin: left;
+  }
+
+  .project-overlay__return:is(:hover, :focus-visible) svg { transform: translateX(-.28rem); }
+
+  :global(body.project-page .site-footer) {
+    z-index: 3;
+    width: 100%;
+    margin: 0;
+    border-inline: 0;
+    box-shadow: none;
+  }
+
+  @media (max-width: 767px) {
+    :global(body.project-page) {
+      --project-overlay-edge: 10px;
+      --project-overlay-footer-gap: 18px;
+    }
+    .project-overlay { padding-block: 10px var(--project-overlay-footer-gap); }
+    .project-overlay__fallback { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .project-overlay__toolbar { min-height: 3.5rem; padding-inline: .85rem; }
+    .project-overlay__panel { box-shadow: 0 14px 42px rgb(16 16 16 / 16%); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .project-overlay__backdrop,
+    .project-overlay__panel { animation: none; }
+    .project-overlay__snapshot { transition: none; }
+    .project-overlay__return::after,
+    .project-overlay__return svg { transition: none; }
+  }
+
+  @media (forced-colors: active) {
+    .project-overlay__backdrop { background: Canvas; }
+    .project-overlay__backdrop::after { background: rgb(255 255 255 / 64%); }
+    .project-overlay__panel { border: 2px solid CanvasText; }
+  }
+
+  @media print {
+    .project-overlay { padding: 0; }
+    .project-overlay__backdrop, .project-overlay__edge-close, .project-overlay__toolbar { display: none; }
+    .project-overlay__panel { width: 100%; border: 0; box-shadow: none; }
+  }
+</style>
