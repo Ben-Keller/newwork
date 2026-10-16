@@ -804,7 +804,7 @@ export function normalizeSiteSettings(
     tickerWords: tickerWords(workPage?.tickerWords, ['Film + photo', 'In production', 'New work']),
     tickerCities: Array.isArray(workPage?.tickerCities) ? [...new Set(workPage.tickerCities.filter((city): city is string => typeof city === 'string' && ['sf', 'la', 'nyc'].includes(city)))] : ['sf', 'la', 'nyc'],
     btsHeading: stringFrom(workPage?.btsHeading) || 'Behind the scenes',
-    btsSubtitle: typeof workPage?.btsSubtitle === 'string' ? workPage.btsSubtitle.trim() : 'A closer look',
+    btsSubtitle: typeof workPage?.btsSubtitle === 'string' ? workPage.btsSubtitle.trim() : '',
     btsGallery: normalizeWorkGallery(workPage?.behindTheScenes),
     stackedWordmark: normalizeBrandAsset(raw.stackedWordmark),
     workGallery: normalizeWorkGallery(workPage?.gallery),

@@ -94,3 +94,8 @@ C05/C07/C11: Ben reported an intermittent board flash on first load. The homepag
 ## Footer copyright alignment — 16 October 2026
 
 C10: Ben requested the copyright alongside the other footer information rather than in a separate lower row. The legal block now occupies the rightmost column beside Featured. Below 1100px, the logo and train board share the first row, with Featured and copyright beside each other in the next row. At phone widths the project links use one column to keep the legal block readable and prevent overlap. Copyright text, CMS fields and the existing logo/board alignment are unchanged.
+
+
+## Remove BTS small caption — 16 October 2026
+
+C08 follow-up: Ben requested removing “A closer look.” The caption was cleared from the published Work-page document; the component, content normalization, Studio default and deliberate migration defaults no longer restore it. The optional CMS caption field remains available and explains that leaving it empty shows only the heading. The section heading and mosaic are unchanged.

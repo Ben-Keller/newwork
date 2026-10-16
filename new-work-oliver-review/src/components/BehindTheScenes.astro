@@ -2,7 +2,7 @@
 import type { BtsItem } from '../lib/bts';
 import ResponsiveImage from './ResponsiveImage.astro';
 interface Props { items: BtsItem[]; heading?: string; subtitle?: string }
-const { items, heading = 'Behind the scenes', subtitle = 'A closer look' } = Astro.props;
+const { items, heading = 'Behind the scenes', subtitle = '' } = Astro.props;
 ---
 {items.length > 0 && (
   <section class="bts" aria-labelledby="bts-heading" data-bts data-bts-layout="mosaic">

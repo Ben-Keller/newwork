@@ -244,3 +244,10 @@ Astro check: **182 files, zero errors/warnings/hints**. ESLint and **174 unit te
 C10 follow-up: copyright now shares the information row beside Featured, occupying the rightmost column. The obsolete separate bottom row and its margin are removed. At tablet/phone widths the signature spans the first row and the directory/copyright share the second; phone project links use one column. The existing logo/train-board bottom alignment is preserved.
 
 Checked **24 layouts on the prototype and 24 on the production CMS preview**, using Chromium/WebKit, Contact and a dark project page, at 320, 390, 768, 1024, 1440 and 1920px. Copyright and directory top edges align within 1px, their columns do not overlap, the logo/board bottom edges remain aligned within 1px, and there is no horizontal overflow. Inspected desktop/mobile captures and the comparison (`captures/footer-inline-copyright-*.png`). ESLint, diff checks, the 93-page/981-file production build and all 553 packaged routes passed. All 1,110 original baseline files remain intact. This is an Oliver stylesheet change; no CMS, Studio or DNS edits.
+
+
+## BTS small caption removal — 16 October 2026
+
+Removed “A closer look” from the Oliver frontend defaults and the Studio/migration defaults. A dry run found exactly one matching published field (`workPage.btsSubtitle`) and no matching draft; the scoped mutation backed up the document privately, required its current revision and unset only that field. A follow-up query confirmed no matching caption remains.
+
+Studio deploy checks passed: schema validation, regenerated schema/query types (no generated diff), typecheck, lint and build. Website Astro check reported 182 files with zero errors/warnings/hints; ESLint and all 174 existing unit tests passed. Rebuilt the CMS preview at port 4330: 93 HTML pages, 981 files and 553 primary/legacy routes verified. Desktop/mobile browser checks against both prototype and CMS previews confirmed no small-caption element or matching text, with the heading and mosaic retained and no horizontal overflow. The original 1,110-file baseline remains intact.

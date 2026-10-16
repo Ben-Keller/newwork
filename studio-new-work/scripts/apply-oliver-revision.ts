@@ -83,7 +83,7 @@ async function main() {
       'defaultSeo.metaDescription': 'New Work Agency is a film and photo production agency. Explore selected work and get in touch.',
       'defaultSeo.noIndex': false,
     },
-    workPage: {gallery, galleryReserve: reserve, tickerWords: ['Film + photo','In production','New work'], tickerCities: ['sf','la','nyc'], btsHeading: 'Behind the scenes', btsSubtitle: 'A closer look'},
+    workPage: {gallery, galleryReserve: reserve, tickerWords: ['Film + photo','In production','New work'], tickerCities: ['sf','la','nyc'], btsHeading: 'Behind the scenes', btsSubtitle: ''},
     footerSettings: {calloutText: 'Looking to create something impactful?', tickerWords: ['Arriving','In transit','Departing','Early'], featuredHeading: 'Featured'},
     contactPage: {},
   }
