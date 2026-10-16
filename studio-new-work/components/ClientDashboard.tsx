@@ -4,6 +4,8 @@ import {Box, Card, Flex, Heading, Spinner, Text} from '@sanity/ui'
 import {defineQuery} from 'groq'
 import {useEffect, useState} from 'react'
 import {useClient} from 'sanity'
+import {StateLink} from 'sanity/router'
+import {NewWorkWordmark} from './NewWorkWordmark'
 import styled from 'styled-components'
 import {SANITY_API_VERSION} from '../sanity.constants'
 import {PUBLISHING_HELP, WEBSITE_URL} from '../website'
@@ -23,7 +25,7 @@ const Content = styled.div`max-width: 1120px; margin: auto; display: grid; gap: 
 const Hero = styled.header`
   background: #191a17; color: #f3f0e8; padding: clamp(1.5rem, 4vw, 3rem);
   display: grid; gap: 2.5rem; border-radius: 3px;
-  img { width: min(330px, 100%); height: auto; filter: brightness(0) invert(1); }
+  .brand-wordmark { display: block; width: min(330px, 100%); height: auto; }
 `
 const HeroTop = styled.div`
   display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; flex-wrap: wrap;
@@ -108,7 +110,7 @@ export function ClientDashboard() {
       <Content>
         <Hero>
           <HeroTop>
-            <img src="/static/brand/horizontal.svg" alt="New Work" />
+            <NewWorkWordmark />
             <a href={WEBSITE_URL} target="_blank" rel="noopener noreferrer">Open website <ArrowTopRightIcon /></a>
           </HeroTop>
           <HeroBottom>
@@ -126,7 +128,7 @@ export function ClientDashboard() {
         <Section aria-labelledby="edit-heading">
           <Heading size={2} id="edit-heading">Make an update</Heading>
           <Grid>{actions.map((item, index) => (
-            <LinkCard href={item.href} key={item.href}>
+            <LinkCard as={StateLink} state={{panes: item.href.replace('/structure/', '').split(';').map(id => [{id}])}} key={item.href}>
               <Flex justify="space-between"><span className="number">0{index + 1}</span><ArrowTopRightIcon /></Flex>
               <h3>{item.title}</h3><p>{item.description}</p>
             </LinkCard>
