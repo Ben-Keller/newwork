@@ -84,3 +84,8 @@ The request after the comment audit authorized updating Sanity and preparing the
 The one-time backed-up migration changed four settings documents atomically, retaining Contact placeholders exactly and preserving 12 unused placements separately. The current CMS audit found 17/17 public Work records with media, 16 curated placements and no active Notes. All 114 validated documents have zero errors. No Project/ordinary Asset documents were edited or deleted.
 
 The production package and revised single publisher are prepared. The automatic rebuild hook is now saved in Sanity but disabled; its dedicated GitHub Actions token is still needed. [Deployment instructions](../../DEPLOYMENT.md), [client guide](../../studio-new-work/CLIENT_GUIDE.md) and [domain cutover](../../hosting/ROOT_RELEASE.md) identify the remaining steps. There was no Git push, public website deployment or DNS change.
+
+
+## Splash ticker follow-up — 16 October 2026
+
+C05/C07/C11: Ben reported an intermittent board flash on first load. The homepage board now starts hidden in server-rendered HTML and remains hidden during route cleanup. CSS excludes both home and footer boards until the one shared wordmark has completed its transition into the home layout. This also covers the desktop board after it moves outside the page content into the document body. Returning to the splash removes the boards immediately, including with reduced motion. The no-JavaScript page keeps its static boards because that fallback has no splash. The selected Tall styling and gallery behavior are preserved.

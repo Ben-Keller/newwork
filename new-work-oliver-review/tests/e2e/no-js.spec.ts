@@ -8,6 +8,7 @@ test('the work index and film fallback remain useful without JavaScript', async 
   expect(homeResponse?.status()).toBe(200);
   await expect(page.locator('[data-home-identity]')).toBeVisible();
   await expect(page.locator('.home-identity__wordmark svg')).toBeVisible();
+  await expect(page.locator('[data-home-departures]')).toBeVisible();
   await expect(page.getByRole('heading', { level: 1, name: 'Selected work' })).toBeAttached();
   await expect(page.locator('[data-project-card]')).toHaveCount(16);
   await expect(page.locator('[data-manifesto]')).toHaveCount(0);

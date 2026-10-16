@@ -110,9 +110,12 @@ test('ticker floats, follows rapid hover and keyboard focus, clears and hides pa
 
 test('ticker cycles standalone city clocks and agency messages with independent footer words', async ({ page }) => {
   await page.clock.install({ time: new Date('2026-01-15T20:59:00Z') });
-  await openHome(page);
+  // Enter at the dock instead of racing the Work hash's deferred gallery scroll.
+  await page.goto('/');
+  await expect(page.locator('[data-logo-work-page]')).toHaveAttribute('data-logo-page-ready', 'true');
+  await page.keyboard.press('Enter');
   const home = page.locator('[data-home-departures] [data-flap-ticker]');
-  await page.evaluate(() => scrollTo(0,0));
+  await expect(home).toBeVisible();
   await expect(home).toBeInViewport();
   await expect(home).toHaveAttribute('data-ticker-text', 'Film + photo');
   for (const value of ['San Francisco 12:59', 'In production', 'Los Angeles 12:59', 'New work', 'New York 15:59', 'Film + photo']) {
