@@ -37,6 +37,15 @@ jobs:
         working-directory: studio-new-work
         run: npm ci
 
+      # Studio's maintenance entry points import the active website's typed
+      # gallery tools. Install that workspace as well on a clean CI checkout.
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11.19.0
+      - name: Install active website dependencies
+        working-directory: new-work-oliver-review
+        run: pnpm install --frozen-lockfile
+
       - name: Validate, type-check, and build Studio
         working-directory: studio-new-work
         run: npm run deploy:check
