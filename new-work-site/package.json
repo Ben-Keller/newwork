@@ -57,6 +57,7 @@
     "eslint": "^9.39.1",
     "eslint-plugin-astro": "^1.5.0",
     "groq-js": "^2.0.0",
+    "jsdom": "27.4.0",
     "sharp": "^0.35.4",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",

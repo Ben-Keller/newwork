@@ -1,6 +1,7 @@
 ---
 import type { SiteSettingsView } from '../lib/types';
 import RichText from './RichText.astro';
+import ContactForm from './ContactForm.astro';
 interface Props { settings: SiteSettingsView }
 const { settings } = Astro.props;
 ---
@@ -10,13 +11,36 @@ const { settings } = Astro.props;
   {settings.contactIntroduction ? (
     <RichText value={settings.contactIntroduction} class="contact-introduction" />
   ) : null}
-  {settings.contactEmail ? (
-    <a class="contact-email" href={`mailto:${settings.contactEmail}`} data-motion-reveal="up">
-      <span>{settings.contactEmail}</span><span class="contact-email__arrow" aria-hidden="true">↗</span>
-    </a>
-  ) : null}
-  <div class="contact-details-grid">
-    {settings.location ? <div><h2>Location</h2><p class="contact-location">{settings.location}</p></div> : null}
-    {settings.socialLinks.length ? <div><h2>Elsewhere</h2><ul class="social-list">{settings.socialLinks.map((item) => <li><a href={item.url} rel="noreferrer">{item.label} ↗</a></li>)}</ul></div> : null}
+  <div class="contact-layout">
+    <ContactForm email={settings.contactEmail} endpoint={settings.formspreeEndpoint} />
+    <aside class="contact-direct" aria-label="Other ways to get in touch">
+      {settings.contactEmail ? (
+        <div>
+          <h2 class="contact-direct__heading">Prefer email?</h2>
+          <a class="contact-email" href={`mailto:${settings.contactEmail}`}>
+            <span>{settings.contactEmail}</span><span class="contact-email__arrow" aria-hidden="true">↗</span>
+          </a>
+        </div>
+      ) : null}
+      <div class="contact-details-grid">
+        {settings.location ? <div><h2>Location</h2><p class="contact-location">{settings.location}</p></div> : null}
+        {settings.socialLinks.length ? <div><h2>Elsewhere</h2><ul class="social-list">{settings.socialLinks.map((item) => <li><a href={item.url} rel="noreferrer">{item.label} ↗</a></li>)}</ul></div> : null}
+      </div>
+    </aside>
   </div>
 </section>
+
+<style>
+  .contact-layout { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr); gap: clamp(3rem, 9vw, 8rem); }
+  .contact-direct { min-width: 0; border-top: 1px solid var(--color-rule); padding-top: 1.2rem; }
+  .contact-direct__heading { font: 600 .7rem/1.4 var(--font-body); letter-spacing: .08em; text-transform: uppercase; }
+  .contact-direct .contact-email { border-top: 0; padding-block: .85rem 1.5rem; font-size: clamp(1.25rem, 2.4vw, 2.1rem); }
+  .contact-direct .contact-details-grid { gap: 2rem; grid-template-columns: 1fr; }
+  @media (max-width: 767px) {
+    .contact-layout { grid-template-columns: 1fr; gap: 3.5rem; }
+    .contact-direct .contact-details-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  @media (max-width: 360px) {
+    .contact-direct .contact-details-grid { grid-template-columns: 1fr; }
+  }
+</style>

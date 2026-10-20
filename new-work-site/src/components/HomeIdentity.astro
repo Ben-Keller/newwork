@@ -38,6 +38,7 @@ const { wordmark, projects, words = ['Film + photo', 'In production', 'New work'
 </style>
 <script>
   import { projectLabel } from '../lib/ticker';
+  import type { BoardMotionReview } from '../lib/review/board-motion-review';
   let disposeHome = () => {};
   function setupHome() {
     disposeHome();
@@ -51,6 +52,7 @@ const { wordmark, projects, words = ['Film + photo', 'In production', 'New work'
     const reduced = matchMedia('(prefers-reduced-motion: reduce)');
     const ticker = board.querySelector<HTMLElement>('[data-flap-ticker]')!;
     let hovered: HTMLElement | null = null; let focused: HTMLElement | null = null; let frame = 0;
+    let motionReview: BoardMotionReview | undefined;
     const setLabel = () => {
       const card = focused || hovered;
       ticker.dispatchEvent(new CustomEvent('new-work:ticker-label', { detail: { label: card ? projectLabel(card.dataset.tickerClient) : '' } }));
@@ -76,8 +78,13 @@ const { wordmark, projects, words = ['Film + photo', 'In production', 'New work'
         const targetX = innerWidth - width - 24;
         const targetY = (innerHeight - height) / 2;
         const amount = floating ? eased : 0;
+        const preview = motionReview?.position({
+          progress: floating ? progress : 0, dockX: anchor.left, dockY, targetX, targetY,
+          travelled: Math.max(0, start - bounds.top), reduced: reduced.matches,
+        });
         board.style.left = '0'; board.style.top = '0';
-        board.style.transform = `translate3d(${anchor.left + (targetX - anchor.left) * amount}px, ${dockY + (targetY - dockY) * amount}px, 0)`;
+        board.style.transform = `translate3d(${preview?.x ?? anchor.left + (targetX - anchor.left) * amount}px, ${preview?.y ?? dockY + (targetY - dockY) * amount}px, 0)`;
+        if (preview) board.style.opacity = String(preview.opacity);
       } else {
         if (board.parentElement !== dock) dock.append(board);
         board.removeAttribute('style');
@@ -96,6 +103,16 @@ const { wordmark, projects, words = ['Film + photo', 'In production', 'New work'
     reduced.addEventListener('change', requestUpdate, { signal });
     const state = new MutationObserver(requestUpdate); state.observe(page, { attributes: true, attributeFilter: ['data-handoff'] });
     const resize = new ResizeObserver(requestUpdate); resize.observe(dock); resize.observe(gallery);
+    // Temporary local comparison: one lazy module owns the alternatives and
+    // controls. Removing this block and the optional position above retires it.
+    if (['localhost', '127.0.0.1', '[::1]'].includes(location.hostname)
+      && new URLSearchParams(location.search).has('board-motion')) {
+      void import('../lib/review/board-motion-review').then(({ mountBoardMotionReview }) => {
+        if (signal.aborted) return;
+        motionReview = mountBoardMotionReview({ board, page, gallery, signal, requestUpdate });
+        requestUpdate();
+      });
+    }
     update();
     disposeHome = () => {
       controller.abort(); state.disconnect(); resize.disconnect(); if (frame) cancelAnimationFrame(frame);

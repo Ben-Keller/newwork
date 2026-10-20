@@ -308,13 +308,14 @@ const CONTACT_PAGE_PROJECTION = `{
   heading,
   introduction,
   email,
+  formspreeEndpoint,
   location,
   socialLinks[]{_key, label, url},
   seo${SEO_PROJECTION}
 }`
 
 const FOOTER_PROJECTION = `{
-  clientLogos[]{_key, name, url, artwork{format, width, height, image${IMAGE_PROJECTION}, file${FILE_PROJECTION}}},
+  clientLogos[]{_key, name, "projectId": project._ref, url, artwork{format, width, height, image${IMAGE_PROJECTION}, file${FILE_PROJECTION}}},
   calloutText,
   tickerWords,
   featuredHeading,

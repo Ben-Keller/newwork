@@ -2,6 +2,7 @@ import {EnvelopeIcon} from '@sanity/icons/Envelope'
 import {defineArrayMember, defineField, defineType} from 'sanity'
 import {hiddenAllFieldsGroup} from '../clientGroups'
 import {collectBlockingSafetyFlags, isRecord} from '../validation'
+import {safeFormspreeEndpoint} from '../../shared/content-policy'
 
 export const contactPage = defineType({
   name: 'contactPage',
@@ -10,6 +11,7 @@ export const contactPage = defineType({
   icon: EnvelopeIcon,
   groups: [
     {name: 'content', title: 'Contact details', default: true},
+    {name: 'enquiries', title: 'Enquiry form'},
     {name: 'seo', title: 'Search & sharing'},
     hiddenAllFieldsGroup,
   ],
@@ -26,6 +28,16 @@ export const contactPage = defineType({
       validation: (Rule) => [Rule.required().email(), Rule.custom((value) => value?.endsWith('@lorem.ipsum') ? 'Replace this placeholder when your public inbox is ready.' : true).warning()],
     }),
     defineField({name: 'location', title: 'Location or public address', type: 'text', rows: 3, group: 'content', description: 'Optional. Enter a city or approved public address, using line breaks as needed. Clear it to hide Location.', validation: (Rule) => Rule.max(240)}),
+    defineField({
+      name: 'formspreeEndpoint',
+      title: 'Formspree form endpoint',
+      type: 'url',
+      group: 'enquiries',
+      description: 'Paste the public https://formspree.io/f/… endpoint from Formspree → Website enquiries → Integration. Publish to enable Send enquiry on the next website build. Leave empty for copy-only mode. Manage the receiving inbox and spam settings in Formspree; never paste a password or API key here.',
+      validation: (Rule) => Rule.custom((value) => !value || safeFormspreeEndpoint(value)
+        ? true
+        : 'Use the exact https://formspree.io/f/… endpoint, without a query string or extra path.'),
+    }),
     defineField({
       name: 'socialLinks',
       title: 'Social links',
@@ -45,5 +57,5 @@ export const contactPage = defineType({
       ? `Clear Contact-page publication flags: ${blockers.join(', ')}.`
       : true
   }),
-  preview: {prepare: () => ({title: 'Contact page', subtitle: 'Email, location and social links'})},
+  preview: {prepare: () => ({title: 'Contact page', subtitle: 'Enquiry form, email, location and social links'})},
 })

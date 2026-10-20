@@ -67,7 +67,7 @@ function generatedHeaders() {
   const playerFrames = PLAYER_FRAME_HOSTS.map((host) => `https://${host}`).join(' ');
   return `/*
   Cache-Control: public, max-age=0, must-revalidate
-  Content-Security-Policy: default-src 'self'; img-src 'self' data: ${sanityCdn} https://i.vimeocdn.com https://i.ytimg.com; media-src 'self' ${sanityCdn}; frame-src ${playerFrames}; script-src 'self' 'unsafe-inline'${analyticsScript}; style-src 'self' 'unsafe-inline'; connect-src 'self' https://*.api.sanity.io https://*.apicdn.sanity.io${analyticsConnect}; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; upgrade-insecure-requests
+  Content-Security-Policy: default-src 'self'; img-src 'self' data: ${sanityCdn} https://i.vimeocdn.com https://i.ytimg.com; media-src 'self' ${sanityCdn}; frame-src ${playerFrames}; script-src 'self' 'unsafe-inline'${analyticsScript}; style-src 'self' 'unsafe-inline'; connect-src 'self' https://*.api.sanity.io https://*.apicdn.sanity.io https://formspree.io${analyticsConnect}; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self' https://formspree.io; frame-ancestors 'self'; upgrade-insecure-requests
   Referrer-Policy: strict-origin-when-cross-origin
   X-Content-Type-Options: nosniff
   Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()

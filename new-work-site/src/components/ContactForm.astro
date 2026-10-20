@@ -1,0 +1,258 @@
+---
+import { isContactInboxReady } from '../lib/contact-enquiry';
+import { safeFormspreeEndpoint } from '../../shared/content-policy';
+interface Props { email?: string; endpoint?: string }
+const { email, endpoint: configuredEndpoint } = Astro.props;
+const endpoint = safeFormspreeEndpoint(configuredEndpoint);
+const emailReady = isContactInboxReady(email);
+---
+
+<form class="contact-form" data-contact-form data-contact-recipient={emailReady ? email : undefined}
+  action={endpoint} method="post" aria-labelledby="enquiry-heading">
+  <h2 id="enquiry-heading">Tell us what you have in mind.</h2>
+  <p class="contact-form__intro">A new project, an idea, or a question. Start here.</p>
+  <fieldset disabled={!endpoint} data-enquiry-fields>
+    <legend class="sr-only">Your enquiry — all fields required</legend>
+    <input type="hidden" name="_subject" value="Website enquiry — New Work Agency" />
+    <label class="contact-form__honeypot" aria-hidden="true">Leave this empty
+      <input name="_gotcha" type="text" tabindex="-1" autocomplete="off" />
+    </label>
+    <label class="contact-form__field">
+      <span id="enquiry-message-label">Your project</span>
+      <textarea name="message" rows="4" required maxlength="2000" placeholder="What are you making, and how can we help?" autocomplete="off" aria-labelledby="enquiry-message-label" aria-describedby="enquiry-message-error"></textarea>
+      <span class="contact-form__error" id="enquiry-message-error" data-enquiry-error="message"></span>
+    </label>
+    <div class="contact-form__details">
+      <label class="contact-form__field">
+        <span id="enquiry-name-label">Your name</span>
+        <input name="name" type="text" autocomplete="name" required maxlength="100" placeholder="Name" aria-labelledby="enquiry-name-label" aria-describedby="enquiry-name-error" />
+        <span class="contact-form__error" id="enquiry-name-error" data-enquiry-error="name"></span>
+      </label>
+      <label class="contact-form__field">
+        <span id="enquiry-email-label">Your email</span>
+        <input name="email" type="email" autocomplete="email" inputmode="email" required maxlength="254" placeholder="you@company.com" aria-labelledby="enquiry-email-label" aria-describedby="enquiry-email-error" />
+        <span class="contact-form__error" id="enquiry-email-error" data-enquiry-error="email"></span>
+      </label>
+    </div>
+    <div class="contact-form__action">
+      <button type="submit" aria-describedby="enquiry-delivery-note">
+        <span data-enquiry-submit-label>{endpoint ? 'Send enquiry' : 'Copy enquiry'}</span><span aria-hidden="true">↗</span>
+      </button>
+      <p id="enquiry-delivery-note">{endpoint
+        ? 'Your brief goes straight to our team. We’ll reply by email.'
+        : 'Sending will be available soon. You can write and copy your enquiry for now.'}</p>
+    </div>
+  </fieldset>
+  <p class="contact-form__status" role="status" aria-live="polite" tabindex="-1" data-enquiry-status></p>
+  <button type="button" class="contact-form__verify" data-enquiry-verify hidden>Complete verification on Formspree ↗</button>
+  <div class="contact-form__fallback" data-enquiry-fallback hidden>
+    <label for="enquiry-copy">Your enquiry</label>
+    <textarea id="enquiry-copy" rows="6" readonly data-enquiry-copy></textarea>
+    <p>Select and copy the text above.</p>
+    <a data-enquiry-email hidden>Open this enquiry in email ↗</a>
+  </div>
+  <noscript><p>{endpoint ? 'Submitting opens Formspree to finish sending your enquiry.' : emailReady ? 'Please use the email address on this page to get in touch.' : 'Our contact inbox will be available soon.'}</p></noscript>
+</form>
+
+<script>
+  import { buildEnquiryBody, buildEnquiryMailto, parseEnquiryResponse } from '../lib/contact-enquiry';
+  import { safeFormspreeEndpoint } from '../../shared/content-policy';
+
+  let disposeForm = (): void => undefined;
+  const setupForm = () => {
+    disposeForm();
+    const form = document.querySelector<HTMLFormElement>('[data-contact-form]');
+    if (!form) return;
+    const controller = new AbortController();
+    const { signal } = controller;
+    const fields = form.querySelector<HTMLFieldSetElement>('[data-enquiry-fields]')!;
+    const status = form.querySelector<HTMLElement>('[data-enquiry-status]')!;
+    const fallback = form.querySelector<HTMLElement>('[data-enquiry-fallback]')!;
+    const copy = form.querySelector<HTMLTextAreaElement>('[data-enquiry-copy]')!;
+    const submit = form.querySelector<HTMLButtonElement>('[type="submit"]')!;
+    const submitLabel = form.querySelector<HTMLElement>('[data-enquiry-submit-label]')!;
+    const emailLink = form.querySelector<HTMLAnchorElement>('[data-enquiry-email]')!;
+    const verify = form.querySelector<HTMLButtonElement>('[data-enquiry-verify]')!;
+    const inputs = [...form.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('[required]')];
+    const endpoint = safeFormspreeEndpoint(form.getAttribute('action'));
+    let busy = false;
+    let sent = false;
+    let request: AbortController | undefined;
+    const idleLabel = endpoint ? 'Send enquiry' : 'Copy enquiry';
+    const clearErrors = () => {
+      inputs.forEach(input => input.removeAttribute('aria-invalid'));
+      form.querySelectorAll<HTMLElement>('[data-enquiry-error]').forEach(error => { error.textContent = ''; });
+    };
+    const showFallback = (enquiry: { name: string; email: string; message: string }) => {
+      copy.value = buildEnquiryBody(enquiry);
+      fallback.hidden = false;
+      const mailto = buildEnquiryMailto(form.dataset.contactRecipient, enquiry);
+      emailLink.hidden = !mailto;
+      if (mailto) emailLink.href = mailto;
+      else emailLink.removeAttribute('href');
+    };
+
+    form.addEventListener('input', event => {
+      const input = event.target;
+      if (input instanceof HTMLInputElement || input instanceof HTMLTextAreaElement) input.setCustomValidity('');
+      status.textContent = '';
+      fallback.hidden = true;
+      verify.hidden = true;
+      clearErrors();
+      if (sent) {
+        sent = false;
+        submit.disabled = false;
+        submitLabel.textContent = idleLabel;
+      }
+    }, { signal });
+    form.addEventListener('submit', async event => {
+      event.preventDefault();
+      if (busy || sent) return;
+      inputs.forEach(input => input.setCustomValidity(input.value.trim() ? '' : 'Please fill in this field.'));
+      if (!form.reportValidity()) return;
+      const data = new FormData(form);
+      const enquiry = {
+        message: String(data.get('message') || '').trim(),
+        name: String(data.get('name') || '').trim(),
+        email: String(data.get('email') || '').trim(),
+      };
+      busy = true;
+      submit.disabled = true;
+      clearErrors();
+      fallback.hidden = true;
+      verify.hidden = true;
+      status.textContent = '';
+      if (!endpoint) {
+        try {
+          await navigator.clipboard.writeText(buildEnquiryBody(enquiry));
+          if (!signal.aborted) status.textContent = 'Enquiry copied. Nothing has been sent.';
+        } catch {
+          if (!signal.aborted) {
+            showFallback(enquiry);
+            status.textContent = 'Copy your enquiry below. Nothing has been sent.';
+            copy.focus();
+            copy.select();
+          }
+        } finally {
+          busy = false;
+          if (!signal.aborted) submit.disabled = false;
+        }
+        return;
+      }
+      Object.entries(enquiry).forEach(([key, value]) => data.set(key, value));
+      // Capture FormData before disabling fields. No details are persisted locally.
+      fields.disabled = true;
+      form.setAttribute('aria-busy', 'true');
+      submitLabel.textContent = 'Sending…';
+      request = new AbortController();
+      const timeout = window.setTimeout(() => request?.abort(), 20_000);
+      try {
+        const response = await fetch(endpoint, {
+          method: 'POST', body: data, headers: { Accept: 'application/json' },
+          credentials: 'omit', redirect: 'error', signal: request.signal,
+        });
+        const result = parseEnquiryResponse(response.status, await response.json());
+        if (signal.aborted) return;
+        if (result.kind === 'success') {
+          sent = true;
+          form.reset();
+          status.textContent = 'Thank you — your enquiry has been sent. We’ll be in touch by email.';
+          status.focus({ preventScroll: true });
+        } else {
+          status.textContent = result.message;
+          showFallback(enquiry);
+          verify.hidden = !result.verification;
+          inputs.forEach(input => {
+            const error = result.fields[input.name as keyof typeof enquiry];
+            if (!error) return;
+            input.setAttribute('aria-invalid', 'true');
+            const errorElement = document.getElementById(`enquiry-${input.name}-error`);
+            if (errorElement) errorElement.textContent = error;
+          });
+        }
+      } catch {
+        if (!signal.aborted) {
+          status.textContent = 'We couldn’t confirm delivery. Your details are still here; check your connection before trying again, or use email.';
+          showFallback(enquiry);
+        }
+      } finally {
+        window.clearTimeout(timeout);
+        busy = false;
+        if (!signal.aborted) {
+          fields.disabled = false;
+          form.removeAttribute('aria-busy');
+          submit.disabled = sent;
+          submitLabel.textContent = sent ? 'Sent' : idleLabel;
+          const invalid = inputs.find(input => input.getAttribute('aria-invalid') === 'true');
+          if (invalid) invalid.focus();
+        }
+      }
+    }, { signal });
+    // A CAPTCHA can be completed on Formspree without loading third-party
+    // challenge scripts on the website. Only an explicit click leaves the page.
+    verify.addEventListener('click', () => {
+      if (endpoint && !busy && form.reportValidity()) {
+        form.action = endpoint;
+        HTMLFormElement.prototype.submit.call(form);
+      }
+    }, { signal });
+    submit.disabled = false;
+    fields.disabled = false;
+    disposeForm = () => {
+      controller.abort();
+      request?.abort();
+      disposeForm = () => undefined;
+    };
+  };
+  setupForm();
+  document.addEventListener('astro:page-load', setupForm);
+  document.addEventListener('astro:before-swap', () => disposeForm());
+</script>
+
+<style>
+  .contact-form { min-width: 0; }
+  .contact-form__honeypot { display: none; }
+  .contact-form h2 { max-width: 18ch; font: 600 clamp(1.8rem, 3vw, 2.8rem)/1.08 var(--font-body); letter-spacing: -.055em; }
+  .contact-form__intro { margin: .9rem 0 2rem; color: var(--color-muted); font-size: .95rem; }
+  .contact-form fieldset { display: grid; gap: 1.65rem; min-width: 0; padding: 0; margin: 0; border: 0; }
+  .contact-form__field { display: grid; gap: .55rem; min-width: 0; }
+  .contact-form__field > span, .contact-form__fallback label { font-size: .75rem; font-weight: 600; }
+  .contact-form :is(input, textarea) {
+    display: block; width: 100%; min-width: 0; border: 0; border-bottom: 1px solid var(--color-rule);
+    border-radius: 0; padding: .75rem 0; color: var(--color-ink); background: transparent;
+    font: 400 1rem/1.5 var(--font-body); box-shadow: none;
+  }
+  .contact-form textarea { resize: vertical; min-height: 130px; }
+  .contact-form :is(input, textarea)::placeholder { color: var(--color-muted); opacity: 1; }
+  .contact-form :is(input, textarea):focus { border-bottom-color: var(--color-ink); }
+  .contact-form :is(input, textarea):focus-visible { outline: 1px solid var(--color-ink); outline-offset: 5px; }
+  .contact-form__details { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5rem; }
+  .contact-form__action { display: flex; align-items: center; gap: 1.25rem; }
+  .contact-form__action button {
+    display: flex; justify-content: space-between; align-items: center; gap: 2rem;
+    flex-shrink: 0; min-height: 48px; padding: .85rem 1.1rem; border: 1px solid var(--color-ink);
+    border-radius: 0; color: var(--color-canvas); background: var(--color-ink);
+    font: 500 .875rem/1.3 var(--font-body);
+  }
+  .contact-form__action button:hover { color: var(--color-ink); background: transparent; }
+  .contact-form__action button:disabled { opacity: .5; cursor: default; }
+  .contact-form[aria-busy="true"] .contact-form__action button { cursor: wait; }
+  .contact-form__action button { min-width: 10rem; }
+  .contact-form__error { color: #9b2923; font-size: .75rem; }
+  .contact-form__error:empty { display: none; }
+  .contact-form [aria-invalid="true"] { border-bottom-color: #9b2923; }
+  .contact-form__action p { max-width: 28ch; color: var(--color-muted); font-size: .75rem; line-height: 1.5; }
+  .contact-form__status { margin-top: .9rem; font-size: .875rem; }
+  .contact-form__status:empty { display: none; }
+  .contact-form__fallback { margin-top: 1.5rem; }
+  .contact-form__fallback[hidden] { display: none; }
+  .contact-form__fallback p { margin-top: .4rem; font-size: .75rem; color: var(--color-muted); }
+  .contact-form__fallback a, .contact-form__verify { display: inline-block; margin-top: .9rem; font-size: .875rem; text-decoration: underline; text-underline-offset: .2em; }
+  .contact-form__verify { padding: 0; border: 0; color: inherit; background: transparent; text-align: left; }
+  .contact-form [hidden] { display: none; }
+  @media (max-width: 479px) {
+    .contact-form__details { grid-template-columns: 1fr; gap: 1.65rem; }
+    .contact-form__action { align-items: flex-start; flex-direction: column; gap: .75rem; }
+    .contact-form__action p { max-width: 36ch; }
+  }
+</style>

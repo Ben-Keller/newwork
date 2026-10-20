@@ -70,7 +70,7 @@ test('published CMS artwork, ticker options and Contact details reach the root r
     if (new URL(url!).pathname.endsWith('.svg')) expect(await response.text()).toContain('<svg');
   }
   await page.locator('[data-site-footer]').scrollIntoViewIfNeeded();
-  for (const mark of await page.locator('.client-logos img').all()) {
+  for (const mark of await page.locator('.client-logos__artwork').all()) {
     await mark.scrollIntoViewIfNeeded();
     await expect(mark).toHaveAttribute('src', /https:\/\/cdn\.sanity\.io\/(?:files|images)\/7un4plyu\/production\//);
     await expect.poll(() => mark.evaluate(image => (image as HTMLImageElement).naturalWidth > 0), {timeout: 15_000}).toBe(true);

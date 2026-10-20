@@ -29,6 +29,13 @@ export const WEBVTT_PATH_PATTERN = /\.vtt$/iu;
 export const SANITY_CDN_HOSTS = ['cdn.sanity.io'] as const;
 export const PLAYER_FRAME_HOSTS = ['player.vimeo.com', 'www.youtube-nocookie.com'] as const;
 
+/** Only public Formspree form endpoints, never an arbitrary destination for enquiries. */
+export function safeFormspreeEndpoint(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const endpoint = value.trim();
+  return /^https:\/\/formspree\.io\/f\/[a-zA-Z0-9]{1,64}$/u.test(endpoint) ? endpoint : undefined;
+}
+
 export function isRecord(value: unknown): value is UnknownRecord {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }

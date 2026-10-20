@@ -271,6 +271,7 @@ export interface ClientLogoView {
   key: string;
   name: string;
   artwork?: BrandAssetView;
+  projectId?: string;
   url?: string;
 }
 
@@ -351,6 +352,7 @@ export interface SiteSettingsView {
   contactHeading: string;
   contactIntroduction?: RichTextView;
   contactEmail?: string;
+  formspreeEndpoint?: string;
   location?: string;
   socialLinks: Array<{ _key?: string; label: string; url: string }>;
   reel: ReelView;

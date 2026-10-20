@@ -15,11 +15,16 @@ export const footerSettings = defineType({
   ],
   fields: [
     defineField({name: 'clientLogos', title: 'Client logos', type: 'array', group: 'directory',
-      description: 'Drag to reorder. The numbered marks are temporary placeholders. Replace each name and artwork with an approved client logo; links are optional. Remove all entries to hide the collection.',
+      description: 'Drag to reorder. Replace the temporary numbered marks with approved client logos and choose their projects. Remove all entries to hide the collection.',
       of: [defineArrayMember({name: 'clientLogo', title: 'Client logo', type: 'object', fields: [
         defineField({name: 'name', title: 'Client name', type: 'string', description: 'Also used as accessible image text.', validation: Rule => Rule.required().max(100)}),
         defineField({name: 'artwork', title: 'Logo artwork', type: 'brandAsset', description: 'Use a monochrome SVG or transparent PNG. The website adapts it to light and dark pages.'}),
-        defineField({name: 'url', title: 'Optional link', type: 'url', validation: Rule => Rule.uri({scheme: ['https']})}),
+        defineField({name: 'project', title: 'Project', type: 'reference', to: [{type: 'work'}],
+          description: 'Clicking the logo opens this project; hovering previews its cover image. The project must be published and visible. Without a selection or external link, a unique matching client name is used.',
+          options: {disableNew: true}}),
+        defineField({name: 'url', title: 'External link (optional)', type: 'url',
+          description: 'Used only when no Project is selected. External links do not show a project preview.',
+          validation: Rule => Rule.uri({scheme: ['https']})}),
       ], preview: {select: {title: 'name', media: 'artwork.image'}, prepare: ({title, media}) => ({title, media, subtitle: 'Client logo'})}})],
       validation: Rule => Rule.max(12),
     }),

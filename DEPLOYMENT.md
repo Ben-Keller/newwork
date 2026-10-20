@@ -76,4 +76,8 @@ Every successful website build retains a recovery artifact for 30 days. Revert a
 
 The scoped October settings migration already ran; its private backup remains in `studio-new-work/.sanity/backups/`. Do not rerun migrations as part of deployment. New ordinary assets must retain generated IDs and canonical project references.
 
+The 21 October update connects the six footer client logos to explicit published Project references. Each logo opens its Project page and previews that project's cover image on hover or keyboard focus. Edit the association under **Footer → Client logos → Project**. Contact now reads its public Formspree endpoint from **Contact page → Enquiry form**. The current form belongs to Ben's test account; change that endpoint when the client's form is ready. The public Contact placeholders remain permitted. Automated form checks intercept submissions and do not verify real inbox delivery.
+
+The temporary train-board motion and reel-backdrop comparison controls are committed for continued local review, but activate only on localhost with their explicit review query parameters. They do not change the default live design.
+
 For newworkagency.com, follow [the separate cutover plan](hosting/ROOT_RELEASE.md). Change the one existing publisher, Studio website URL and content-check URL together, configure the verified custom domain and update website DNS records only. Keep mail records unchanged. The current publisher deliberately refuses to deploy its `/newwork` package if a custom domain is attached.

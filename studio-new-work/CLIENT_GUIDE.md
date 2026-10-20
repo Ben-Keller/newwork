@@ -1,10 +1,11 @@
-# Editing the Oliver website
+# Editing the New Work website
 
 Open [New Work Studio](https://new-work.sanity.studio/) and choose **Website content**. The Overview screen has direct links to the main editing areas.
 
 | Change | Where to edit |
 |---|---|
 | Public email | Contact page → Contact details → Contact email |
+| Enable website enquiries | Contact page → Enquiry form → Formspree form endpoint |
 | City or multiline address | Contact page → Contact details → Location or public address |
 | Social destinations | Contact page → Contact details → Social links; change the label and URL or remove an entry |
 | Homepage tiles | Work page → Front gallery; select and order 16 placements for the four-row desktop layout |
@@ -21,6 +22,14 @@ Open [New Work Studio](https://new-work.sanity.studio/) and choose **Website con
 | Header “film + photo…” wording | Brand & navigation → Brand → Header description |
 
 Contact placeholders are intentionally retained. Replace them whenever the real details are ready; no code change is needed. Clear the address to hide Location. Remove all social entries to hide Elsewhere. The email should be a valid public inbox. Placeholder email warnings are reminders and do not prevent publishing.
+
+The Contact form asks for a project brief, name and email. It sends directly through Formspree when a valid **Contact page → Enquiry form → Formspree form endpoint** is published. Without an endpoint, it stays in **Copy enquiry** mode and clearly says nothing has been sent. The public Contact email is a separate setting and remains available as an alternative.
+
+To connect it, create an agency-owned [Formspree account](https://formspree.io/register), verify the email, and create **New Work Agency → Website enquiries**. Choose and verify the receiving inbox. Copy the public `https://formspree.io/f/…` endpoint from the form's **Integration** tab into Sanity and Publish. Never paste a password or private API key into Sanity.
+
+The receiving inbox, notifications, spam settings and submission archive are managed in Formspree. Changing the public email in Sanity does not change the form's recipient. The website includes a hidden honeypot. If Formspree requires a CAPTCHA, the visitor can explicitly continue on Formspree to complete it. Test the account's selected spam settings before launch; do not disable them simply to make a test pass. Domain restrictions, when enabled, must allow `ben-keller.github.io` for review and the approved custom-domain hostnames at launch.
+
+After the website rebuild finishes, submit one clearly marked test enquiry. Check both Formspree's submission archive and the receiving inbox, including spam, and check that replying addresses the visitor's email. A website success message confirms service acceptance; inbox delivery must be verified separately. Failed requests retain the typed details and offer a copy/email fallback. The website does not put enquiry text in the URL, browser storage or Sanity.
 
 Ticker styling is fixed to the selected Tall train board. Longer phrases cycle across a single line. City times update automatically using the correct local timezone, including daylight saving time. No manual daily time editing is needed.
 
@@ -51,6 +60,6 @@ Every image, video or file has one Asset record with its description, caption an
 
 ## V3 placeholders — 20 October 2026
 
-The six numbered footer marks are temporary client-logo placeholders. Replace them individually under **Footer → Client logos** with an approved monochrome SVG or transparent PNG and the correct client name. Artwork is displayed in the current page color; optional links must use HTTPS. Clear the collection to hide it entirely.
+The six numbered footer marks are temporary client-logo placeholders. Replace them individually under **Footer → Client logos** with an approved monochrome SVG or transparent PNG and the correct client name. Artwork is displayed in the current page color. Choose **Project** to link a logo to its project page and preview that project's cover image on hover or keyboard focus. On touchscreens, tapping opens the project directly. The project must be published and visible. Existing entries without a selection automatically use the project with the same client name when there is exactly one match; select a Project explicitly if a client has multiple projects. An optional HTTPS external link is used only without a Project selection and has no image preview. Clear the collection to hide it entirely.
 
 Photography uses neutral public titles and numbered Client labels until the final names are supplied. Edit the client label in **Projects → Project details** and individual photograph titles in **Assets**. Internal ownership and existing URLs are preserved. Personal photographer/director names were removed from public titles and credits for this revision.

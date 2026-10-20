@@ -91,6 +91,13 @@ function approvedRawProject() {
 }
 
 describe('content mode', () => {
+  it('projects a valid enquiry endpoint while leaving unconfigured or unsafe destinations disabled', () => {
+    expect(normalizeSiteSettings({contactPage: {formspreeEndpoint: 'https://formspree.io/f/abcdefgh'}}, 'production')
+      .formspreeEndpoint).toBe('https://formspree.io/f/abcdefgh');
+    expect(normalizeSiteSettings({contactPage: {formspreeEndpoint: 'https://elsewhere.test/collect'}}, 'production')
+      .formspreeEndpoint).toBeUndefined();
+    expect(normalizeSiteSettings({}, 'production').formspreeEndpoint).toBeUndefined();
+  });
   it('requires the explicit production value', () => {
     expect(getContentMode('production')).toBe('production');
     expect(getContentMode('prototype')).toBe('prototype');
@@ -686,11 +693,12 @@ describe('editable V3 client logos', () => {
   it('keeps editor order, labels and optional destinations', () => {
     const logos = normalizeSiteSettings({footer: {clientLogos: [
       {_key: 'second', name: 'Client 02', url: 'https://example.com'},
-      {_key: 'first', name: 'Client 01'},
+      {_key: 'first', name: 'Client 01', projectId: 'selected-project'},
       {_key: 'empty'},
     ]}}, 'production').footer.clientLogos;
     expect(logos.map(logo => logo.name)).toEqual(['Client 02', 'Client 01']);
     expect(logos[0]?.url).toBe('https://example.com/');
     expect(logos[1]?.url).toBeUndefined();
+    expect(logos[1]?.projectId).toBe('selected-project');
   });
 });

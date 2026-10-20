@@ -12,7 +12,7 @@ test('V3 reel, eleven-photo mosaic and client marks fit desktop and mobile', asy
     await page.locator('[data-site-footer]').scrollIntoViewIfNeeded();
     await expect(page.locator('.client-logos__mark')).toHaveCount(6);
     await expect(page.locator('.site-footer__featured-link')).toHaveCount(0);
-    for (const image of await page.locator('.client-logos img').all()) {
+    for (const image of await page.locator('.client-logos__artwork').all()) {
       await expect.poll(() => image.evaluate(img => (img as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
     }
     const layout = await page.evaluate(() => {

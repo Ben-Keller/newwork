@@ -50,6 +50,7 @@ import {
   safeHostedVideoUrl,
   safeWebVttUrl,
   isSafeEmail,
+  safeFormspreeEndpoint,
   type UnknownRecord,
 } from '../../shared/content-policy';
 import type {
@@ -782,7 +783,7 @@ function normalizeFooter(value: unknown): FooterSettingsView {
         artwork.src = url.href;
       }
       return name ? [{key: stringFrom(item._key) || `client-${index}`, name,
-        artwork, url: safeHttpsUrl(item.url)}] : [];
+        artwork, projectId: stringFrom(item.projectId), url: safeHttpsUrl(item.url)}] : [];
     }) : placeholderLogos.map(item => ({key: item._key, name: item.name,
       artwork: {src: withBase(`/media/client-placeholders/${item.filename}`), width: item.width, height: item.height}})),
     strapline,
@@ -835,6 +836,7 @@ export function normalizeSiteSettings(
     contactIntroduction: normalizeRichText(contactPage?.introduction),
     contactEmail:
       approvedContactOverride || (isSafeEmail(contactPage?.email) ? contactPage.email : isSafeEmail(fixtureFallback.contactEmail) ? fixtureFallback.contactEmail : undefined),
+    formspreeEndpoint: safeFormspreeEndpoint(contactPage?.formspreeEndpoint),
     location: stringFrom(contactPage?.location) || stringFrom(fixtureFallback.location),
     socialLinks: Array.isArray(socialLinks)
       ? socialLinks.flatMap((item: UnknownRecord) => {
