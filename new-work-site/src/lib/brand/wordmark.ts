@@ -51,11 +51,13 @@ export function setupWordmark(intro: HTMLElement, signal: AbortSignal) {
     if (canAnimate() && video && video.readyState >= 2 && video.videoWidth) return video;
     return image?.complete && image.naturalWidth ? image : null;
   };
-  const drawCover = (image: Media, x: number, y: number, width: number, height: number) => {
+  const drawCover = (image: Media, x: number, y: number, width: number, height: number, bleed: number) => {
     if (!context) return;
     const iw = image instanceof HTMLVideoElement ? image.videoWidth : image.naturalWidth;
     const ih = image instanceof HTMLVideoElement ? image.videoHeight : image.naturalHeight;
-    const scale = Math.max(width / iw, height / ih);
+    // Extend the image past the clip's antialiased edge. The native glyph
+    // still defines the silhouette; its bounds must not also crop the media.
+    const scale = Math.max((width + bleed * 2) / iw, (height + bleed * 2) / ih);
     context.drawImage(image, x + (width - iw * scale) / 2, y + (height - ih * scale) / 2, iw * scale, ih * scale);
   };
   const applyGeometry = (value: Layout) => {
@@ -76,6 +78,7 @@ export function setupWordmark(intro: HTMLElement, signal: AbortSignal) {
     const density = Math.min(devicePixelRatio || 1, Math.sqrt(8_294_400 / Math.max(1, rect.width * rect.height)));
     const width = Math.max(1, Math.round(rect.width * density));
     const height = Math.max(1, Math.round(rect.height * density));
+    const bleed = 2 * Math.max(layout.width / width, layout.height / height);
     if (canvas.width !== width) canvas.width = width;
     if (canvas.height !== height) canvas.height = height;
     context.setTransform(width / layout.width, 0, 0, height / layout.height, 0, 0);
@@ -85,14 +88,14 @@ export function setupWordmark(intro: HTMLElement, signal: AbortSignal) {
     if (shared) {
       const mask = new Path2D();
       masks.forEach((path, index) => { if (!hovered || index !== active) mask.addPath(path); });
-      context.save(); context.clip(mask); drawCover(shared, 0, 0, layout.width, layout.height); context.restore();
+      context.save(); context.clip(mask); drawCover(shared, 0, 0, layout.width, layout.height, bleed); context.restore();
       canvas.dataset.sharedSource = shared.currentSrc;
     } else delete canvas.dataset.sharedSource;
     if (hovered && paths[active]) {
       const { bounds, word } = paths[active]!;
       context.save(); context.clip(masks[active]!);
       drawCover(hovered, bounds.x + layout[word === 'new' ? 'newX' : 'workX'],
-        bounds.y + layout[word === 'new' ? 'newY' : 'workY'], bounds.width, bounds.height);
+        bounds.y + layout[word === 'new' ? 'newY' : 'workY'], bounds.width, bounds.height, bleed);
       context.restore();
       canvas.dataset.activeLetter = String(active);
       canvas.dataset.activeSource = hovered.currentSrc;
@@ -100,6 +103,14 @@ export function setupWordmark(intro: HTMLElement, signal: AbortSignal) {
     } else {
       delete canvas.dataset.activeLetter; delete canvas.dataset.activeSource; delete canvas.dataset.activeKind;
     }
+    // Avoid compositing two antialiased silhouettes: a black SVG underneath
+    // the canvas shows through its edge pixels as an outline. Keep the SVG
+    // for geometry and pointer hit testing, and restore its fill when no
+    // decoded media is available.
+    paths.forEach(({ element }, index) => {
+      const filled = Boolean(shared || (hovered && index === active));
+      if (element.hasAttribute('data-media-filled') !== filled) element.toggleAttribute('data-media-filled', filled);
+    });
   };
   // Matches the handoff's cubic-bezier(.22, 1, .36, 1).
   const ease = (progress: number) => {
@@ -184,6 +195,7 @@ export function setupWordmark(intro: HTMLElement, signal: AbortSignal) {
   signal.addEventListener('abort', () => {
     clearTimeout(revealTimer); cancelAnimationFrame(revealFrame); cancelAnimationFrame(frame);
     videos.forEach(video => video.pause()); resize.disconnect(); intersection.disconnect();
+    paths.forEach(({ element }) => element.removeAttribute('data-media-filled'));
   }, { once: true });
   applyGeometry(stack);
   reveal(reduced.matches ? 0 : 240);

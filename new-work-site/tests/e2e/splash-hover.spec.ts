@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import sharp from 'sharp';
 
 test.use({ deviceScaleFactor: 2 });
 
@@ -17,6 +18,58 @@ async function hoverLetter(page: Page, index: number) {
     throw new Error('No visible hit point for glyph');
   });
   await page.mouse.move(point.x, point.y);
+}
+
+for (const density of [1, 2]) {
+  test.describe(`wordmark edge coverage at ${density}x`, () => {
+    test.use({ deviceScaleFactor: density });
+    test('media reaches every letter edge without a dark outline in splash and home', async ({ page, isMobile }) => {
+      test.skip(isMobile, 'Touch does not expose letter hover.');
+      test.setTimeout(60_000);
+      await page.addInitScript(() => {
+        const drawImage = CanvasRenderingContext2D.prototype.drawImage;
+        CanvasRenderingContext2D.prototype.drawImage = function (source, ...coordinates: number[]) {
+          if (this.canvas instanceof HTMLCanvasElement && this.canvas.matches('[data-wordmark-canvas]')
+            && coordinates.length === 4) {
+            // White media on a white surface makes any black fallback fringe
+            // measurable, independently of the current video frame.
+            this.save();
+            this.fillStyle = '#fff';
+            this.fillRect(coordinates[0]!, coordinates[1]!, coordinates[2]!, coordinates[3]!);
+            this.restore();
+          } else Reflect.apply(drawImage, this, [source, ...coordinates]);
+        };
+      });
+      await page.setViewportSize({ width: 1423, height: 947 });
+      await page.goto('/');
+      await page.addStyleTag({ content: `
+        .home-page, .logo-work-page__hero, .home-identity, .logo-intro__art { background: #fff !important; }
+        .logo-intro__svg path:not([data-type-active]) { fill-opacity: 0 !important; }
+      ` });
+      const intro = page.locator('[data-logo-intro]');
+      const canvas = page.locator('[data-wordmark-canvas]');
+      await expect(intro).toHaveAttribute('data-logo-reveal-phase', 'done');
+      for (const state of ['splash', 'home']) {
+        if (state === 'home') {
+          await page.mouse.move(2, 2);
+          await page.keyboard.press('Enter');
+          await expect(intro).toHaveAttribute('data-title-state', 'home');
+          await expect(intro).toHaveAttribute('data-title-motion', 'settled');
+        }
+        for (const index of [0, 1, 2, 3, 4, 5, 6]) {
+          await hoverLetter(page, index);
+          await expect(canvas).toHaveAttribute('data-active-letter', String(index));
+          const hasVideo = await page.locator(`[data-letter-media="${index}"] video source`).count();
+          await expect(canvas).toHaveAttribute('data-active-kind', hasVideo ? 'video' : 'image');
+          const pixels = await sharp(await page.locator('[data-wordmark-art]').screenshot())
+            .removeAlpha().raw().toBuffer();
+          const darkPixels = pixels.reduce((count, value, offset) =>
+            count + (offset % 3 === 0 && value < 245 ? 1 : 0), 0);
+          expect(darkPixels, `${state}, letter ${index}: black fallback must not outline the media`).toBe(0);
+        }
+      }
+    });
+  });
 }
 
 test('one native wordmark survives splash, home and return with identical letter spacing', async ({ page, request }) => {
