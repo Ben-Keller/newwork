@@ -2,31 +2,43 @@
   {
     "_key": "client-01",
     "name": "Client 01",
-    "filename": "client-01.svg"
+    "filename": "client-01-generated.webp",
+    "width": 159,
+    "height": 160
   },
   {
     "_key": "client-02",
     "name": "Client 02",
-    "filename": "client-02.svg"
+    "filename": "client-02-generated.webp",
+    "width": 360,
+    "height": 86
   },
   {
     "_key": "client-03",
     "name": "Client 03",
-    "filename": "client-03.svg"
+    "filename": "client-03-generated.webp",
+    "width": 112,
+    "height": 160
   },
   {
     "_key": "client-04",
     "name": "Client 04",
-    "filename": "client-04.svg"
+    "filename": "client-04-generated.webp",
+    "width": 360,
+    "height": 118
   },
   {
     "_key": "client-05",
     "name": "Client 05",
-    "filename": "client-05.svg"
+    "filename": "client-05-generated.webp",
+    "width": 164,
+    "height": 160
   },
   {
     "_key": "client-06",
     "name": "Client 06",
-    "filename": "client-06.svg"
+    "filename": "client-06-generated.webp",
+    "width": 360,
+    "height": 105
   }
 ]

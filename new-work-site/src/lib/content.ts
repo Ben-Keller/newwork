@@ -776,7 +776,7 @@ function normalizeFooter(value: unknown): FooterSettingsView {
       const artwork = normalizeBrandAsset(item.artwork);
       if (artwork?.src.startsWith('https://cdn.sanity.io/images/')) {
         const url = new URL(artwork.src);
-        url.searchParams.set('w', '600');
+        url.searchParams.set('w', '320');
         url.searchParams.set('fit', 'max');
         url.searchParams.set('auto', 'format');
         artwork.src = url.href;
@@ -784,7 +784,7 @@ function normalizeFooter(value: unknown): FooterSettingsView {
       return name ? [{key: stringFrom(item._key) || `client-${index}`, name,
         artwork, url: safeHttpsUrl(item.url)}] : [];
     }) : placeholderLogos.map(item => ({key: item._key, name: item.name,
-      artwork: {src: withBase(`/media/client-placeholders/${item.filename}`), width: 230, height: 60}})),
+      artwork: {src: withBase(`/media/client-placeholders/${item.filename}`), width: item.width, height: item.height}})),
     strapline,
     calloutText: stringFrom(footer.calloutText) || 'Looking to create something impactful?',
     tickerWords: tickerWords(footer.tickerWords, ['Arriving', 'In transit', 'Departing', 'Early']),

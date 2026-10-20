@@ -42,7 +42,7 @@ async function main() {
   if (!footer) throw new Error('Missing footer')
   const changes: Change[] = []
   const publicRoots = new Set([...publicText, 'cover', 'seo', 'contentBlocks', 'credits', 'contributors', 'credit', 'reel'])
-  const placeholders = JSON.parse(await readFile('../new-work-site/shared/client-logo-placeholders.json', 'utf8')) as Array<{_key: string; name: string; filename: string}>
+  const placeholders = JSON.parse(await readFile('../new-work-site/shared/client-logo-placeholders.json', 'utf8')) as Array<{_key: string; name: string; filename: string; width: number; height: number}>
   // Patch each draft from its own values, preserving all unrelated editor changes.
   for (const doc of docs) {
     const set: Record<string, unknown> = {}
@@ -79,11 +79,11 @@ async function main() {
   if (footerChanges.length) {
     const logos: Array<Record<string, unknown>> = []
     for (const item of placeholders) {
-      const svg = await readFile(`../new-work-site/public/media/client-placeholders/${item.filename}`)
-      const asset = await client.assets.upload('file', svg, {filename: item.filename, contentType: 'image/svg+xml'})
+      const bytes = await readFile(`../new-work-site/public/media/client-placeholders/${item.filename}`)
+      const asset = await client.assets.upload('image', bytes, {filename: item.filename, contentType: 'image/webp'})
       logos.push({_key: item._key, _type: 'clientLogo', name: item.name,
-        artwork: {_type: 'brandAsset', format: 'file', width: 230, height: 60,
-          file: {_type: 'editorialFile', asset: {_type: 'reference', _ref: asset._id}}}})
+        artwork: {_type: 'brandAsset', format: 'image', width: item.width, height: item.height,
+          image: {_type: 'editorialImage', asset: {_type: 'reference', _ref: asset._id}}}})
     }
     footerChanges.forEach(change => { change.set.clientLogos = logos })
   }

@@ -1,0 +1,36 @@
+{
+  "tool": "built-in image_gen",
+  "purpose": "Temporary monochrome client symbols; replace with approved client artwork in Sanity.",
+  "assets": [
+    {
+      "id": "client-01",
+      "file": "client-01-generated.webp",
+      "prompt": "Use case: logo-brand. Asset type: one temporary client logo for the footer of a high-end film and photography agency. Primary request: create a sophisticated, distinctive symbol-only identity mark worthy of a carefully art-directed independent design studio. Flat black ink only, crisp vector-like geometry, intentional negative space, confident optical balance, unmistakably professional. No text, letters, numbers, labels, mockup, shading, gradients, shadows, frame, texture, or other logos. Genuinely transparent background. One centered standalone mark, with modest consistent clear space. Designed to stay recognizable and beautiful at 45 pixels high. Design direction: an intricate but simple interlocking folded ribbon emblem, three broad rounded bands weaving into a compact open hexagonal knot. Bold closed silhouette balanced by generous negative space; polished mid-century corporate identity craftsmanship. A compact near-square mark."
+    },
+    {
+      "id": "client-02",
+      "file": "client-02-generated.webp",
+      "prompt": "Use case: logo-brand. Asset type: one temporary client logo for the footer of a high-end film and photography agency. Primary request: create a sophisticated, distinctive symbol-only identity mark worthy of a carefully art-directed independent design studio. Flat black ink only, crisp vector-like geometry, intentional negative space, confident optical balance, unmistakably professional. No text, letters, numbers, labels, mockup, shading, gradients, shadows, frame, texture, or other logos. Genuinely transparent background. One centered standalone mark, with modest consistent clear space. Designed to stay recognizable and beautiful at 45 pixels high. Design direction: an elegant horizontal organic emblem, two broad tapering elliptical leaf-like forms turning around a narrow diagonal negative-space cut. A beautiful asymmetrical gesture with a low wide silhouette, restrained and editorial rather than environmental clip art. Approximately 2:1 overall proportions."
+    },
+    {
+      "id": "client-03",
+      "file": "client-03-generated.webp",
+      "prompt": "Use case: logo-brand. Asset type: one temporary client logo for the footer of a high-end film and photography agency. Primary request: create a sophisticated, distinctive symbol-only identity mark worthy of a carefully art-directed independent design studio. Flat black ink only, crisp vector-like geometry, intentional negative space, confident optical balance, unmistakably professional. No text, letters, numbers, labels, mockup, shading, gradients, shadows, frame, texture, or other logos. Genuinely transparent background. One centered standalone mark, with modest consistent clear space. Designed to stay recognizable and beautiful at 45 pixels high. Design direction: a compact architectural emblem made from three bold offset rectangular interlocking planes with precisely considered negative-space cuts; an impossible folded doorway reduced to a strong two-dimensional mark. Swiss modernist identity, tactile print-era confidence. Near-square proportions."
+    },
+    {
+      "id": "client-04",
+      "file": "client-04-generated.webp",
+      "prompt": "Use case: logo-brand. Asset type: one temporary client logo for the footer of a high-end film and photography agency. Primary request: create a sophisticated, distinctive symbol-only identity mark worthy of a carefully art-directed independent design studio. Flat black ink only, crisp vector-like geometry, intentional negative space, confident optical balance, unmistakably professional. No text, letters, numbers, labels, mockup, shading, gradients, shadows, frame, texture, or other logos. Genuinely transparent background. One centered standalone mark, with modest consistent clear space. Designed to stay recognizable and beautiful at 45 pixels high. Design direction: a horizontal kinetic emblem of five thick gracefully curved black fins that form an implied circular orbit, with open negative space and a distinctive elongated sweep to one side. Refined motorsport/editorial identity, compact and unmistakable, no thin lines. Approximately 1.7:1 proportions."
+    },
+    {
+      "id": "client-05",
+      "file": "client-05-generated.webp",
+      "prompt": "Use case: logo-brand. Asset type: one temporary client logo for the footer of a high-end film and photography agency. Primary request: create a sophisticated, distinctive symbol-only identity mark worthy of a carefully art-directed independent design studio. Flat black ink only, crisp vector-like geometry, intentional negative space, confident optical balance, unmistakably professional. No text, letters, numbers, labels, mockup, shading, gradients, shadows, frame, texture, or other logos. Genuinely transparent background. One centered standalone mark, with modest consistent clear space. Designed to stay recognizable and beautiful at 45 pixels high. Design direction: a sculptural four-lobed emblem with an unexpected off-center negative-space diamond, like four heavy rounded petals rotating toward one another. Balance organic softness with exact optical geometry; distinctive high-end cultural institution identity, not a generic star or flower icon. Near-square proportions."
+    },
+    {
+      "id": "client-06",
+      "file": "client-06-generated.webp",
+      "prompt": "Use case: logo-brand. Asset type: one temporary client logo for the footer of a high-end film and photography agency. Primary request: create a sophisticated, distinctive symbol-only identity mark worthy of a carefully art-directed independent design studio. Flat black ink only, crisp vector-like geometry, intentional negative space, confident optical balance, unmistakably professional. No text, letters, numbers, labels, mockup, shading, gradients, shadows, frame, texture, or other logos. Genuinely transparent background. One centered standalone mark, with modest consistent clear space. Designed to stay recognizable and beautiful at 45 pixels high. Design direction: a low wide geometric emblem of three concentric stepped arches with a deliberate off-axis interruption, forming an elegant optical rhythm. Heavy architectural strokes and equal open channels. Warm modernist publishing-house identity, strong horizontal composition, approximately 2:1 proportions."
+    }
+  ]
+}
