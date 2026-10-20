@@ -16,7 +16,7 @@ const { settings } = Astro.props;
     <aside class="contact-direct" aria-label="Other ways to get in touch">
       {settings.contactEmail ? (
         <div>
-          <h2 class="contact-direct__heading">Prefer email?</h2>
+          <h2 class="contact-direct__heading">Or send us an email at</h2>
           <a class="contact-email" href={`mailto:${settings.contactEmail}`}>
             <span>{settings.contactEmail}</span><span class="contact-email__arrow" aria-hidden="true">↗</span>
           </a>
