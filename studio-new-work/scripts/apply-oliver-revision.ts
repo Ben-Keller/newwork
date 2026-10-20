@@ -57,7 +57,7 @@ async function main() {
     .filter((item, index, all) => all.findIndex(other => other.asset._ref === item.asset._ref) === index)
   const artwork = await Promise.all(['horizontal', 'stacked', 'compact'].map(async variant => {
     const filename = `oliver-${variant}.svg`
-    const contents = await readFile(new URL(`../../new-work-oliver-review/public/media/brand/${filename}`, import.meta.url))
+    const contents = await readFile(new URL(`../../new-work-site/public/media/brand/${filename}`, import.meta.url))
     const viewBox = /viewBox="([^"]+)"/u.exec(contents.toString())?.[1].split(/\s+/u).map(Number)
     if (!viewBox || viewBox.length !== 4 || viewBox[2] <= 0 || viewBox[3] <= 0) throw new Error(`Invalid logo: ${filename}`)
     return {variant, filename, contents, width: viewBox[2], height: viewBox[3], digest: createHash('sha1').update(contents).digest('hex')}

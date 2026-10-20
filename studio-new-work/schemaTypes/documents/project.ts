@@ -126,7 +126,7 @@ export const work = defineType({
       title: 'Client / commissioner',
       type: 'string',
       group: 'overview',
-      description: 'Optional. Add only when the public client name is confirmed.',
+      description: 'This is the only label shown on the homepage train board when this project is hovered or focused. Use a numbered Client placeholder until the name is confirmed; never enter a photographer or director here.',
       validation: (Rule) => Rule.max(120),
     }),
     defineField({

@@ -3,11 +3,12 @@ import { readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { root } from './lib.mjs';
 
-const rootRelease = process.argv.includes('--root-release');
-const config = JSON.parse(await readFile(path.join(root, rootRelease ? (process.argv.includes('--review') ? 'hosting/review-release.json' : 'hosting/root-release.json') : 'hosting/config.json'), 'utf8'));
+// Both destination profiles build the same canonical website.
+const review = process.argv.includes('--review');
+const config = JSON.parse(await readFile(path.join(root, review ? 'hosting/review-release.json' : 'hosting/root-release.json'), 'utf8'));
 const base = (process.env.PAGES_BASE_PATH ?? config.base).replace(/\/$/u, '');
-const directory = path.join(root, rootRelease ? config.output : 'pages-dist');
-const port = Number(process.env.PAGES_PREVIEW_PORT || (rootRelease ? 4330 : 4326));
+const directory = path.join(root, config.output);
+const port = Number(process.env.PAGES_PREVIEW_PORT || 4330);
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.webp': 'image/webp', '.avif': 'image/avif', '.png': 'image/png', '.woff2': 'font/woff2', '.mp4': 'video/mp4', '.xml': 'application/xml' };
 createServer(async (request, response) => {
   try {

@@ -4,6 +4,6 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import { getSiteContent } from '../lib/content';
 const content = await getSiteContent();
 ---
-<BaseLayout content={content} title="Contact" seo={content.settings.contactSeo} pageClass="utility-page">
+<BaseLayout content={content} title="Contact" seo={content.settings.contactSeo} pageClass="utility-page contact-page">
   <ContactDetails settings={content.settings} />
 </BaseLayout>

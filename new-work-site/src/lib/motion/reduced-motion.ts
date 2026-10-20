@@ -29,4 +29,3 @@ export const observeReducedMotion = (
   query.addEventListener('change', onChange);
   return () => query.removeEventListener('change', onChange);
 };
-

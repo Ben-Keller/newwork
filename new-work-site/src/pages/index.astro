@@ -1,6 +1,6 @@
 ---
 import NotesStrip from '../components/NotesStrip.astro';
-import LogoIntro from '../components/LogoIntro.astro';
+import HomeIdentity from '../components/HomeIdentity.astro';
 import ProjectGrid from '../components/ProjectGrid.astro';
 import GalleryBackdropCapture from '../components/GalleryBackdropCapture.astro';
 import Reel from '../components/Reel.astro';
@@ -11,6 +11,7 @@ import { storagePrefix, withBase } from '../lib/base-path';
 import { getSiteContent } from '../lib/content';
 import { buildGalleryImageSizes } from '../lib/responsive-images';
 import { buildBtsItems } from '../lib/bts';
+import { buildWorkGallery } from '../lib/content/work-gallery';
 
 const content = await getSiteContent();
 const { settings, projects, galleryEntries, notes, mode } = content;
@@ -27,7 +28,8 @@ const workReel = settings.reel.enabled
       aspectRatio: '16 / 9',
     };
 // Placeholder BTS material drawn from the work gallery until real BTS content exists.
-const btsItems = buildBtsItems(galleryEntries);
+const hasBtsSelection = Boolean(settings.btsGallery?.length);
+const btsItems = hasBtsSelection ? buildBtsItems(buildWorkGallery(projects, settings.btsGallery), 11, true) : buildBtsItems(galleryEntries);
 const preloadEntry = galleryEntries[0];
 const preloadImageSizes = preloadEntry
   ? buildGalleryImageSizes(preloadEntry.image, {
@@ -61,7 +63,6 @@ const preloadImageSizes = preloadEntry
           document.documentElement.dataset.workNavigationTransition = 'true';
           window.__newWorkEntryStaticRevealsUntil = performance.now() + 5000;
           history.scrollRestoration = 'manual';
-          window.scrollTo({top: 0, left: 0, behavior: 'auto'});
         }
       } catch {
         // Storage may be unavailable in hardened browsing contexts; the
@@ -102,9 +103,7 @@ const preloadImageSizes = preloadEntry
     })();
   </script>
   <div class="logo-work-page" data-logo-work-page data-handoff="false" data-logo-page-ready="false">
-    <!-- The splash is a colour field and a geometry reference, nothing more.
-         There is only one title on this page: the one below, in flow. Its
-         splash state is that title placed on this frame. -->
+    <!-- The background carries no title. HomeIdentity owns the single moving wordmark. -->
     <div
       class="logo-work-page__hero"
       data-logo-work-hero
@@ -117,7 +116,7 @@ const preloadImageSizes = preloadEntry
 
     <div class="logo-work-page__content" data-logo-work-content>
       <div class="logo-work-page__title" data-logo-work-title>
-        <LogoIntro siteName={settings.workIntroName} projects={homeProjects} />
+        <HomeIdentity wordmark={mode === 'prototype' ? undefined : settings.wordmark} projects={homeProjects} words={settings.tickerWords} cities={settings.tickerCities} />
       </div>
       <!-- Everything below the title is what actually fades in behind it. The
            title itself must stay out of this group: an opacity group would
@@ -136,8 +135,8 @@ const preloadImageSizes = preloadEntry
         <GalleryBackdropCapture />
         <NotesStrip notes={notes} mode={mode} />
         <Reel reel={workReel} />
-        <BehindTheScenes items={btsItems} />
-        <ContactCallout />
+        <BehindTheScenes items={btsItems} heading={settings.btsHeading} subtitle={settings.btsSubtitle} />
+        <ContactCallout text={settings.footer.calloutText} />
       </div>
     </div>
   </div>
@@ -145,7 +144,10 @@ const preloadImageSizes = preloadEntry
   <noscript>
     <style is:global>
       .logo-work-page__hero { display: none !important; }
+      .logo-intro__stage { opacity: 1 !important; }
       .logo-work-page__body { opacity: 1 !important; pointer-events: auto !important; }
+      .home-departures[hidden] { display: block !important; }
+      .home-page [data-site-footer] [data-flap-ticker] { display: inline-flex !important; }
       body.home-page .site-header { opacity: 1 !important; pointer-events: auto !important; transform: none !important; }
     </style>
   </noscript>
@@ -172,11 +174,8 @@ const preloadImageSizes = preloadEntry
     pointer-events: none;
   }
 
-  /* Review round 1: the title now sits behind the gallery rather than in
-     front of it, so the top row of work crosses over the wordmark. The
-     gallery's own stacking context (.work-index, z-index 3) is what this has
-     to lose to, so any value below it works; 1 keeps the title above the
-     page field. Restore 5 to put the title back in front. */
+  /* Keep the approved splash stacking order. The new hero stays in flow;
+     gallery geometry is independent, including when retained on project pages. */
   .logo-work-page__title {
     position: relative;
     z-index: 1;
@@ -299,6 +298,7 @@ const preloadImageSizes = preloadEntry
 </style>
 
 <script>
+  import { setupWordmark } from '../lib/brand/wordmark';
   import { COLUMN_SCROLL_RESPONSES, COMPACT_COLUMN_SCROLL_RESPONSES } from '../lib/motion/column-filter';
   import {
     readStorageValue,
@@ -306,49 +306,6 @@ const preloadImageSizes = preloadEntry
   } from '../lib/browser-storage';
 
   const WORK_NAVIGATION_ENTRY_KEY = 'new-work:work-navigation-entry';
-  const WORK_ENTRY_SCROLL_SETTLE_MS = 500;
-
-  const scrollWorkEntryToTop = (): void => {
-    window.scrollTo({top: 0, left: 0, behavior: 'auto'});
-  };
-
-  const settleWorkEntrySurface = (page: HTMLElement): void => {
-    page.dataset.workEntryAtTop = 'true';
-    const gallery = page.querySelector<HTMLElement>('[data-work-gallery]');
-    const entrance = gallery?.querySelector<HTMLElement>('[data-gallery-entrance]');
-    if (gallery) {
-      gallery.dataset.galleryEntrancePlayed = 'true';
-      gallery.dataset.galleryEntryReveals = 'static';
-      gallery.querySelectorAll<HTMLElement>('[data-motion-reveal]')
-        .forEach((element) => { element.dataset.motionRevealSkip = 'work-entry'; });
-    }
-    if (entrance) {
-      entrance.dataset.galleryEntranceState = 'settled';
-      entrance.style.removeProperty('transform');
-      entrance.style.removeProperty('will-change');
-    }
-    scrollWorkEntryToTop();
-  };
-
-  const finalizeWorkEntryAtTop = (page: HTMLElement): void => {
-    settleWorkEntrySurface(page);
-    const startedAt = performance.now();
-    let settleFrame = 0;
-    const keepSettled = (): void => {
-      if (!page.isConnected || page.dataset.workEntryAtTop !== 'true') return;
-      settleWorkEntrySurface(page);
-      if (performance.now() - startedAt < WORK_ENTRY_SCROLL_SETTLE_MS) {
-        settleFrame = window.requestAnimationFrame(keepSettled);
-        return;
-      }
-      if (settleFrame) window.cancelAnimationFrame(settleFrame);
-      removeStorageValue('session', WORK_NAVIGATION_ENTRY_KEY);
-      delete document.documentElement.dataset.workNavigationTransition;
-      history.scrollRestoration = 'auto';
-    };
-    settleFrame = window.requestAnimationFrame(keepSettled);
-  };
-
   declare global {
     interface Window {
       __newWorkLogoPageCleanup?: () => void;
@@ -366,9 +323,6 @@ const preloadImageSizes = preloadEntry
     // back. Keep the first color cycle instead of tearing it down and choosing
     // another one during the same paint sequence.
     if (page.dataset.logoPageReady === 'true') {
-      if (page.dataset.workEntryAtTop === 'true') {
-        finalizeWorkEntryAtTop(page);
-      }
       return;
     }
     window.__newWorkLogoPageCleanup?.();
@@ -416,7 +370,9 @@ const preloadImageSizes = preloadEntry
     let splashReturnProgress = 0;
     let splashReturnLastAt = 0;
     const lockedKeys = new Set<string>();
-    const openAtGallery = window.location.hash === '#work-gallery';
+    const restoringGallery = Boolean(document.querySelector('[data-work-gallery][data-gallery-restore="true"]'))
+      || readStorageValue('session', 'new-work-restore-requested') === 'true';
+    const openAtGallery = window.location.hash === '#work-gallery' && !restoringGallery;
     const openFromWorkNavigation = readStorageValue(
       'session',
       WORK_NAVIGATION_ENTRY_KEY,
@@ -436,7 +392,7 @@ const preloadImageSizes = preloadEntry
     const splashBox = hero.querySelector<HTMLElement>('[data-splash-box]');
     const titleIntro = content.querySelector<HTMLElement>('[data-logo-intro]');
     const titleStage = content.querySelector<HTMLElement>('[data-logo-stage-morph]');
-    const titleMeasure = content.querySelector<HTMLElement>('[data-title-measure]');
+    const wordmark = titleIntro ? setupWordmark(titleIntro, controller.signal) : null;
     const titleMoveDuration = 1_200;
     let titleSettleTimer = 0;
     let titleAnimation: Animation | null = null;
@@ -445,9 +401,14 @@ const preloadImageSizes = preloadEntry
     // splash box is a plain translate-then-scale in viewport pixels.
     // Always called with the title at rest, so the measured box is its own.
     const splashPlacement = (): string | null => {
-      if (!splashBox || !titleMeasure) return null;
+      if (!splashBox || !titleIntro) return null;
       const box = splashBox.getBoundingClientRect();
-      const title = titleMeasure.getBoundingClientRect();
+      // Measure the reserved home footprint. The child artwork may still be
+      // skewed by its reveal or morphing between layouts; neither may affect
+      // the final placement, including when a font/resize event arrives mid-reveal.
+      const bounds = titleIntro.getBoundingClientRect();
+      const title = { left: bounds.left, top: bounds.top, width: bounds.width,
+        height: wordmark?.splashRatio ? bounds.width / wordmark.splashRatio : bounds.height };
       if (!box.width || !title.width) return null;
       // Keep the same breathing room on both axes. The stacked type can be
       // taller than the reference box, so a width-only fit would fill almost
@@ -502,6 +463,7 @@ const preloadImageSizes = preloadEntry
       titleStage.style.transform = 'none';
       const placement = splashPlacement() ?? 'none';
       titleIntro.dataset.titleState = active ? 'home' : 'splash';
+      wordmark?.setLayout(active, animate && !reducedMotion, titleMoveDuration);
       const hiddenMedia = `translateY(${window.innerHeight}px)`;
 
       if (body) {
@@ -594,7 +556,14 @@ const preloadImageSizes = preloadEntry
       }
       if (wasActive !== active) applyTitleState(active, animateTitle);
       else if (!animateTitle) applyTitleState(active, false);
-      if (wasActive && !active) window.dispatchEvent(new Event('new-work:logo-reveal'));
+      if (active && backgroundFrame) {
+        window.cancelAnimationFrame(backgroundFrame);
+        backgroundFrame = 0;
+      }
+      if (wasActive && !active) {
+        startAutomaticBackground();
+        window.dispatchEvent(new Event('new-work:logo-reveal'));
+      }
     };
 
     const scrollToGallery = () => {
@@ -618,19 +587,6 @@ const preloadImageSizes = preloadEntry
         ?.removeAttribute('data-gallery-restore');
       setHandoff(true, false);
       requestGalleryScroll();
-    };
-
-    const enterWorkAtTop = () => {
-      if (galleryScrollFrame) {
-        window.cancelAnimationFrame(galleryScrollFrame);
-        galleryScrollFrame = 0;
-      }
-      document.querySelector<HTMLElement>('[data-work-gallery]')
-        ?.removeAttribute('data-gallery-restore');
-      // Work navigation selects the post-splash state directly. Scroll is
-      // reset only to establish the page's real top, never to drive handoff.
-      setHandoff(true, false);
-      finalizeWorkEntryAtTop(page);
     };
 
     // Subdued pastels and off-whites. The hue arc is unchanged; only chroma
@@ -669,11 +625,13 @@ const preloadImageSizes = preloadEntry
       const color = automaticColor(hue);
       hero.style.setProperty('--logo-hero-background', color);
       hero.dataset.backgroundMode = 'auto';
-      if (!reducedMotion) backgroundFrame = window.requestAnimationFrame(animateBackground);
+      if (!reducedMotion && !handoffActive && !document.hidden) {
+        backgroundFrame = window.requestAnimationFrame(animateBackground);
+      }
     };
 
     const startAutomaticBackground = () => {
-      if (backgroundFrame) return;
+      if (backgroundFrame || handoffActive || document.hidden) return;
       if (reducedMotion) animateBackground(performance.now());
       else backgroundFrame = window.requestAnimationFrame(animateBackground);
     };
@@ -724,6 +682,7 @@ const preloadImageSizes = preloadEntry
     };
 
     const handleWheel = (event: WheelEvent) => {
+      if (document.body.classList.contains('has-open-mobile-menu')) return;
       const eventAt = performance.now();
       const beginsNewGesture = wheelLocked && eventAt - lastWheelEventAt >= wheelGestureGap;
       lastWheelEventAt = eventAt;
@@ -761,6 +720,7 @@ const preloadImageSizes = preloadEntry
     };
 
     const handleTouchMove = (event: TouchEvent) => {
+      if (document.body.classList.contains('has-open-mobile-menu')) return;
       if (touchLocked) {
         event.preventDefault();
         return;
@@ -789,6 +749,7 @@ const preloadImageSizes = preloadEntry
     const reverseScrollKeys = new Set(['ArrowUp', 'Home', 'PageUp']);
     const initialHandoffKeys = new Set(['Space', 'Enter']);
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (document.body.classList.contains('has-open-mobile-menu')) return;
       const target = event.target as HTMLElement | null;
       const isEditable = Boolean(target?.closest('input, textarea, select, [contenteditable="true"]'));
       if (lockedKeys.has(event.code)) {
@@ -846,7 +807,7 @@ const preloadImageSizes = preloadEntry
     // previous viewport's type size, leaving the splash oversized or off-center.
     // Placement changes only transforms, so it cannot resize these observed boxes.
     const titleResizeObserver = new ResizeObserver(replaceTitle);
-    if (titleMeasure) titleResizeObserver.observe(titleMeasure);
+    if (titleIntro) titleResizeObserver.observe(titleIntro);
     if (splashBox?.parentElement) titleResizeObserver.observe(splashBox.parentElement);
     void document.fonts?.ready.then(replaceTitle).catch(() => undefined);
     window.addEventListener('wheel', handleWheel, { passive: false, signal: controller.signal });
@@ -859,20 +820,35 @@ const preloadImageSizes = preloadEntry
     window.addEventListener('click', handlePageClick, { signal: controller.signal });
     window.addEventListener('scroll', handleScrollFallback, { passive: true, signal: controller.signal });
     window.addEventListener('scroll', handleSplashDwellScroll, { passive: true, signal: controller.signal });
-    window.addEventListener('new-work:work-navigation', enterWorkAtTop, { signal: controller.signal });
+    window.addEventListener('new-work:work-navigation', revealGallery, { signal: controller.signal });
     window.addEventListener('hashchange', () => {
       if (window.location.hash === '#work-gallery') revealGallery();
     }, { signal: controller.signal });
-    header.querySelectorAll<HTMLAnchorElement>('a[href$="#work-gallery"]')
-      .forEach((link) => link.addEventListener('click', revealGallery, { signal: controller.signal }));
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden && backgroundFrame) {
+        window.cancelAnimationFrame(backgroundFrame);
+        backgroundFrame = 0;
+      } else startAutomaticBackground();
+    }, { signal: controller.signal });
     page.dataset.logoPageReady = 'true';
     startAutomaticBackground();
     if (openFromWorkNavigation) {
-      enterWorkAtTop();
+      revealGallery();
+      removeStorageValue('session', WORK_NAVIGATION_ENTRY_KEY);
+      delete document.documentElement.dataset.workNavigationTransition;
+      history.scrollRestoration = 'auto';
     } else {
       setHandoff(restoreWorkOnLoad, false);
     }
     if (openAtGallery) requestGalleryScroll();
+    // The route's deferred motion setup refreshes ScrollTrigger after page-load.
+    // Position explicit Work entry once that layout is ready; never run this
+    // for browser Back, which restores the originating project card instead.
+    if (openAtGallery || openFromWorkNavigation) {
+      document.addEventListener('new-work:motion-ready', requestGalleryScroll, {
+        once: true, signal: controller.signal,
+      });
+    }
 
     window.__newWorkLogoPageCleanup = () => {
       controller.abort();

@@ -50,7 +50,6 @@ const returnToSplash = async (page: Page, mobile: boolean) => {
 };
 
 test.describe('logo mask study', () => {
-  test.describe.configure({ mode: 'serial' });
 
   test('paints the color field first while requesting the title video immediately', async ({page}, testInfo) => {
     test.skip(testInfo.project.name !== 'desktop-chromium', 'The first-paint sequence is browser-independent and covered once.');
@@ -101,7 +100,7 @@ test.describe('logo mask study', () => {
     const backgroundFrameIndex = frames.findIndex((frame) => frame === backgroundFrame);
 
     expect(backgroundFrame).toBeDefined();
-    expect(backgroundFrame?.background).toBe('rgb(71, 0, 71)');
+    expect(backgroundFrame?.background).toBe('rgb(242, 233, 242)');
     expect(backgroundFrame?.opacity).toBe('0');
     expect(backgroundFrames.some((frame) => frame.videoRequested)).toBe(true);
     const backgroundChannels = backgroundFrames.map((frame) =>
@@ -114,14 +113,14 @@ test.describe('logo mask study', () => {
     }, 0);
     expect(largestFrameJump).toBeLessThanOrEqual(2);
     expect(contentFrameIndex).toBeGreaterThan(backgroundFrameIndex);
-    await expect(experience.locator('source[data-src]').first()).toHaveAttribute('src', /.+/u);
+    await expect(page.locator('[data-splash-video] source').first()).toHaveAttribute('src', /.+/u);
   });
 
   test('chooses a new automatic color seed for each page load', async ({page}, testInfo) => {
     test.skip(testInfo.project.name !== 'desktop-chromium', 'The load seed is browser-independent and covered once.');
     await page.emulateMedia({reducedMotion: 'reduce'});
     await page.addInitScript(() => {
-      Math.random = () => window.sessionStorage.getItem('new-work-color-probe') === 'second'
+      Math.random = () => window.sessionStorage.getItem('new-work::new-work-color-probe') === 'second'
         ? .625
         : .125;
     });
@@ -130,13 +129,13 @@ test.describe('logo mask study', () => {
     await expectLogoPageReady(page);
     const hero = page.locator('[data-logo-work-hero]');
     const firstColor = await hero.evaluate((element) => getComputedStyle(element).backgroundColor);
-    expect(firstColor).toBe('rgb(71, 0, 71)');
+    expect(firstColor).toBe('rgb(242, 233, 242)');
 
-    await page.evaluate(() => window.sessionStorage.setItem('new-work-color-probe', 'second'));
+    await page.evaluate(() => window.sessionStorage.setItem('new-work::new-work-color-probe', 'second'));
     await page.reload();
     await expectLogoPageReady(page);
     const secondColor = await hero.evaluate((element) => getComputedStyle(element).backgroundColor);
-    expect(secondColor).toBe('rgb(0, 71, 71)');
+    expect(secondColor).toBe('rgb(233, 242, 242)');
     expect(secondColor).not.toBe(firstColor);
   });
 
@@ -171,7 +170,7 @@ test.describe('logo mask study', () => {
   test('keeps animation 2 on load, reload, and return to the splash', async ({ page }, testInfo) => {
     const mobile = testInfo.project.name.startsWith('mobile-');
     await page.addInitScript(() => {
-      window.sessionStorage.setItem('new-work-logo-reveal', '5');
+      window.sessionStorage.setItem('new-work::new-work-logo-reveal', '5');
       Math.random = () => .01;
     });
     await page.goto('/');
@@ -205,14 +204,14 @@ test.describe('logo mask study', () => {
     await expect(stage).toHaveCSS('animation-name', 'logo-reveal-diagonal');
   });
 
-  test('restarts the persisted title video after leaving Work and returning', async ({page}, testInfo) => {
+  test('restarts the approved splash video after leaving Work and returning', async ({page}, testInfo) => {
     test.setTimeout(60_000);
     test.skip(testInfo.project.name !== 'desktop-chromium', 'Persisted route playback is covered once on desktop.');
     await page.goto('/');
     await expectLogoPageReady(page);
 
     const titleVideo = page.locator(
-      '[data-logo-mask-experience] [data-single-layer][data-active="true"] [data-logo-video]',
+      '[data-logo-mask-experience] [data-splash-video]',
     );
     await expect(titleVideo).toBeAttached();
     await expect.poll(() => titleVideo.evaluate((element) => (
@@ -232,15 +231,16 @@ test.describe('logo mask study', () => {
     await projectLink.scrollIntoViewIfNeeded();
     await projectLink.click({noWaitAfter: true});
     await page.waitForURL(/\/work\//u);
-    const retainedVideo = page.locator('[data-logo-video][data-restart-probe="ready"]');
-    await expect(retainedVideo).toBeAttached();
-    await expect.poll(() => retainedVideo.evaluate((element) => (
-      (element as HTMLVideoElement).paused
-    ))).toBe(true);
-
+    await expect(page.locator('[data-splash-video]')).toHaveCount(0);
     await page.locator('[data-desktop-nav]').getByRole('link', {name: 'Work'}).click();
-    await page.waitForURL(/\/$/u);
-    const returnedVideo = page.locator('[data-logo-video][data-restart-probe="ready"]');
+    await page.waitForURL(/#work-gallery$/u);
+    await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(400);
+    await page.keyboard.press('Home');
+    await expect.poll(() => page.evaluate(() => scrollY)).toBe(0);
+    await page.waitForTimeout(SPLASH_RETURN_DWELL);
+    await page.keyboard.press('Home');
+    await expect(page.locator('[data-logo-work-page]')).toHaveAttribute('data-handoff', 'false');
+    const returnedVideo = page.locator('[data-splash-video]');
     await expect(returnedVideo).toBeAttached();
     await expect.poll(() => returnedVideo.evaluate((element) => (
       (element as HTMLVideoElement).paused
@@ -280,31 +280,29 @@ test.describe('logo mask study', () => {
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
   });
 
-  test('keeps both wordmark rows together through narrow resizes in splash and gallery modes', async ({ page }, testInfo) => {
+  test('keeps both wordmark rows together through narrow resizes in splash mode', async ({ page }, testInfo) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.setViewportSize({ width: 320, height: 812 });
     await page.goto('/');
     await expectLogoPageReady(page);
     await page.evaluate(() => document.fonts.ready);
 
-    const title = page.locator('[data-type-title]');
-    for (const state of ['splash', 'home']) {
+    const title = page.locator('[data-wordmark-art]');
+    for (const state of ['splash']) {
       if (state === 'home') {
         await scrollGesture(page, 240, testInfo.project.name.startsWith('mobile-'));
         await expect(page.locator('[data-logo-intro]')).toHaveAttribute('data-title-state', 'home');
       }
       for (const width of [320, 375, 600, 767, 768, 1024]) {
         await page.setViewportSize({ width, height: 812 });
-        await expect.poll(() => title.evaluate((element) => {
-          const rows = [...element.querySelectorAll<HTMLElement>('[data-type-title-line]')];
-          const lineHeight = Number.parseFloat(getComputedStyle(rows[0]!).lineHeight);
-          // Each word must occupy exactly one line, including the touch-only
-          // whole-word outline and its inline canvas baseline marker.
-          return Math.max(
-            ...rows.map((row) => Math.abs(Number.parseFloat(getComputedStyle(row).height) - lineHeight)),
-            Math.abs(Number.parseFloat(getComputedStyle(element).height) - lineHeight * 2),
-          );
-        }), { message: `Compact wordmark at ${width}px in ${state}` }).toBeLessThan(.1);
+        await expect.poll(() => title.evaluate(element => {
+          const svg = element as SVGSVGElement;
+          const groups = ['new', 'work'].map(word => [...svg.querySelectorAll<SVGPathElement>(`[data-word="${word}"]`)]);
+          // All glyphs in each word share one translation. Their source
+          // coordinates cannot reflow or acquire different letter spacing.
+          return groups.every(paths => new Set(paths.map(path => path.getAttribute('transform'))).size === 1)
+            && groups[0]!.length === 3 && groups[1]!.length === 5;
+        }), { message: `Native wordmark at ${width}px in ${state}` }).toBe(true);
 
         await expect.poll(() => title.evaluate((element) => {
           const box = element.getBoundingClientRect();
@@ -414,8 +412,8 @@ test.describe('logo mask study', () => {
     await expect(hero).toHaveAttribute('data-background-mode', 'auto');
     const automaticChannels = await hero.evaluate((element) =>
       (getComputedStyle(element).backgroundColor.match(/\d+/g) || []).slice(0, 3).map(Number));
-    expect(Math.min(...automaticChannels)).toBe(0);
-    expect(Math.max(...automaticChannels)).toBe(71);
+    expect(Math.min(...automaticChannels)).toBeGreaterThanOrEqual(230);
+    expect(Math.max(...automaticChannels)).toBeLessThanOrEqual(246);
     const [automaticRed = 0, automaticGreen = 0, automaticBlue = 0] = automaticChannels;
     if (automaticBlue === 0 && automaticRed > 0 && automaticGreen > 0) {
       expect(automaticGreen).toBeLessThanOrEqual(35);
@@ -440,12 +438,13 @@ test.describe('logo mask study', () => {
     const centeredTop = (stagePlacement.viewportHeight - stagePlacement.height) / 2;
     const expectedTop = Math.max(stagePlacement.sidePadding, centeredTop);
     expect(Math.abs(stagePlacement.top - expectedTop)).toBeLessThan(1);
-    expect(Math.abs(stagePlacement.left - stagePlacement.sidePadding)).toBeLessThan(1);
-    expect(Math.abs(stagePlacement.right - stagePlacement.sidePadding)).toBeLessThan(1);
+    expect(stagePlacement.left).toBeGreaterThanOrEqual(stagePlacement.sidePadding - 1);
+    expect(Math.abs(stagePlacement.left - stagePlacement.right)).toBeLessThan(1);
+    expect(stagePlacement.right).toBeGreaterThanOrEqual(stagePlacement.sidePadding - 1);
     await expect(siteHeader).toHaveCSS('opacity', '0');
     await expect(siteHeader).toHaveAttribute('inert', '');
     await expect(page.locator('[data-logo-work-body]')).toHaveCSS('opacity', '0');
-    await expect(normalTitle).toHaveCSS('z-index', '5');
+    await expect(normalTitle).toHaveCSS('z-index', '1');
     const siteFooter = page.locator('[data-site-footer]');
     await expect(siteFooter).toBeAttached();
     await expect(siteFooter).toHaveAttribute('inert', '');
@@ -460,7 +459,6 @@ test.describe('logo mask study', () => {
       Math.min(...elements.map((element) => element.getBoundingClientRect().top)));
     const viewportHeight = await page.evaluate(() => window.innerHeight);
     expect(initialGalleryTop).toBeGreaterThan(0);
-    expect(initialGalleryTop).toBeLessThan(viewportHeight);
     const initialTitleTop = await normalTitle.evaluate((element) => element.getBoundingClientRect().top);
     expect(initialTitleTop).toBeLessThan(viewportHeight);
     await expect(normalTitle).toHaveCSS('transform', 'none');
@@ -468,16 +466,13 @@ test.describe('logo mask study', () => {
     // The splash media is no longer a painted layer behind a mask: it is the
     // source the title's own letters are filled from, so what has to be true is
     // that the fill has a frame and the source is running.
-    const firstSingleAsset = page.locator('[data-single-layer]').first();
-    await expect(page.locator('[data-splash-canvas]'))
-      .toHaveAttribute('data-media-ready', 'true');
-    await expect.poll(() => firstSingleAsset.locator('video').evaluate((video) => {
+    await expect(page.locator('[data-wordmark-canvas]')).toHaveAttribute('data-shared-source', /.+/u);
+    await expect.poll(() => page.locator('[data-splash-video]').evaluate((video) => {
       const media = video as HTMLVideoElement;
       return !media.paused && media.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA;
     })).toBe(true);
 
-    const activeAsset = page.locator('[data-single-layer][data-active="true"]');
-    await expect(activeAsset).toHaveAttribute('data-asset-index', '0');
+    await expect(page.locator('[data-splash-video]')).toHaveCount(1);
 
     const initialHeroTop = await hero.evaluate((element) => element.getBoundingClientRect().top);
     await scrollGesture(page, viewportHeight * .2, mobile);

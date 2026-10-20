@@ -45,4 +45,3 @@ export const observePointerCapabilities = (
 
   return () => queries.forEach((query) => query.removeEventListener('change', onChange));
 };
-

@@ -2,7 +2,7 @@
 
 ## Approved destination — 16 October 2026
 
-Ben authorized committing and publishing the Oliver revision, and chose the **existing review address**, https://ben-keller.github.io/newwork/. The custom domain remains on Squarespace; no DNS or email change is part of this handoff.
+Ben authorized committing and publishing the updated website, and chose the **existing review address**, https://ben-keller.github.io/newwork/. The custom domain remains on Squarespace; no DNS or email change is part of this handoff.
 
 The website builds published Sanity content, retains `noindex` for review, and uses the revised shared wordmark, 16-tile gallery, Tall tickers, footer alignment and responsive fixes. Contact placeholders remain by instruction and are editable in Studio. Real BTS photographs remain a client content task; the empty selection uses the portfolio-derived mosaic.
 
@@ -10,8 +10,7 @@ The website builds published Sanity content, retains `noindex` for review, and u
 
 | Component | Responsibility |
 |---|---|
-| `new-work-oliver-review/` | Active website source |
-| `new-work-site/` | Preserved baseline; never overwrite |
+| `new-work-site/` | Active website source |
 | `studio-new-work/` | Client editor, project `7un4plyu`, dataset `production` |
 | `hosting/review-release.json` | Active `/newwork` release profile, `review-release-dist/` |
 | `hosting/root-release.json` | Future root-domain profile, `release-dist/` |
@@ -61,7 +60,6 @@ npm run lint
 npm run test:coverage
 # Repository root
 node --test hosting/hosting.test.mjs hosting/root-release.test.mjs hosting/content-fingerprint.test.mjs
-node hosting/check-review-baseline.mjs
 node hosting/root-release.mjs --production --review
 node hosting/verify-root-release.mjs --production --review
 # Active website
@@ -70,12 +68,12 @@ PAGES_REVIEW=1 ./node_modules/.bin/playwright test --config=playwright.pages.con
 
 The review browser suite checks base-path assets, CMS logo decoding, gallery count, project/return navigation, Contact, real 404 responses, noindex and V1/V2 redirects preserving query/fragment. Local review package: `PAGES_PREVIEW_PORT=4331 node hosting/serve.mjs --root-release --review` → http://127.0.0.1:4331/newwork/.
 
-Prototype design preview remains 4327; original 4325; comparison 4328; CMS development 4329; future root-domain candidate 4330. Editing Sanity does not update the deliberately fixed prototype at 4327.
+There is one local app on port 4327. `npm run dev` uses prototype content; stop it before running `npm run dev:cms` at the same address to read published Sanity content. Release packaging tests use a temporary static server; they do not represent another source version.
 
 ## Recovery and future domain launch
 
-Every successful website build retains a recovery artifact for 30 days. Revert a reviewed code regression and push normally; never force-push. Restore editorial changes through Sanity history, publish, and verify the automatic rebuild. Baseline source and the archived V1 snapshot remain available.
+Every successful website build retains a recovery artifact for 30 days. Revert a reviewed code regression and push normally; never force-push. Restore editorial changes through Sanity history, publish, and verify the automatic rebuild. Earlier versions are recoverable from Git history and the private local consolidation archive. They are not active source directories.
 
-The scoped Oliver settings migration already ran; its private backup remains in `studio-new-work/.sanity/backups/`. Do not rerun migrations as part of deployment. New ordinary assets must retain generated IDs and canonical project references.
+The scoped October settings migration already ran; its private backup remains in `studio-new-work/.sanity/backups/`. Do not rerun migrations as part of deployment. New ordinary assets must retain generated IDs and canonical project references.
 
 For newworkagency.com, follow [the separate cutover plan](hosting/ROOT_RELEASE.md). Change the one existing publisher, Studio website URL and content-check URL together, configure the verified custom domain and update website DNS records only. Keep mail records unchanged. The current publisher deliberately refuses to deploy its `/newwork` package if a custom domain is attached.

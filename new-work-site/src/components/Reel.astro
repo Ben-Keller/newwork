@@ -1,4 +1,5 @@
 ---
+import { wordmarkGlyphs } from '../lib/brand/wordmark-artwork';
 import ResponsiveImage from './ResponsiveImage.astro';
 import VideoControls from './VideoControls.astro';
 import ErrorMedia from './ErrorMedia.astro';
@@ -18,6 +19,10 @@ const mobileMime = inferVideoMimeType(reel.mobileSource || reel.desktopSource);
 {ready ? (
   <section class="reel" aria-labelledby="reel-heading">
     <h2 id="reel-heading" class="sr-only">Showreel</h2>
+    <div class="reel__texture" aria-hidden="true">
+      <svg class="reel__word reel__word--new" viewBox="558.68 384 353.28 188.30" focusable="false">{wordmarkGlyphs.filter(letter => letter.word === 'new').map(letter => <path d={letter.path} fill="currentColor" />)}</svg>
+      <svg class="reel__word reel__word--work" viewBox="939.90 384 461.55 188.30" focusable="false">{wordmarkGlyphs.filter(letter => letter.word === 'work').map(letter => <path d={letter.path} fill="currentColor" />)}</svg>
+    </div>
     <div class="reel__frame" data-reel-shell data-media-frame style={`aspect-ratio:${reel.aspectRatio || '16 / 9'}`}>
       <ResponsiveImage image={reel.poster!} sizes="70vw" />
       <video
@@ -112,3 +117,16 @@ const mobileMime = inferVideoMimeType(reel.mobileSource || reel.desktopSource);
   document.addEventListener('astro:page-load', setupReels);
   document.addEventListener('astro:before-swap', () => disposeReels());
 </script>
+
+<style>
+  .reel { position: relative; isolation: isolate; }
+  .reel .reel__texture { position: absolute; inset: 0; width: 100%; margin: 0; overflow: clip; pointer-events: none; z-index: -1; color: var(--color-ink); opacity: .075; }
+  .reel__word { position: absolute; top: 50%; transform: translateY(-55%) rotate(-90deg); width: 36%; height: auto; }
+  .reel__word--new { width: 42%; left: -12%; }
+  .reel__word--work { width: 48%; right: -15%; transform: translateY(-55%) rotate(90deg); }
+  @media (max-width: 599px) {
+    .reel__word { width: 49%; }
+    .reel__word--new { left: -20%; }
+    .reel__word--work { right: -22%; }
+  }
+</style>

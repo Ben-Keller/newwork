@@ -1,10 +1,12 @@
 ---
 import { withBase } from '../lib/base-path';
+interface Props { text?: string }
+const { text = 'Looking to create something impactful?' } = Astro.props;
 ---
 
 <section class="contact-callout" aria-labelledby="contact-callout-heading" data-contact-callout>
   <div class="contact-callout__inner">
-    <p class="contact-callout__eyebrow">Looking to create something beautiful?</p>
+    <p class="contact-callout__eyebrow">{text}</p>
     <a class="contact-callout__link" href={withBase('/contact')} aria-labelledby="contact-callout-heading">
       <h2 id="contact-callout-heading"><span class="contact-callout__outline">contact</span>{' '}<span>us.</span></h2>
       <span class="contact-callout__arrow" aria-hidden="true">

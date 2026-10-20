@@ -60,7 +60,8 @@ export const michaelWorkPhotos = [
  */
 export const michaelPhotoWork: ProjectView = {
   id: 'work.michael-selected-photography',
-  title: 'Photography',
+  title: 'Selected Photography',
+  client: 'Client 01',
   slug: 'michael-selected-photography',
   owner: 'michael',
   types: ['Photography'],

@@ -1,18 +1,13 @@
-# Oliver revision — implementation and review
+# New Work — feedback register
 
-Implemented in an independent copy of the existing site on 13 October 2026. The existing version is preserved for comparison. On 16 October, Ben requested launch preparation and CMS updates: Studio/schema and scoped settings are now deployed, and the local publisher targets the Oliver revision. The public website and DNS have not changed; workflow changes still need a reviewed push.
+The October feedback was implemented in the current website. On 20 October 2026,
+Ben consolidated the latest V3 implementation into **`new-work-site/`** and retired
+the duplicate baseline/revision workflow. Project Studio has one **New Work** card
+at http://127.0.0.1:4327/. All future website changes belong in that folder on `main`.
 
-## Review the two versions
-
-- **Side by side:** http://127.0.0.1:4328/
-- **Existing version:** http://127.0.0.1:4325/ — `new-work-site/`
-- **Oliver revision:** http://127.0.0.1:4327/ — `new-work-oliver-review/`
-
-Project Studio's **New Work — Oliver Review** card opens the revised app on port 4327. Its docs link to all three views; its Stop/status controls manage only the revised app. The original remains separately available on port 4325.
-
-From the repository root, `node hosting/review.mjs` starts both apps and the comparison page. It can reuse matching running previews and refuses a port occupied by a different app. View controls cover opening, gallery and Contact, at desktop, tablet and phone widths.
-
-**Future edits belong only in `new-work-oliver-review/`.** Read [editing and promotion rules](EDITING.md). Both apps stay in this checkout on `main`; no extra branch/worktree was created. Source/assets are independent, and the revised app has its own browser-storage namespace and gallery-order version.
+The records below retain source comment IDs and dated decisions. Earlier mentions
+of separate versions describe the historical review process, not current launch
+or editing instructions. See [current editing rules](EDITING.md).
 
 ## Selected ticker style
 
@@ -99,3 +94,22 @@ C10: Ben requested the copyright alongside the other footer information rather t
 ## Remove BTS small caption — 16 October 2026
 
 C08 follow-up: Ben requested removing “A closer look.” The caption was cleared from the published Work-page document; the component, content normalization, Studio default and deliberate migration defaults no longer restore it. The optional CMS caption field remains available and explains that leaving it empty shows only the heading. The section heading and mosaic are unchanged.
+
+## V3 feedback — 20 October 2026
+
+Source: Oliver Hamilton's nine comments in `V3.pptx` (19 October). Ben authorized all changes, including temporary logos and photography labels. Comment numbers below are the deck's original IDs. The implementation is now in the sole `new-work-site/` app after consolidation on 20 October.
+
+| Comment | Implemented response |
+|---|---|
+| V3-C01 | Keep the single-line Tall train board; restore bold type, physical top/bottom flap leaves and a slower forward character sequence. Animation is bounded to under 1.8 seconds and stops offscreen, with reduced motion, on hidden tabs and during route cleanup. |
+| V3-C02 | Interpolate the board's position across a scroll range, smoothly in both directions, instead of switching coordinates at one threshold. Mobile stays inline. Existing first-paint/splash exclusion remains. |
+| V3-C03 | Hover and keyboard focus show only the client, with a neutral pending label if absent. Photography uses numbered Client placeholders. Remove personal names from public project/photo titles, descriptions and credits in Sanity; retain internal ownership, provenance and stable URLs. |
+| V3-C04 | Add faint oversized “new”/“work” artwork beside and partially behind the homepage showreel, using the same approved glyph paths. Decorative clipping is contained within the texture layer, with mobile sizing and no extra scripting. |
+| V3-C05 | Reduce the combined showreel-bottom and BTS-top spacing. |
+| V3-C06 | Replace the footer project-name directory with six numbered, monochrome placeholder client marks. Sanity Footer → Client logos controls names, artwork, order and optional links. Emptying the collection hides it. Keep the agency logo and board bottom-aligned and the copyright beside the other footer information. |
+| V3-C07 | Restore outlined “Behind”, with filled “the scenes”; keep the current mosaic. Custom CMS headings remain supported. |
+| V3-C08/C09 | Reduce BTS from 15 to 11 photographs (approximately 25%). Rebalance the desktop and tablet arrangements. The CMS retains extra placements in reserve. The main gallery remains 16 tiles/four desktop rows. |
+
+The scoped Sanity migration `studio-new-work/scripts/apply-v3-feedback.ts` was previewed and applied: 37 revision-guarded document updates, including the client label in one existing draft without changing its other fields, plus six SVG file uploads. Private backups are under Studio's ignored `.sanity/backups/`. A second dry run proposes zero mutations. Production public-text inspection found no Oliver/Michael matches across all 93 rendered pages; existing URL slugs and internal media identifiers intentionally remain stable.
+
+The new Studio controls, frontend code and visual snapshots are local changes awaiting commit/deployment. Production CMS content has been updated. The local production-content review candidate is at `http://127.0.0.1:4330/newwork/`; side-by-side prototype comparison remains at `http://127.0.0.1:4328/`. No DNS change was made. See QA.md for verification evidence and CLIENT_GUIDE.md in the Studio project for replacement instructions.

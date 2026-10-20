@@ -3,7 +3,7 @@ import { initializeCardPointer } from './card-pointer';
 import { initializeDeclarativeMotion } from './effects';
 import { initializeGalleryMotion } from './gallery';
 import type { MotionCleanup, MotionEnvironment, RouteMotionInitializer } from './types';
-import { ScrollTrigger, ensureGsapPlugins, gsap } from './vendor';
+import { refreshMotionLayout, ensureGsapPlugins, gsap } from './vendor';
 
 const builtInInitializers: RouteMotionInitializer[] = [
   initializeGalleryMotion,
@@ -27,7 +27,7 @@ export const initializeMotionRoute = (
     if (refreshFrame) return;
     refreshFrame = window.requestAnimationFrame(() => {
       refreshFrame = 0;
-      ScrollTrigger.refresh();
+      refreshMotionLayout();
     });
   };
 

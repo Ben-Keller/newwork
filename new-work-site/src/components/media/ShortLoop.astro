@@ -1,12 +1,13 @@
 ---
 import ErrorMedia from '../ErrorMedia.astro';
+import ResponsiveImage from '../ResponsiveImage.astro';
 import VideoControls from '../VideoControls.astro';
 import MediaCaption from './MediaCaption.astro';
 import MediaAccessibility from './MediaAccessibility.astro';
 import { inferVideoMimeType } from './video-mime';
 import type { ShortLoopBlock } from '../../lib/types';
 interface Props { block: ShortLoopBlock; projectTitle: string; eager?: boolean; sizes?: string }
-const { block, projectTitle } = Astro.props;
+const { block, projectTitle, eager = false, sizes = '100vw' } = Astro.props;
 const displayRatio = block.video.poster
   ? `${block.video.poster.width} / ${block.video.poster.height}`
   : '16 / 9';
@@ -15,6 +16,7 @@ const videoId = `short-loop-${block._key.replace(/[^a-zA-Z0-9_-]/gu, '-')}`;
 ---
 <figure class="media-block media-block--loop">
   <div class="hosted-video hosted-video--loop" data-media-frame style={`--video-ratio:${displayRatio}`}>
+    {block.video.poster ? <div class="short-loop-poster"><ResponsiveImage image={block.video.poster} eager={eager} sizes={sizes} /></div> : null}
     {block.video.src ? (
       <video
         id={videoId}
@@ -22,6 +24,7 @@ const videoId = `short-loop-${block._key.replace(/[^a-zA-Z0-9_-]/gu, '-')}`;
         loop
         playsinline
         preload="none"
+        poster={block.video.poster?.src}
         crossorigin={block.video.captionsFile ? 'anonymous' : undefined}
         aria-label={block.video.accessibleDescription || `${projectTitle} motion loop`}
         data-short-loop
@@ -117,3 +120,9 @@ const videoId = `short-loop-${block._key.replace(/[^a-zA-Z0-9_-]/gu, '-')}`;
   document.addEventListener('astro:page-load', setupShortLoops);
   document.addEventListener('astro:before-swap', () => disposeShortLoops());
 </script>
+
+<style>
+  .hosted-video--loop { position: relative; }
+  .short-loop-poster { position: absolute; inset: 0; pointer-events: none; }
+  .short-loop-poster :global(.responsive-image), .short-loop-poster :global(picture), .short-loop-poster :global(img) { display: block; width: 100%; height: 100%; object-fit: contain; }
+</style>

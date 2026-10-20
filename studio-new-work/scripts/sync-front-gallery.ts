@@ -13,7 +13,7 @@ async function main() {
     ...process.argv.slice(2).filter((argument) => argument !== '--'),
   ]
 
-  await import('../../new-work-oliver-review/scripts/sync-sanity-gallery')
+  await import('../../new-work-site/scripts/sync-sanity-gallery')
 }
 
 main().catch((error) => {

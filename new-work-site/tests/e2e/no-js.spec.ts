@@ -6,21 +6,14 @@ test('the work index and film fallback remain useful without JavaScript', async 
   await page.setViewportSize({ width: 1440, height: 1_000 });
   const homeResponse = await page.goto('/');
   expect(homeResponse?.status()).toBe(200);
-  await expect(page.locator('[data-logo-intro]')).toBeVisible();
-  await expect(page.locator('[data-type-title]')).toBeVisible();
-  expect(await page.locator('[data-type-title-line]').evaluateAll((lines) =>
-    lines.map((line) => (line as HTMLElement).dataset.typeTitleLine),
-  )).toEqual(['new', 'work']);
-  // Logo 01 ("headline"): the title closes on a full stop.
-  expect(await page.locator('[data-type-title-line]').evaluateAll((lines) =>
-    lines.map((line) => (line as HTMLElement).dataset.typeTitleText),
-  )).toEqual(['new', 'work.']);
-  await expect(page.locator('[data-svg-title]')).toHaveCount(0);
+  await expect(page.locator('[data-home-identity]')).toBeVisible();
+  await expect(page.locator('.home-identity__wordmark svg')).toBeVisible();
+  await expect(page.locator('[data-home-departures]')).toBeVisible();
   await expect(page.getByRole('heading', { level: 1, name: 'Selected work' })).toBeAttached();
-  await expect(page.locator('[data-project-card]')).toHaveCount(20);
+  await expect(page.locator('[data-project-card]')).toHaveCount(16);
   await expect(page.locator('[data-manifesto]')).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'Behind the scenes', exact: true })).toBeVisible();
-  await expect(page.locator('.bts__heading-text')).toHaveCSS('opacity', '1');
+  await expect(page.locator('.bts__header')).toHaveCSS('opacity', '1');
   await expect(page.locator('[data-gallery-remove]')).toHaveCount(0);
   // Scoped to the gallery: the Behind the scenes strip also links to Arc.
   await expect(page.locator('[data-work-gallery]').getByRole('link', { name: /Arc/u })).toBeVisible();
@@ -49,7 +42,7 @@ test('the work index and film fallback remain useful without JavaScript', async 
   });
   expect(staticLayout.columns).toBe(4);
   expect(staticLayout.firstTops).toHaveLength(4);
-  expect(Math.max(...staticLayout.firstTops) - Math.min(...staticLayout.firstTops)).toBeGreaterThan(20);
+  expect(Math.max(...staticLayout.firstTops) - Math.min(...staticLayout.firstTops)).toBeLessThanOrEqual(1);
   expect(staticLayout.contained).toBe(true);
   expect(staticLayout.overflow).toBeLessThanOrEqual(0);
   await expect(page.locator('.project-card__label--touch')).toHaveCount(0);

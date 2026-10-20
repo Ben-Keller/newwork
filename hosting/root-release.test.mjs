@@ -5,7 +5,7 @@ import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {redirectHtml} from './lib.mjs';
 import {verifyRootRelease} from './root-release-validation.mjs';
-const config = {source: 'new-work-oliver-review', site: 'https://newworkagency.com', legacyPrefixes: ['v1','v2','newwork','newwork/v1','newwork/v2']};
+const config = {source: 'new-work-site', site: 'https://newworkagency.com', legacyPrefixes: ['v1','v2','newwork','newwork/v1','newwork/v2']};
 async function fixture(t, mode = 'production') {
   const dir = await mkdtemp(path.join(tmpdir(), 'newwork-release-'));
   t.after(() => rm(dir, {recursive: true, force: true}));
@@ -32,7 +32,7 @@ test('rejects missing assets and a wrongly packaged source', async t => {
   const home = path.join(dir, 'index.html');
   await writeFile(home, `${await readFile(home, 'utf8')}<img src="/missing.webp">`);
   await assert.rejects(verifyRootRelease(dir, config), /missing local reference/);
-  await writeFile(path.join(dir, 'release-info.json'), JSON.stringify({source: 'new-work-site', origin: config.site, base: '/', mode: 'production'}));
+  await writeFile(path.join(dir, 'release-info.json'), JSON.stringify({source: 'retired-website-copy', origin: config.site, base: '/', mode: 'production'}));
   await assert.rejects(verifyRootRelease(dir, config), /Unexpected release source/);
 });
 test('rejects noindex production and an incorrect gallery count', async t => {

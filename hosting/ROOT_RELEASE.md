@@ -35,4 +35,4 @@ Public values reconfirmed 16 October 2026. Nameservers: `dns1.p03.nsone.net` thr
 
 Reconfirm official GitHub targets at cutover. Preserve the verification TXT record. Website hosting does not create email accounts.
 
-For application rollback, redeploy the recorded last-good artifact through the sole publisher. For hosting rollback, restore the captured website records. Never alter mail records or overwrite the preserved comparison app as a recovery shortcut.
+For application rollback, redeploy the recorded last-good artifact through the sole publisher. For hosting rollback, restore the captured website records. Never alter mail records. Recover previous code from the recorded Git commit or deployment artifact.

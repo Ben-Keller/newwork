@@ -11,8 +11,8 @@ const { entries, mode = 'prototype' } = Astro.props;
 // Temporary editorial tooling remains implemented, but is not rendered in the
 // review UI. Switch this flag back on when another curation pass is needed.
 const galleryEditingEnabled = false;
-// Keep the home gallery's curated selection to at most 20 pieces.
-const MAX_GALLERY_ENTRIES = 20;
+// Keep the home gallery's curated selection to 16 pieces: four tiles in each of four desktop columns.
+const MAX_GALLERY_ENTRIES = 16;
 const selectedEntries = entries.slice(0, MAX_GALLERY_ENTRIES);
 const hasPreviewVideo = (entry: WorkGalleryEntryView) => Boolean(
   entry.asset?.kind === 'video' ? entry.asset.video?.src
@@ -23,7 +23,7 @@ const photos = selectedEntries.filter((entry) => !hasPreviewVideo(entry));
 const rowCount = Math.ceil(selectedEntries.length / 4);
 const firstRowVideos = videos.length ? Math.max(1, Math.floor(videos.length / rowCount)) : 0;
 const remainingVideos = videos.length - firstRowVideos;
-// Keep the selected 20 pieces, spreading motion across rows instead of
+// Keep the selected 16 pieces, spreading motion across rows instead of
 // bunching films in the same lanes. The opening video's fourth position is
 // fixed; later rows move it across the composition. Extra videos are spaced
 // through the remaining rows when the edit contains more than one per row.
@@ -44,15 +44,9 @@ for (let row = 0; row < rowCount; row += 1) {
     if (entry) galleryEntries.push(entry);
   }
 }
-const isWideFeature = (entry: WorkGalleryEntryView, index: number) =>
-  entry.work.cover.cardRatio === 'wideFeature' && index >= 8;
 const assignColumns = (columnCount: number) => {
   let nextColumn = 0;
-  return galleryEntries.map((entry, index) => {
-    if (isWideFeature(entry, index)) {
-      nextColumn = 0;
-      return undefined;
-    }
+  return galleryEntries.map(() => {
 
     const column = nextColumn + 1;
     nextColumn = column % columnCount;
@@ -113,8 +107,8 @@ const tabletColumnStarts = tabletColumns.map((column, index) =>
 
   // Editorial source order changed after the original review shuffle. Keep
   // removals, but do not let that stale saved sequence override new placements.
-  const galleryOrderStorageKey = 'new-work:gallery-order:v3';
-  const galleryHiddenStorageKey = 'new-work:gallery-hidden:v1';
+  const galleryOrderStorageKey = 'new-work:gallery-order:oliver-16:v1';
+  const galleryHiddenStorageKey = 'new-work:gallery-hidden:oliver-16:v1';
   const detailPosterSizes = '(min-width: 1200px) 56vw, (min-width: 768px) 52vw, 100vw';
   const detailPosterCacheLimit = 8;
 

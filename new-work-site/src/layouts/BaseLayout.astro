@@ -12,6 +12,7 @@ import { storagePrefix, withBase, withoutBase } from '../lib/base-path';
 import type { BrandAssetView, ImageView, ProjectTheme, SeoFields, SiteContent } from '../lib/types';
 import '../styles/brand.css';
 import '../styles/global.css';
+import '../styles/layout.css';
 
 interface Props {
   content: SiteContent;
@@ -61,7 +62,7 @@ const showNotes = settings.notesEnabled && notes.length > 0;
 // and not routed, so an About destination from the CMS has nowhere to go and
 // is dropped from the menus rather than linking to a missing page.
 const destinationHref: Partial<Record<'work' | 'about' | 'notes' | 'contact', string>> = {
-  work: withBase('/'),
+  work: withBase('/#work-gallery'),
   notes: withBase('/notes'),
   contact: withBase('/contact'),
 };
@@ -105,7 +106,7 @@ const isWorkProject = pageClass.includes('project-page');
       (() => {
         const navigation = performance.getEntriesByType('navigation')[0];
         const isReload = navigation?.type === 'reload';
-        if (!isReload) return;
+        if (!isReload || location.hash === '#work-gallery') return;
 
         history.scrollRestoration = 'manual';
         sessionStorage.removeItem(`${storagePrefix}new-work-restore-requested`);
@@ -172,7 +173,8 @@ const isWorkProject = pageClass.includes('project-page');
         siteName={headerSiteName}
         navItems={navigationItems}
         wordmarkAsset={wordmarkAsset}
-        compactMarkAsset={compactMarkAsset}
+        compactMarkAsset={mode === 'prototype' ? undefined : compactMarkAsset}
+        descriptor={settings.headerDescriptor}
         tone={brandTone}
         galleryEditing={galleryOrderToolsEnabled && mode !== 'production'}
       />
@@ -196,10 +198,10 @@ const isWorkProject = pageClass.includes('project-page');
     {showSiteFooter ? (
       <SiteFooter
         siteName={headerSiteName}
-        featuredProjects={content.galleryEntries.map(({ work }) => work)}
-        peopleHeading={settings.footer.peopleHeading}
+        clientLogos={settings.footer.clientLogos}
+        tickerWords={settings.footer.tickerWords}
         copyrightLine={settings.footer.copyrightLine}
-        wordmarkAsset={wordmarkAsset}
+        wordmarkAsset={mode === 'prototype' ? undefined : settings.stackedWordmark}
         tone={brandTone}
         showYear={settings.footer.showYear}
       />

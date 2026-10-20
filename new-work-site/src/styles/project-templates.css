@@ -1,3 +1,7 @@
+/* Astro can emit this route stylesheet before global.css on direct visits.
+   Establish the same layer order before any component rules in either entry. */
+@layer reset, base, components, utilities;
+
 @layer components {
   body.project-page[data-page-theme="light"] {
     --page-background: #e8e8e4;
@@ -11,6 +15,7 @@
   }
 
   body.project-page[data-page-theme="dark"] {
+    --brand-asset-invert: 1;
     --page-background: #171716;
     --color-project: #171716;
     --color-ink: #f4f2ea;
@@ -89,12 +94,12 @@
     gap: clamp(1.35rem, 2.5vw, 2.8rem);
   }
 
-  .project-template .project-header__title { min-width: 0; }
+  .project-template .project-header__title { min-width: 0; container-type: inline-size; }
   .project-template .project-header__title .eyebrow { color: var(--project-muted); }
   .project-template .project-header h1 {
     max-width: none;
     margin-top: .35rem;
-    font-size: clamp(3.15rem, 5.4vw, 7.4rem);
+    font-size: min(clamp(3.15rem, 5.4vw, 7.4rem), 16cqi);
     letter-spacing: -.065em;
     line-height: .82;
     text-wrap: initial;
@@ -109,7 +114,10 @@
 
   .project-title__mask {
     display: inline-block;
-    overflow: clip;
+    max-width: 100%;
+    /* Leave room for glyph overhangs and descenders around the reveal window. */
+    overflow: visible;
+    clip-path: inset(-.12em -.06em);
     padding: .04em .035em .1em 0;
     margin-bottom: -.1em;
     vertical-align: bottom;
@@ -117,7 +125,9 @@
 
   .project-title__word {
     display: inline-block;
-    white-space: nowrap;
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 
   .project-title-treatment--stacked .project-title__words,
@@ -423,7 +433,7 @@
     grid-template-columns: minmax(20rem, .78fr) minmax(0, 1.22fr);
   }
 
-  .project-template--photo-essay .project-header h1 { font-size: clamp(3.35rem, 5.7vw, 7.8rem); }
+  .project-template--photo-essay .project-header h1 { font-size: min(clamp(3.35rem, 5.7vw, 7.8rem), 16cqi); }
   .project-template--photo-essay .media-stream { gap: clamp(7rem, 16vw, 19rem); }
 
   .project-template--photo-essay [data-media-index="1"] > .media-block {
@@ -533,7 +543,7 @@
 
   .project-template--experimental .project-header h1 {
     max-width: none;
-    font-size: clamp(3.4rem, 5.4vw, 7.6rem);
+    font-size: min(clamp(3.4rem, 5.4vw, 7.6rem), 16cqi);
     line-height: .79;
   }
 
@@ -593,7 +603,7 @@
     .project-template .project-header h1,
     .project-template--photo-essay .project-header h1,
     .project-template--experimental .project-header h1 {
-      font-size: clamp(2.75rem, 13.5vw, 5.4rem);
+      font-size: min(clamp(2.75rem, 13.5vw, 5.4rem), 16cqi);
       line-height: .8;
     }
 

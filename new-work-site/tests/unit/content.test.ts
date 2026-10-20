@@ -646,3 +646,51 @@ describe('project adjacency', () => {
     });
   });
 });
+
+describe('Oliver CMS controls', () => {
+  it('keeps the selected defaults and accepts client edits without restoring retired layouts', () => {
+    const defaults = normalizeSiteSettings({}, 'production');
+    expect(defaults.tickerWords).toEqual(['Film + photo', 'In production', 'New work']);
+    expect(defaults.tickerCities).toEqual(['sf','la','nyc']);
+    expect(defaults.footer.tickerWords).toEqual(['Arriving','In transit','Departing','Early']);
+    const settings = normalizeSiteSettings({
+      headerDescriptor: 'Film production\nPhotography',
+      workPage: {tickerWords: ['  New projects  ', '', 'Open for enquiries'], tickerCities: [], btsHeading: 'On set', btsSubtitle: '', behindTheScenes: [{_key: 'bts-1', workId: 'drafts.work-1', assetId: 'asset-1'}]},
+      footer: {calloutText: 'Let’s make something.', tickerWords: ['Boarding'], featuredHeading: 'Projects'},
+      contactPage: {email: 'hello@lorem.ipsum', location: 'Line one\nLine two', socialLinks: []},
+    }, 'production');
+    expect(settings.headerDescriptor).toBe('Film production\nPhotography');
+    expect(settings.tickerWords).toEqual(['New projects', 'Open for enquiries']);
+    expect(settings.tickerCities).toEqual([]);
+    expect(settings.btsGallery?.[0]).toMatchObject({workId: 'work-1', assetId: 'asset-1'});
+    expect(settings.btsSubtitle).toBe('');
+    expect(settings.footer.calloutText).toBe('Let’s make something.');
+    expect(settings.footer.tickerWords).toEqual(['Boarding']);
+    expect(settings.contactEmail).toBe('hello@lorem.ipsum');
+    expect(settings.location).toBe('Line one\nLine two');
+    expect(settings.socialLinks).toEqual([]);
+  });
+  it('rejects unknown city keys and safely falls back from empty ticker copy', () => {
+    const settings = normalizeSiteSettings({workPage: {tickerCities: ['nyc','bad','nyc','sf'], tickerWords: ['', null]}, footer: {tickerWords: []}}, 'production');
+    expect(settings.tickerCities).toEqual(['nyc','sf']);
+    expect(settings.tickerWords).toHaveLength(3);
+    expect(settings.footer.tickerWords).toHaveLength(4);
+  });
+});
+
+describe('editable V3 client logos', () => {
+  it('uses review placeholders only before the collection exists; respects an editor clearing it', () => {
+    expect(normalizeSiteSettings({}, 'prototype').footer.clientLogos).toHaveLength(6);
+    expect(normalizeSiteSettings({footer: {clientLogos: []}}, 'production').footer.clientLogos).toEqual([]);
+  });
+  it('keeps editor order, labels and optional destinations', () => {
+    const logos = normalizeSiteSettings({footer: {clientLogos: [
+      {_key: 'second', name: 'Client 02', url: 'https://example.com'},
+      {_key: 'first', name: 'Client 01'},
+      {_key: 'empty'},
+    ]}}, 'production').footer.clientLogos;
+    expect(logos.map(logo => logo.name)).toEqual(['Client 02', 'Client 01']);
+    expect(logos[0]?.url).toBe('https://example.com/');
+    expect(logos[1]?.url).toBeUndefined();
+  });
+});

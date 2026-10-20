@@ -12,7 +12,9 @@ from fontTools.pens.cu2quPen import Cu2QuPen
 
 document = fitz.open(sys.argv[1])
 drawings = document[4].get_drawings()
-# Drawing IDs and advances preserve the V1 headline's overlapping spacing.
+# Drawing IDs and advances preserve the V1 headline glyph geometry.
+# Historical font experiment; the active homepage and splash now use the
+# canonical oliver-horizontal.svg paths directly, not this font.
 letters = {'n': (5, 98.70), 'e': (7, 89.88), 'w': (2, 164.68),
            'o': (6, 100.71), 'r': (8, 75.53), 'k': (4, 106.15), '.': (9, 35.90)}
 glyphs = {}

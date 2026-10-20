@@ -1,10 +1,10 @@
-name: Deploy Oliver revision
+name: Deploy New Work
 
 on:
   push:
     branches: [main]
     paths:
-      - new-work-oliver-review/**
+      - new-work-site/**
       - hosting/**
       - studio-new-work/schemaTypes/**
       - studio-new-work/shared/**
@@ -46,12 +46,12 @@ jobs:
     needs: content
     if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && !inputs.only_if_content_changed) || needs.content.outputs.changed == 'true'
 
-    name: Validate Oliver revision and published CMS content
+    name: Validate New Work and published CMS content
     runs-on: ubuntu-latest
     timeout-minutes: 25
     defaults:
       run:
-        working-directory: new-work-oliver-review
+        working-directory: new-work-site
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -61,15 +61,14 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-          cache-dependency-path: new-work-oliver-review/pnpm-lock.yaml
+          cache-dependency-path: new-work-site/pnpm-lock.yaml
       - uses: actions/configure-pages@v6
       - run: pnpm install --frozen-lockfile
       - name: Check source, types and content rules
         run: npm run typecheck && npm run lint && npm run test:coverage
-      - name: Check release packaging and preserved baseline
+      - name: Check release packaging
         run: |
           node --test ../hosting/hosting.test.mjs ../hosting/root-release.test.mjs ../hosting/content-fingerprint.test.mjs
-          node ../hosting/check-review-baseline.mjs --source-only
       - name: Build the client review from published Sanity content
         run: |
           node ../hosting/root-release.mjs --production --review
@@ -81,7 +80,7 @@ jobs:
       - name: Retain a recovery artifact
         uses: actions/upload-artifact@v6
         with:
-          name: oliver-production-${{ github.sha }}-${{ github.run_id }}
+          name: new-work-production-${{ github.sha }}-${{ github.run_id }}
           path: review-release-dist
           retention-days: 30
       - name: Upload the validated review site
@@ -90,7 +89,7 @@ jobs:
           path: review-release-dist
 
   deploy:
-    name: Publish the validated Oliver revision
+    name: Publish the validated New Work website
     needs: build
     runs-on: ubuntu-latest
     environment:

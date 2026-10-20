@@ -1,248 +1,102 @@
 ---
-/**
- * A split-flap "departure board" that flips through what the studio makes.
- * The tiles are decorative; `label` gives assistive tech the same words once.
- */
+import { tickerPages } from '../lib/ticker';
 interface Props {
-  words?: readonly string[];
-  label?: string;
-  /** Tile height, any CSS length. */
-  size?: string;
-  class?: string;
+  words?: readonly string[]; label?: string; size?: string; class?: string;
+  cells?: number; rows?: number; clock?: boolean; cities?: readonly string[];
 }
-const {
-  words = ['photo', 'creative', 'film'],
-  label = words.join(', '),
-  size,
-  class: className,
-} = Astro.props;
-const normalized = words.map((word) => word.toUpperCase());
-const cells = Math.max(...normalized.map((word) => word.length));
-const first = (normalized[0] ?? '').padEnd(cells, ' ');
+const { words = ['Photo', 'Creative', 'Film'], label = words.join(', '), size, class: className, cells = 10, rows = 1, clock = false, cities = ['sf', 'la', 'nyc'] } = Astro.props;
+const first = tickerPages(words[0] || 'New Work', cells, rows)[0]!;
 ---
-
-<span
-  class:list={['flap-ticker', className]}
-  data-flap-ticker
-  data-ticker-words={JSON.stringify(normalized)}
-  style={size ? `--flap-height:${size}` : undefined}
->
-  <span class="sr-only">{label}</span>
+<div class:list={['flap-ticker', className]} data-flap-ticker data-ticker-words={JSON.stringify(words)} data-ticker-columns={cells} data-ticker-rows={rows} data-ticker-clock={String(clock)} data-ticker-cities={JSON.stringify(cities)} style={`--flap-columns:${cells};${size ? `--flap-height:${size}` : ''}`}>
+  <span class="sr-only" data-ticker-accessible>{label}</span>
   <span class="flap-ticker__board" aria-hidden="true">
-    {[...first].map((glyph) => (
-      <span class="flap" data-flap>
-        <span class="flap__half flap__half--top"><span data-flap-top>{glyph}</span></span>
-        <span class="flap__half flap__half--bottom"><span data-flap-bottom>{glyph}</span></span>
-        <span class="flap__leaf flap__leaf--top"><span data-flap-leaf-top>{glyph}</span></span>
-        <span class="flap__leaf flap__leaf--bottom"><span data-flap-leaf-bottom>{glyph}</span></span>
-      </span>
-    ))}
+    {[...first].map(glyph => <span class="flap" data-flap>
+      <span class="flap__half flap__half--top"><span data-flap-top>{glyph}</span></span>
+      <span class="flap__half flap__half--bottom"><span data-flap-glyph>{glyph}</span></span>
+      <span class="flap__leaf flap__leaf--top"><span data-flap-leaf-top>{glyph}</span></span>
+      <span class="flap__leaf flap__leaf--bottom"><span data-flap-leaf-bottom>{glyph}</span></span>
+    </span>)}
   </span>
-</span>
-
+</div>
 <style>
-  .flap-ticker {
-    --flap-height: clamp(1.7rem, 2.3vw, 2.35rem);
-    --flap-width: calc(var(--flap-height) * .64);
-    --flap-face: #161616;
-    --flap-ink: #f3f0e8;
-    display: inline-flex;
-  }
-
-  .flap-ticker__board {
-    display: inline-flex;
-    gap: 2px;
-    padding: 3px;
-    background: #0b0b0b;
-    border-radius: 3px;
-    box-shadow: inset 0 0 0 1px rgb(255 255 255 / 6%);
-  }
-
-  .flap {
-    position: relative;
-    display: block;
-    width: var(--flap-width);
-    height: var(--flap-height);
-    color: var(--flap-ink);
-    font: 700 calc(var(--flap-height) * .62) / var(--flap-height) var(--font-body);
-    font-variant-numeric: tabular-nums;
-    text-align: center;
-    perspective: calc(var(--flap-height) * 6);
-  }
-
-  .flap__half,
-  .flap__leaf {
-    position: absolute;
-    left: 0;
-    width: 100%;
-    height: 50%;
-    overflow: hidden;
-    background: var(--flap-face);
-    backface-visibility: hidden;
-  }
-
-  .flap__half--top,
-  .flap__leaf--top {
-    top: 0;
-    border-radius: 2px 2px 0 0;
-    background: linear-gradient(#1f1f1f, var(--flap-face));
-    transform-origin: 50% 100%;
-  }
-
-  .flap__half--bottom,
-  .flap__leaf--bottom {
-    bottom: 0;
-    border-radius: 0 0 2px 2px;
-    transform-origin: 50% 0;
-  }
-
-  /* Each half shows its share of one glyph centred on the whole tile. */
-  .flap__half > span,
-  .flap__leaf > span {
-    position: absolute;
-    left: 0;
-    width: 100%;
-    height: 200%;
-  }
-
-  .flap__half--top > span,
-  .flap__leaf--top > span {
-    top: 0;
-  }
-
-  .flap__half--bottom > span,
-  .flap__leaf--bottom > span {
-    top: -100%;
-  }
-
-  /* The hinge between the two halves. */
-  .flap::after {
-    position: absolute;
-    top: calc(50% - .5px);
-    left: 0;
-    width: 100%;
-    height: 1px;
-    background: rgb(0 0 0 / 85%);
-    content: '';
-  }
-
-  .flap__leaf {
-    visibility: hidden;
-  }
-
-  .flap[data-flipping='true'] .flap__leaf {
-    visibility: visible;
-  }
-
-  .flap__leaf--bottom {
-    transform: rotateX(90deg);
-  }
-
+  .flap-ticker { --flap-height: clamp(1.5rem, 2.1vw, 2.25rem); display: inline-flex; max-width: 100%; }
+  .flap-ticker__board { display: grid; position: relative; grid-template-columns: repeat(var(--flap-columns), minmax(0, 1fr)); gap: clamp(1px, .14vw, 2px); padding: 3px; background: #0b0b0b; border-radius: 2px; }
+  .flap { --tile-height: calc(var(--flap-height) * 1.35); display: block; position: relative; width: calc(var(--flap-height) * .64); height: var(--tile-height); color: #f4f0e5; font: 700 calc(var(--flap-height) * .76)/var(--tile-height) var(--font-body); font-variant-numeric: tabular-nums; text-align: center; perspective: calc(var(--tile-height) * 6); }
+  .flap__half, .flap__leaf { position: absolute; left: 0; width: 100%; height: 50%; overflow: hidden; background: #171715; backface-visibility: hidden; }
+  .flap__half--top, .flap__leaf--top { top: 0; border-radius: 2px 2px 0 0; background: linear-gradient(#292926, #20201d); transform-origin: 50% 100%; }
+  .flap__half--bottom, .flap__leaf--bottom { bottom: 0; border-radius: 0 0 2px 2px; transform-origin: 50% 0; }
+  .flap__half > span, .flap__leaf > span { position: absolute; left: 0; width: 100%; height: 200%; white-space: pre; }
+  .flap__half--top > span, .flap__leaf--top > span { top: 0; }
+  .flap__half--bottom > span, .flap__leaf--bottom > span { top: -100%; }
+  .flap__leaf { visibility: hidden; }
+  .flap[data-flipping] .flap__leaf { visibility: visible; }
+  .flap__leaf--bottom { transform: rotateX(90deg); }
+  .flap::after { content: ''; position: absolute; inset: 50% 0 auto; height: 1px; background: #000; z-index: 1; }
 </style>
-
 <script>
-  const ALPHABET = ' ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-  const STEP_MS = 64;
-  const HOLD_MS = 2600;
-
-  let disposeTicker = (): void => undefined;
-
-  const setupTicker = (): void => {
-    disposeTicker();
-    const ticker = document.querySelector<HTMLElement>('[data-flap-ticker]');
-    if (!ticker) return;
-    let words: string[] = [];
-    try {
-      words = JSON.parse(ticker.dataset.tickerWords ?? '[]') as string[];
-    } catch {
-      return;
-    }
-    const flaps = Array.from(ticker.querySelectorAll<HTMLElement>('[data-flap]'));
-    if (words.length < 2 || !flaps.length) return;
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    let wordIndex = 0;
-    let timer = 0;
-    let disposed = false;
-
-    const parts = (flap: HTMLElement) => ({
-      top: flap.querySelector<HTMLElement>('[data-flap-top]')!,
-      bottom: flap.querySelector<HTMLElement>('[data-flap-bottom]')!,
-      leafTop: flap.querySelector<HTMLElement>('[data-flap-leaf-top]')!,
-      leafBottom: flap.querySelector<HTMLElement>('[data-flap-leaf-bottom]')!,
+  import { createFlapMotion } from '../lib/ticker-motion';
+  import { CITY_CLOCKS, cityTime, tickerPages } from '../lib/ticker';
+  let disposeAll = () => {};
+  function setupTickers() {
+    disposeAll();
+    const cleanups: Array<() => void> = [];
+    document.querySelectorAll<HTMLElement>('[data-flap-ticker]').forEach(ticker => {
+      const controller = new AbortController(); const { signal } = controller;
+      const words: string[] = JSON.parse(ticker.dataset.tickerWords || '[]');
+      const columns = Number(ticker.dataset.tickerColumns); const rows = Number(ticker.dataset.tickerRows);
+      const cityKeys: string[] = JSON.parse(ticker.dataset.tickerCities || '[]');
+      const cityIndexes = cityKeys.map(key => CITY_CLOCKS.findIndex(city => city.city.toLowerCase() === key)).filter(index => index >= 0);
+      const clock = ticker.dataset.tickerClock === 'true' && cityIndexes.length > 0;
+      // Each city clock is a complete entry, interleaved with the agency messages.
+      // Resolve times when displayed so returning from a project never shows a stale clock.
+      const entries: Array<() => string> = [];
+      for (let i = 0; i < Math.max(words.length, clock ? cityIndexes.length : 0); i++) {
+        const word = words[i];
+        if (word) entries.push(() => word);
+        if (clock && i < cityIndexes.length) entries.push(() => cityTime(cityIndexes[i]!, new Date(), 'board'));
+      }
+      if (!entries.length) entries.push(() => 'New Work');
+      const motion = createFlapMotion(ticker);
+      const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+      let index = 0; let pageIndex = 0; let label = ''; let visible = true; let pageCount = 1;
+      let rotation = 0; let minute = 0;
+      const render = (animate = true) => {
+        const value = label || entries[index % entries.length]!();
+        const pages = tickerPages(value, columns, rows);
+        pageCount = pages.length;
+        const target = pages[pageIndex % pages.length]!;
+        ticker.dataset.tickerText = value;
+        const accessible = ticker.querySelector<HTMLElement>('[data-ticker-accessible]');
+        if (accessible) accessible.textContent = label || `${words.join('. ')}${clock ? `. Local times: ${cityIndexes.map(i => cityTime(i)).join(', ')}.` : ''}`;
+        motion.render(target, animate && visible && !reduced.matches && !document.hidden);
+      };
+      const scheduleRotation = () => {
+        clearTimeout(rotation);
+        if (document.hidden || !visible || reduced.matches) return;
+        rotation = window.setTimeout(() => {
+          if (label) pageIndex = (pageIndex + 1) % pageCount;
+          else if (++pageIndex >= pageCount) { pageIndex = 0; index = (index + 1) % entries.length; }
+          render(); scheduleRotation();
+        }, label ? 4200 : 5000);
+      };
+      const scheduleMinute = () => {
+        clearTimeout(minute);
+        if (!clock || document.hidden) return;
+        minute = window.setTimeout(() => { if (!label) render(false); scheduleMinute(); }, 60_000 - Date.now() % 60_000 + 20);
+      };
+      ticker.addEventListener('new-work:ticker-label', ((event: CustomEvent<{ label?: string }>) => {
+        label = event.detail.label || ''; pageIndex = 0; render(); scheduleRotation();
+      }) as EventListener, { signal });
+      const observer = new IntersectionObserver(entries => { visible = entries[0]?.isIntersecting ?? false; if (!visible) render(false); scheduleRotation(); }, { rootMargin: '80px' });
+      observer.observe(ticker);
+      document.addEventListener('visibilitychange', () => { render(false); scheduleRotation(); scheduleMinute(); }, { signal });
+      reduced.addEventListener('change', () => { render(false); scheduleRotation(); }, { signal });
+      render(false); scheduleRotation(); scheduleMinute();
+      cleanups.push(() => { controller.abort(); observer.disconnect(); clearTimeout(rotation); clearTimeout(minute); motion.dispose(); });
     });
-
-    const set = (flap: HTMLElement, glyph: string): void => {
-      const { top, bottom, leafTop, leafBottom } = parts(flap);
-      top.textContent = glyph;
-      bottom.textContent = glyph;
-      leafTop.textContent = glyph;
-      leafBottom.textContent = glyph;
-    };
-
-    // One mechanical step: the upper leaf with the old glyph falls, then the
-    // lower leaf with the new glyph lands over the old lower half.
-    const flipOnce = async (flap: HTMLElement, from: string, to: string): Promise<void> => {
-      const { top, bottom, leafTop, leafBottom } = parts(flap);
-      top.textContent = to;
-      bottom.textContent = from;
-      leafTop.textContent = from;
-      leafBottom.textContent = to;
-      flap.dataset.flipping = 'true';
-      const leafTopElement = leafTop.parentElement!;
-      const leafBottomElement = leafBottom.parentElement!;
-      await leafTopElement.animate(
-        [{ transform: 'rotateX(0deg)' }, { transform: 'rotateX(-90deg)' }],
-        { duration: STEP_MS / 2, easing: 'ease-in', fill: 'forwards' },
-      ).finished.catch(() => undefined);
-      await leafBottomElement.animate(
-        [{ transform: 'rotateX(90deg)' }, { transform: 'rotateX(0deg)' }],
-        { duration: STEP_MS / 2, easing: 'ease-out', fill: 'forwards' },
-      ).finished.catch(() => undefined);
-      bottom.textContent = to;
-      leafTopElement.getAnimations().forEach((animation) => animation.cancel());
-      leafBottomElement.getAnimations().forEach((animation) => animation.cancel());
-      delete flap.dataset.flipping;
-    };
-
-    // Like a real board, a tile only ever turns forward through its set.
-    const flipTo = async (flap: HTMLElement, target: string, delay: number): Promise<void> => {
-      const current = parts(flap).bottom.textContent || ' ';
-      if (current === target) return;
-      await new Promise((resolve) => window.setTimeout(resolve, delay));
-      let position = Math.max(0, ALPHABET.indexOf(current));
-      const goal = Math.max(0, ALPHABET.indexOf(target));
-      while (position !== goal && !disposed) {
-        const next = (position + 1) % ALPHABET.length;
-        await flipOnce(flap, ALPHABET[position]!, ALPHABET[next]!);
-        position = next;
-      }
-    };
-
-    const advance = async (): Promise<void> => {
-      if (disposed) return;
-      if (document.hidden) {
-        timer = window.setTimeout(advance, HOLD_MS);
-        return;
-      }
-      wordIndex = (wordIndex + 1) % words.length;
-      const word = words[wordIndex]!.padEnd(flaps.length, ' ');
-      if (reduced) {
-        flaps.forEach((flap, index) => set(flap, word[index] ?? ' '));
-      } else {
-        await Promise.all(flaps.map((flap, index) => flipTo(flap, word[index] ?? ' ', index * 45)));
-      }
-      if (!disposed) timer = window.setTimeout(advance, reduced ? HOLD_MS * 1.6 : HOLD_MS);
-    };
-
-    timer = window.setTimeout(advance, HOLD_MS);
-    disposeTicker = () => {
-      disposed = true;
-      window.clearTimeout(timer);
-      disposeTicker = () => undefined;
-    };
-  };
-
-  setupTicker();
-  document.addEventListener('astro:page-load', setupTicker);
-  document.addEventListener('astro:before-swap', () => disposeTicker());
+    disposeAll = () => { cleanups.forEach(cleanup => cleanup()); disposeAll = () => {}; };
+  }
+  setupTickers();
+  document.addEventListener('astro:page-load', setupTickers);
+  document.addEventListener('astro:before-swap', () => disposeAll());
 </script>

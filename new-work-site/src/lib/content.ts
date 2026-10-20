@@ -1,4 +1,6 @@
 import {sanityClient} from 'sanity:client';
+import placeholderLogos from '../../shared/client-logo-placeholders.json';
+import { withBase } from './base-path';
 import fixtureProjects from '../content/local/projects.json';
 import fixtureSettings from '../content/local/site-settings.json';
 import attributionRecords from '../content/local/asset-attribution.json';
@@ -540,7 +542,7 @@ function normalizeSeo(value: unknown): SeoFields | undefined {
 
 function normalizeBrandAsset(value: unknown): BrandAssetView | undefined {
   const raw = optionalRecord(value);
-  if (!raw) return undefined;
+  if (!raw || hasBlockedContent(raw)) return undefined;
   const asset = raw.format === 'file' ? raw.file : raw.image;
   const src = sourceUrl(asset);
   if (!src) return undefined;
@@ -735,6 +737,11 @@ function normalizeWorkGallery(value: unknown): WorkGalleryPlacementView[] | unde
   });
 }
 
+function tickerWords(value: unknown, fallback: string[]): string[] {
+  const words = Array.isArray(value) ? value.filter((word): word is string => typeof word === 'string').map(word => word.trim().slice(0, 60)).filter(Boolean).slice(0, 12) : [];
+  return words.length ? words : fallback;
+}
+
 function normalizeFooter(value: unknown): FooterSettingsView {
   const footer = recordOrEmpty(value);
   const strapline = Array.isArray(footer.strapline)
@@ -763,7 +770,25 @@ function normalizeFooter(value: unknown): FooterSettingsView {
     : [];
 
   return {
+    clientLogos: Array.isArray(footer.clientLogos) ? footer.clientLogos.flatMap((value, index) => {
+      const item = recordOrEmpty(value);
+      const name = stringFrom(item.name);
+      const artwork = normalizeBrandAsset(item.artwork);
+      if (artwork?.src.startsWith('https://cdn.sanity.io/images/')) {
+        const url = new URL(artwork.src);
+        url.searchParams.set('w', '600');
+        url.searchParams.set('fit', 'max');
+        url.searchParams.set('auto', 'format');
+        artwork.src = url.href;
+      }
+      return name ? [{key: stringFrom(item._key) || `client-${index}`, name,
+        artwork, url: safeHttpsUrl(item.url)}] : [];
+    }) : placeholderLogos.map(item => ({key: item._key, name: item.name,
+      artwork: {src: withBase(`/media/client-placeholders/${item.filename}`), width: 230, height: 60}})),
     strapline,
+    calloutText: stringFrom(footer.calloutText) || 'Looking to create something impactful?',
+    tickerWords: tickerWords(footer.tickerWords, ['Arriving', 'In transit', 'Departing', 'Early']),
+    featuredHeading: stringFrom(footer.featuredHeading) || 'Featured',
     peopleHeading: stringFrom(footer.peopleHeading) || 'People',
     exploreHeading: stringFrom(footer.exploreHeading) || 'Explore',
     connectHeading: stringFrom(footer.connectHeading) || 'Connect',
@@ -792,6 +817,13 @@ export function normalizeSiteSettings(
     siteName: typeof raw.siteName === 'string' && raw.siteName ? raw.siteName : 'New Work Agency',
     navigation: normalizeNavigation(raw.navigation),
     workIntroName: stringFrom(workPage?.introName) || 'New Work',
+    headerDescriptor: stringFrom(raw.headerDescriptor) || 'film + photo\nproduction agency',
+    tickerWords: tickerWords(workPage?.tickerWords, ['Film + photo', 'In production', 'New work']),
+    tickerCities: Array.isArray(workPage?.tickerCities) ? [...new Set(workPage.tickerCities.filter((city): city is string => typeof city === 'string' && ['sf', 'la', 'nyc'].includes(city)))] : ['sf', 'la', 'nyc'],
+    btsHeading: stringFrom(workPage?.btsHeading) || 'Behind the scenes',
+    btsSubtitle: typeof workPage?.btsSubtitle === 'string' ? workPage.btsSubtitle.trim() : '',
+    btsGallery: normalizeWorkGallery(workPage?.behindTheScenes),
+    stackedWordmark: normalizeBrandAsset(raw.stackedWordmark),
     workGallery: normalizeWorkGallery(workPage?.gallery),
     wordmark: normalizeBrandAsset(raw.wordmark),
     compactMark: normalizeBrandAsset(raw.compactMark),

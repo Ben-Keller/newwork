@@ -1,0 +1,32 @@
+[
+  {
+    "_key": "client-01",
+    "name": "Client 01",
+    "filename": "client-01.svg"
+  },
+  {
+    "_key": "client-02",
+    "name": "Client 02",
+    "filename": "client-02.svg"
+  },
+  {
+    "_key": "client-03",
+    "name": "Client 03",
+    "filename": "client-03.svg"
+  },
+  {
+    "_key": "client-04",
+    "name": "Client 04",
+    "filename": "client-04.svg"
+  },
+  {
+    "_key": "client-05",
+    "name": "Client 05",
+    "filename": "client-05.svg"
+  },
+  {
+    "_key": "client-06",
+    "name": "Client 06",
+    "filename": "client-06.svg"
+  }
+]

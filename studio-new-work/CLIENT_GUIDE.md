@@ -14,7 +14,9 @@ Open [New Work Studio](https://new-work.sanity.studio/) and choose **Website con
 | BTS title, subtitle and pictures | Work page → Behind the scenes; selected Assets retain their order |
 | “Looking to create something impactful?” | Footer → Callout & ticker → Contact callout |
 | Footer train-board words | Footer → Callout & ticker → Footer ticker messages |
-| Featured heading and copyright | Footer → Link columns / Legal line |
+| Client logos | Footer → Client logos; drag to reorder, replace each name and artwork, optionally add a link |
+| Copyright | Footer → Legal line |
+| Gallery hover label | Projects → Project details → Client / commissioner; only this client label appears in the train board |
 | Horizontal, stacked and compact logos | Brand & navigation → Brand; each placement has its own field |
 | Header “film + photo…” wording | Brand & navigation → Brand → Header description |
 
@@ -24,7 +26,7 @@ Ticker styling is fixed to the selected Tall train board. Longer phrases cycle a
 
 Gallery placement changes do not delete underlying projects or assets. Keep 16 placements to preserve the selected layout; the editor warns if the count differs. Extra placements can be kept in Gallery reserve. The frontend uses up to the first 16 eligible placements.
 
-For BTS, use the Asset library to upload a photograph, add its image description and connect it to the relevant approved Project. Publish that Asset and choose it under Work page → Behind the scenes. An empty BTS selection keeps the current portfolio-derived placeholder mosaic. Real BTS photos have not been supplied yet.
+For BTS, use the Asset library to upload a photograph, add its image description and connect it to the relevant approved Project. Publish that Asset and choose it under Work page → Behind the scenes. The website displays the first 11 photos; additional placements stay in reserve. An empty BTS selection shows 11 portfolio-derived placeholders. The default heading outlines “Behind”. Real BTS photos have not been supplied yet.
 
 Use transparent SVG logo artwork where available; supply its width and height (viewBox dimensions) to preserve its proportions. PNG images are also supported, but use transparency because the site renders these logos in black. Clearing an optional logo field falls back to the approved local artwork. The opening and homepage share one wordmark implementation. The approved horizontal artwork keeps its individual-letter media treatment; custom replacement artwork displays as a single image.
 
@@ -37,7 +39,7 @@ The website at [the client review address](https://ben-keller.github.io/newwork/
 You do not need a deployment token. Draft edits never trigger publication. If the site has not updated after an hour, contact Ben so he can inspect the publishing run. The current review address stays out of search indexes. newworkagency.com remains separate until the agreed domain launch.
 
 Oliver and Michael already have Studio invitations. Accept the existing invitation and use that same email to sign in.
-For developer-assisted local review, the CMS preview runs on port 4329 and the production package on 4330. The ordinary design review on 4327 deliberately uses fixed prototype content, so it does not reflect CMS edits.
+For developer-assisted local review, the single website runs on port 4327. Its default mode uses prototype content. Stop it and run `npm run dev:cms` in `new-work-site/` to read published CMS content at that same address. The packaged release can be tested separately on port 4330.
 
 Final project titles, copy and metadata still deserve editorial review. Rights approval remains the client's responsibility and is not an added CMS publication gate.
 
@@ -46,3 +48,9 @@ Final project titles, copy and metadata still deserve editorial review. Rights a
 Create a Project with the Photo, Video or Featured starter. Complete Project details, Work-page card, Project page, Credits, Approval & publishing and Search & sharing. Add supporting Assets with a Project reference and Project order. Choose **Approved for website** when the Project is ready, then Publish. Draft or incomplete Projects do not appear just because a page references them.
 
 Every image, video or file has one Asset record with its description, caption and credit. Brand files may remain unlinked. Use Vimeo or YouTube for full films; small Sanity video uploads are for preview clips. Use meaningful image descriptions or an intentional decorative setting. Project page sections control authored supporting sequences.
+
+## V3 placeholders — 20 October 2026
+
+The six numbered footer marks are temporary client-logo placeholders. Replace them individually under **Footer → Client logos** with an approved monochrome SVG or transparent PNG and the correct client name. Artwork is displayed in the current page color; optional links must use HTTPS. Clear the collection to hide it entirely.
+
+Photography uses neutral public titles and numbered Client labels until the final names are supplied. Edit the client label in **Projects → Project details** and individual photograph titles in **Assets**. Internal ownership and existing URLs are preserved. Personal photographer/director names were removed from public titles and credits for this revision.

@@ -1,72 +1,34 @@
-# Hosting
+# New Work release packaging
 
-The active publisher builds the Oliver revision from published Sanity content at https://ben-keller.github.io/newwork/. It uses `root-release.mjs --production --review`, validates `review-release-dist/` and preserves noindex and old V1/V2 bookmarks. Published CMS revisions are checked every 15 minutes, with builds only when needed.
+Both deployment profiles build the **same `new-work-site/` source**. They differ
+only in destination URL, base path and indexing. There is one Pages publisher.
 
-`deploy-site.yml` is the sole public publisher. `prepare-root-release.yml` produces future-domain artifacts only. No workflow migrates CMS content. See [DEPLOYMENT.md](../DEPLOYMENT.md) for verification and recovery, and [ROOT_RELEASE.md](ROOT_RELEASE.md) for a later domain cutover.
-
-## Legacy versioned package — recovery only
-
-The previous publisher used this package. The scripts remain available for recovery and historical comparison:
-
-- `/newwork/` redirects to `/newwork/v2/`, preserving query strings and fragments.
-- `/newwork/v1/` serves the frozen version previously live at `/newwork/`.
-- `/newwork/v2/` serves the active Astro app in `new-work-site/`.
-
-Each version owns its own HTML, scripts, styles, fonts, and local media. Nothing
-in V2 imports files from V1. Existing external CDN/embedded-film URLs in V1 are
-preserved. V2 also namespaces browser storage by its base path so preferences
-and gallery navigation state cannot collide with V1.
-
-## Build and preview
-
-From the repository root, after installing `new-work-site` dependencies:
+## Current GitHub Pages address
 
 ```sh
-node hosting/build.mjs
-node hosting/verify.mjs
-node hosting/serve.mjs
+node hosting/root-release.mjs --production --review
+node hosting/verify-root-release.mjs --production --review
+node hosting/serve.mjs --review
+# http://127.0.0.1:4330/newwork/
 ```
 
-Open `http://127.0.0.1:4326/newwork/` for this legacy versioned package.
-Project Studio now opens the Oliver revision at `http://127.0.0.1:4327/`;
-the preserved original stays at `http://127.0.0.1:4325/`.
-The generated `pages-dist/` directory is ignored by Git and uploaded as the
-single Pages artifact. It contains `v1/`, `v2/`, a root redirect, a 404 page, and
-small compatibility redirects from existing unversioned V1 page URLs.
+This builds `review-release-dist/` for https://ben-keller.github.io/newwork/ using
+published CMS content and noindex. Legacy V1/V2 bookmarks redirect into the same
+current website. There are no old website snapshots in the output.
 
-`hosting/config.json` controls the default version and whether V1 is included.
-`PAGES_SITE_URL` and `PAGES_BASE_PATH` can override the host and repository path.
-These overrides apply only to the legacy builder; the prepared publisher uses `root-release.json`.
+`.github/workflows/deploy-site.yml` validates and publishes this package.
+Scheduled CMS checks rebuild only when published content or source has changed.
+See [deployment details](../DEPLOYMENT.md).
 
-V2 deliberately uses `prototype` content mode to publish exactly the local
-version under review, including its 20 gallery tiles. It retains `noindex` and
-does not query Sanity. Switching to approved CMS content is a separate decision:
-change `v2ContentMode` to `production`, then run the Sanity audit and production
-content checks before publishing. This build does not mutate Sanity.
+## Future custom domain
 
-## Frozen V1
+`root-release.json` describes the destination at newworkagency.com and builds
+`release-dist/` from the same source. The manual root-candidate workflow only
+creates an artifact. Follow [the cutover plan](ROOT_RELEASE.md) when authorized.
 
-`versions/v1/manifest.json` identifies the successful live deployment, capture
-time, and SHA-256 of every original file. `snapshot/` is immutable archival
-input, not the deployment output. The build verifies every checksum, copies it
-to `pages-dist/v1/`, and rewrites its original base URL in that generated copy.
-Do not edit or regenerate the snapshot as part of normal development.
+## Local development
 
-The original GitHub Actions artifact was no longer available, so the snapshot
-was captured from the public site. Dynamically addressed public assets were
-copied from the exact deployed Git commit, independent of the V2 working tree.
-`capture-v1.mjs` documents that one-time operation; deployment never runs it or
-exports CMS records. It refuses to overwrite a completed archive.
-
-## Remove V1 later
-
-1. Set `includeV1` to `false` in `hosting/config.json`.
-2. Delete `versions/v1/` and, if no longer needed, `hosting/capture-v1.mjs`.
-3. Build and verify again, then publish the reviewed change.
-
-The clean build automatically removes V1 and its legacy URL redirects from
-the artifact. V2 source, media, links, and build commands require no changes.
-
-## Legacy publishing
-
-No current workflow uploads this package. Publishing it would require an explicit recovery decision and updating the single Pages publisher. Do not add a second publisher or overwrite the preserved app.
+Project Studio opens **New Work** at http://127.0.0.1:4327/ from `new-work-site/`.
+The old baseline, comparison page, versioned publisher and V1 snapshot were
+retired on 20 October 2026. Recover previous versions from Git history or the
+private consolidation archive; do not reintroduce competing launchers/publishers.

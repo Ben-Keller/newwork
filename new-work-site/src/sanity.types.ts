@@ -358,7 +358,7 @@ export type FooterLine = {
 export type NavigationItem = {
   _type: "navigationItem";
   label: string;
-  destination: "work" | "about" | "contact";
+  destination: "work" | "contact";
   visible?: boolean;
 };
 
@@ -465,6 +465,8 @@ export type EditorialImage = {
 
 export type BrandAsset = {
   _type: "brandAsset";
+  width?: number;
+  height?: number;
   format: "image" | "file";
   image?: EditorialImage;
   file?: EditorialFile;
@@ -685,6 +687,17 @@ export type FooterSettings = {
   _createdAt: string;
   _updatedAt: string;
   _rev: string;
+  clientLogos?: Array<{
+    name: string;
+    artwork?: BrandAsset;
+    url?: string;
+    _type: "clientLogo";
+    _key: string;
+  }>;
+  oliverRevision?: string;
+  calloutText: string;
+  tickerWords?: Array<string>;
+  featuredHeading?: string;
   strapline: Array<
     {
       _key: string;
@@ -709,6 +722,7 @@ export type ContactPage = {
   _createdAt: string;
   _updatedAt: string;
   _rev: string;
+  oliverRevision?: string;
   heading: string;
   introduction?: PortableText;
   email: string;
@@ -751,9 +765,24 @@ export type WorkPage = {
   _createdAt: string;
   _updatedAt: string;
   _rev: string;
+  oliverRevision?: string;
   introName: string;
   manifesto?: string;
   gallery: Array<
+    {
+      _key: string;
+    } & WorkPlacement
+  >;
+  galleryReserve?: Array<
+    {
+      _key: string;
+    } & WorkPlacement
+  >;
+  tickerWords?: Array<string>;
+  tickerCities?: Array<"sf" | "la" | "nyc">;
+  btsHeading?: string;
+  btsSubtitle?: string;
+  behindTheScenes?: Array<
     {
       _key: string;
     } & WorkPlacement
@@ -769,8 +798,11 @@ export type SiteSettings = {
   _createdAt: string;
   _updatedAt: string;
   _rev: string;
+  oliverRevision?: string;
   siteName: string;
   wordmark?: BrandAsset;
+  stackedWordmark?: BrandAsset;
+  headerDescriptor?: string;
   compactMark?: BrandAsset;
   navigation?: Array<
     {
@@ -931,7 +963,7 @@ export type AllSanitySchemaTypes =
 
 // Source: ../new-work-site/sanity/queries.ts
 // Variable: SANITY_RELEASE_AUDIT_QUERY
-// Query: {  "singletonCounts": {    "siteSettings": count(*[_id == "siteSettings"]),    "workPage": count(*[_id == "workPage"]),    "aboutPage": count(*[_id == "aboutPage"]),    "contactPage": count(*[_id == "contactPage"]),    "footerSettings": count(*[_id == "footerSettings"])  },  "aboutPage": *[_id == "aboutPage"][0]{  openingLabel,  openingHeadline,  openingNote,  windingHeadline,  orbitHeadline,  indexHeadline,  chaptersHeadline,  apertureHeadline,  fallbackLabel,  fallbackHeadline,  fallbackDescription,  closingLabel,  closingHeadline,  ctaLabel,  ctaDestination,  seo{  metaTitle,  metaDescription,  shareImage{  _type,  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},  crop,  hotspot,    needsReview,  prototypeOnly,  altNeedsReview,  needsApprovedEmbed,  needsApprovedMaster,  previewIsPlaceholder,  doNotPublishWithoutExplicitApproval},  shareImageAlt,  noIndex}},  "workPage": *[_id == "workPage"][0]{    notesEnabled,    gallery[]{      _key,      "assetId": asset->_id,      "assetType": asset->_type,      "assetKind": asset->kind,      "workId": asset->project->_id,      "workType": asset->project->_type    }  },  "workDocuments": *[_type == "work" && !(_id in path("drafts.**"))]{    _id,    title,    legacyId,    "slug": slug.current,    template,    "assets": *[_type == "mediaItem" && project._ref == ^._id]{      _id,      title,      "slug": slug.current,      kind,      "hasMedia": select(        kind == "image" => defined(image.asset),        kind == "video" => defined(poster.asset) && (defined(videoFile.asset) || defined(videoUrl)),        kind == "file" => defined(file.asset),        false      ),      "hasAccessibilityText": kind == "file" || decorative == true || length(coalesce(alt, "")) > 0    },    editorialStatus,    publishAt  },  "publicWorkIds": *[_type == "work" &&   !(_id in path("drafts.**")) &&  (editorialStatus == "approved" || (!defined(editorialStatus) && visible == true)) &&  (defined(editorialStatus) || needsReview != true) &&  doNotPublishWithoutExplicitApproval != true &&  (!defined(publishAt) || publishAt <= now()) &&  defined(cover.poster.asset) &&  (length(coalesce(cover.alt, "")) > 0 || cover.decorative == true) &&  count(*[_type == "mediaItem" && project._ref == ^._id]) > 0 &&  count(*[_type == "mediaItem" && project._ref == ^._id]) ==    count(*[_type == "mediaItem" && project._ref == ^._id &&   !(_id in path("drafts.**")) &&  defined(project) &&  defined(slug.current) && length(slug.current) > 0 &&  (kind == "file" || decorative == true || length(coalesce(alt, "")) > 0) &&  select(    kind == "image" => defined(image.asset),    kind == "video" => defined(poster.asset) && (defined(videoFile.asset) || defined(videoUrl)),    kind == "file" => defined(file.asset),    false  )]) &&  cover.needsReview != true &&  cover.previewIsPlaceholder != true &&  cover.prototypeOnly != true &&  cover.focalPoint.needsReview != true &&  cover.poster.needsReview != true &&  cover.poster.prototypeOnly != true &&  cover.poster.altNeedsReview != true &&  cover.poster.needsApprovedEmbed != true &&  cover.poster.needsApprovedMaster != true &&  cover.poster.previewIsPlaceholder != true &&  cover.poster.doNotPublishWithoutExplicitApproval != true &&  cover.previewVideo.needsReview != true &&  cover.previewVideo.prototypeOnly != true &&  cover.previewVideo.altNeedsReview != true &&  cover.previewVideo.needsApprovedEmbed != true &&  cover.previewVideo.needsApprovedMaster != true &&  cover.previewVideo.previewIsPlaceholder != true &&  cover.previewVideo.doNotPublishWithoutExplicitApproval != true &&  cover.previewPosterOverride.needsReview != true &&  cover.previewPosterOverride.prototypeOnly != true &&  cover.previewPosterOverride.altNeedsReview != true &&  cover.previewPosterOverride.needsApprovedEmbed != true &&  cover.previewPosterOverride.needsApprovedMaster != true &&  cover.previewPosterOverride.previewIsPlaceholder != true &&  cover.previewPosterOverride.doNotPublishWithoutExplicitApproval != true &&  cover.mobilePoster.needsReview != true &&  cover.mobilePoster.prototypeOnly != true &&  cover.mobilePoster.altNeedsReview != true &&  cover.mobilePoster.needsApprovedEmbed != true &&  cover.mobilePoster.needsApprovedMaster != true &&  cover.mobilePoster.previewIsPlaceholder != true &&  cover.mobilePoster.doNotPublishWithoutExplicitApproval != true &&  seo.shareImage.needsReview != true &&  seo.shareImage.prototypeOnly != true &&  seo.shareImage.altNeedsReview != true &&  seo.shareImage.needsApprovedEmbed != true &&  seo.shareImage.needsApprovedMaster != true &&  seo.shareImage.previewIsPlaceholder != true &&  seo.shareImage.doNotPublishWithoutExplicitApproval != true &&  count(contentBlocks[_type in ["heroImage", "heroVideo", "fullBleedImage", "containedImage", "imagePair", "imageGrid", "video", "shortLoop"]]) > 0 &&  count(contentBlocks[    needsReview == true ||    prototypeOnly == true ||    altNeedsReview == true ||    needsApprovedEmbed == true ||    needsApprovedMaster == true ||    previewIsPlaceholder == true ||    doNotPublishWithoutExplicitApproval == true ||    image.needsReview == true || image.prototypeOnly == true || image.altNeedsReview == true || image.needsApprovedEmbed == true || image.needsApprovedMaster == true || image.previewIsPlaceholder == true || image.doNotPublishWithoutExplicitApproval == true ||    poster.needsReview == true || poster.prototypeOnly == true || poster.altNeedsReview == true || poster.needsApprovedEmbed == true || poster.needsApprovedMaster == true || poster.previewIsPlaceholder == true || poster.doNotPublishWithoutExplicitApproval == true ||    source.needsReview == true || source.prototypeOnly == true || source.altNeedsReview == true || source.needsApprovedEmbed == true || source.needsApprovedMaster == true || source.previewIsPlaceholder == true || source.doNotPublishWithoutExplicitApproval == true ||    captionsFile.needsReview == true || captionsFile.prototypeOnly == true || captionsFile.needsApprovedMaster == true || captionsFile.doNotPublishWithoutExplicitApproval == true ||    left.needsReview == true || left.prototypeOnly == true || left.altNeedsReview == true || left.doNotPublishWithoutExplicitApproval == true || left.image.needsReview == true || left.image.prototypeOnly == true || left.image.altNeedsReview == true || left.image.needsApprovedEmbed == true || left.image.needsApprovedMaster == true || left.image.previewIsPlaceholder == true || left.image.doNotPublishWithoutExplicitApproval == true ||    right.needsReview == true || right.prototypeOnly == true || right.altNeedsReview == true || right.doNotPublishWithoutExplicitApproval == true || right.image.needsReview == true || right.image.prototypeOnly == true || right.image.altNeedsReview == true || right.image.needsApprovedEmbed == true || right.image.needsApprovedMaster == true || right.image.previewIsPlaceholder == true || right.image.doNotPublishWithoutExplicitApproval == true  ]) == 0 &&  count(contentBlocks[_type == "imageGrid" && count(images[    needsReview == true || prototypeOnly == true || altNeedsReview == true || doNotPublishWithoutExplicitApproval == true ||    image.needsReview == true || image.prototypeOnly == true || image.altNeedsReview == true || image.needsApprovedEmbed == true || image.needsApprovedMaster == true || image.previewIsPlaceholder == true || image.doNotPublishWithoutExplicitApproval == true  ]) > 0]) == 0 &&  count(contentBlocks[_type in ["heroImage", "fullBleedImage", "containedImage"] && (    (!defined(image.asset) && !defined(mediaItem->image.asset)) ||    (!defined(mediaItem) && length(coalesce(alt, "")) == 0 && decorative != true)  )]) == 0 &&  count(contentBlocks[_type == "imagePair" && (    (!defined(left.image.asset) && !defined(left.mediaItem->image.asset)) || (!defined(left.mediaItem) && length(coalesce(left.alt, "")) == 0 && left.decorative != true) ||    (!defined(right.image.asset) && !defined(right.mediaItem->image.asset)) || (!defined(right.mediaItem) && length(coalesce(right.alt, "")) == 0 && right.decorative != true)  )]) == 0 &&  count(contentBlocks[_type == "imageGrid" && count(images[    (!defined(image.asset) && !defined(mediaItem->image.asset)) ||    (!defined(mediaItem) && length(coalesce(alt, "")) == 0 && decorative != true)  ]) > 0]) == 0 &&  count(contentBlocks[_type in ["heroVideo", "video"] && !defined(poster.asset) && !defined(mediaItem->poster.asset)]) == 0 &&  count(contentBlocks[_type == "shortLoop" && !defined(poster.asset)]) == 0 &&  count(contentBlocks[_type in ["heroVideo", "video"] && !defined(mediaItem) &&    !defined(source.asset) && !defined(remoteSource) && !defined(vimeoId) && !defined(youtubeId) && !defined(externalUrl)  ]) == 0 &&  count(contentBlocks[_type == "shortLoop" && length(coalesce(alt, "")) == 0 && decorative != true]) == 0]._id,  "legacyProjectCount": count(*[_type == "project" && !(_id in path("drafts.**"))]),  "notes": *[_type == "note" && !(_id in path("drafts.**"))]{    _id,    title,    "slug": slug.current,    date,    visible,    publishAt  },  "publicNoteIds": *[_type == "note" &&   !(_id in path("drafts.**")) &&  visible == true &&  needsReview != true &&  doNotPublishWithoutExplicitApproval != true &&  (!defined(publishAt) || publishAt <= now()) &&  defined(title) && length(title) > 0 &&  defined(slug.current) && length(slug.current) > 0 &&  defined(summary) && length(summary) > 0 && length(summary) <= 220 &&  dateTime(date + "T00:00:00Z") <= dateTime(now()) &&  media.needsReview != true &&  media.prototypeOnly != true &&  media.altNeedsReview != true &&  media.needsApprovedEmbed != true &&  media.needsApprovedMaster != true &&  media.previewIsPlaceholder != true &&  media.doNotPublishWithoutExplicitApproval != true &&  media.image.needsReview != true && media.image.prototypeOnly != true && media.image.altNeedsReview != true && media.image.needsApprovedEmbed != true && media.image.needsApprovedMaster != true && media.image.previewIsPlaceholder != true && media.image.doNotPublishWithoutExplicitApproval != true &&  media.file.needsReview != true && media.file.prototypeOnly != true && media.file.altNeedsReview != true && media.file.needsApprovedEmbed != true && media.file.needsApprovedMaster != true && media.file.previewIsPlaceholder != true && media.file.doNotPublishWithoutExplicitApproval != true &&  media.poster.needsReview != true && media.poster.prototypeOnly != true && media.poster.altNeedsReview != true && media.poster.needsApprovedEmbed != true && media.poster.needsApprovedMaster != true && media.poster.previewIsPlaceholder != true && media.poster.doNotPublishWithoutExplicitApproval != true &&  media.captionsFile.needsReview != true && media.captionsFile.prototypeOnly != true && media.captionsFile.needsApprovedMaster != true && media.captionsFile.doNotPublishWithoutExplicitApproval != true &&  seo.shareImage.needsReview != true && seo.shareImage.prototypeOnly != true && seo.shareImage.altNeedsReview != true && seo.shareImage.needsApprovedEmbed != true && seo.shareImage.needsApprovedMaster != true && seo.shareImage.previewIsPlaceholder != true && seo.shareImage.doNotPublishWithoutExplicitApproval != true &&  ((media.kind == "image" && defined(media.image.asset) && (length(coalesce(media.alt, "")) > 0 || media.decorative == true)) ||   (media.kind == "video" && defined(media.poster.asset) && (defined(media.file.asset) || defined(media.remoteUrl))))]._id}
+// Query: {  "singletonCounts": {    "siteSettings": count(*[_id == "siteSettings"]),    "workPage": count(*[_id == "workPage"]),    "aboutPage": count(*[_id == "aboutPage"]),    "contactPage": count(*[_id == "contactPage"]),    "footerSettings": count(*[_id == "footerSettings"])  },  "aboutPage": *[_id == "aboutPage"][0]{  openingLabel,  openingHeadline,  openingNote,  windingHeadline,  orbitHeadline,  indexHeadline,  chaptersHeadline,  apertureHeadline,  fallbackLabel,  fallbackHeadline,  fallbackDescription,  closingLabel,  closingHeadline,  ctaLabel,  ctaDestination,  seo{  metaTitle,  metaDescription,  shareImage{  _type,  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},  crop,  hotspot,    needsReview,  prototypeOnly,  altNeedsReview,  needsApprovedEmbed,  needsApprovedMaster,  previewIsPlaceholder,  doNotPublishWithoutExplicitApproval},  shareImageAlt,  noIndex}},  "workPage": *[_id == "workPage"][0]{    notesEnabled,    gallery[]{      _key,      "assetId": asset->_id,      "assetType": asset->_type,      "assetKind": asset->kind,      "assetSlug": asset->slug.current,      "workId": asset->project->_id,      "workSlug": asset->project->slug.current,      "workType": asset->project->_type    }  },  "workDocuments": *[_type == "work" && !(_id in path("drafts.**"))]{    _id,    title,    legacyId,    "slug": slug.current,    template,    "assets": *[_type == "mediaItem" && project._ref == ^._id]{      _id,      title,      "slug": slug.current,      kind,      "hasMedia": select(        kind == "image" => defined(image.asset),        kind == "video" => defined(poster.asset) && (defined(videoFile.asset) || defined(videoUrl)),        kind == "file" => defined(file.asset),        false      ),      "hasAccessibilityText": kind == "file" || decorative == true || length(coalesce(alt, "")) > 0    },    editorialStatus,    publishAt  },  "publicWorkIds": *[_type == "work" &&   !(_id in path("drafts.**")) &&  (editorialStatus == "approved" || (!defined(editorialStatus) && visible == true)) &&  (defined(editorialStatus) || needsReview != true) &&  doNotPublishWithoutExplicitApproval != true &&  (!defined(publishAt) || publishAt <= now()) &&  defined(cover.poster.asset) &&  (length(coalesce(cover.alt, "")) > 0 || cover.decorative == true) &&  count(*[_type == "mediaItem" && project._ref == ^._id]) > 0 &&  count(*[_type == "mediaItem" && project._ref == ^._id]) ==    count(*[_type == "mediaItem" && project._ref == ^._id &&   !(_id in path("drafts.**")) &&  defined(project) &&  defined(slug.current) && length(slug.current) > 0 &&  (kind == "file" || decorative == true || length(coalesce(alt, "")) > 0) &&  select(    kind == "image" => defined(image.asset),    kind == "video" => defined(poster.asset) && (defined(videoFile.asset) || defined(videoUrl)),    kind == "file" => defined(file.asset),    false  )]) &&  cover.needsReview != true &&  cover.previewIsPlaceholder != true &&  cover.prototypeOnly != true &&  cover.focalPoint.needsReview != true &&  cover.poster.needsReview != true &&  cover.poster.prototypeOnly != true &&  cover.poster.altNeedsReview != true &&  cover.poster.needsApprovedEmbed != true &&  cover.poster.needsApprovedMaster != true &&  cover.poster.previewIsPlaceholder != true &&  cover.poster.doNotPublishWithoutExplicitApproval != true &&  cover.previewVideo.needsReview != true &&  cover.previewVideo.prototypeOnly != true &&  cover.previewVideo.altNeedsReview != true &&  cover.previewVideo.needsApprovedEmbed != true &&  cover.previewVideo.needsApprovedMaster != true &&  cover.previewVideo.previewIsPlaceholder != true &&  cover.previewVideo.doNotPublishWithoutExplicitApproval != true &&  cover.previewPosterOverride.needsReview != true &&  cover.previewPosterOverride.prototypeOnly != true &&  cover.previewPosterOverride.altNeedsReview != true &&  cover.previewPosterOverride.needsApprovedEmbed != true &&  cover.previewPosterOverride.needsApprovedMaster != true &&  cover.previewPosterOverride.previewIsPlaceholder != true &&  cover.previewPosterOverride.doNotPublishWithoutExplicitApproval != true &&  cover.mobilePoster.needsReview != true &&  cover.mobilePoster.prototypeOnly != true &&  cover.mobilePoster.altNeedsReview != true &&  cover.mobilePoster.needsApprovedEmbed != true &&  cover.mobilePoster.needsApprovedMaster != true &&  cover.mobilePoster.previewIsPlaceholder != true &&  cover.mobilePoster.doNotPublishWithoutExplicitApproval != true &&  seo.shareImage.needsReview != true &&  seo.shareImage.prototypeOnly != true &&  seo.shareImage.altNeedsReview != true &&  seo.shareImage.needsApprovedEmbed != true &&  seo.shareImage.needsApprovedMaster != true &&  seo.shareImage.previewIsPlaceholder != true &&  seo.shareImage.doNotPublishWithoutExplicitApproval != true &&  count(contentBlocks[_type in ["heroImage", "heroVideo", "fullBleedImage", "containedImage", "imagePair", "imageGrid", "video", "shortLoop"]]) > 0 &&  count(contentBlocks[    needsReview == true ||    prototypeOnly == true ||    altNeedsReview == true ||    needsApprovedEmbed == true ||    needsApprovedMaster == true ||    previewIsPlaceholder == true ||    doNotPublishWithoutExplicitApproval == true ||    image.needsReview == true || image.prototypeOnly == true || image.altNeedsReview == true || image.needsApprovedEmbed == true || image.needsApprovedMaster == true || image.previewIsPlaceholder == true || image.doNotPublishWithoutExplicitApproval == true ||    poster.needsReview == true || poster.prototypeOnly == true || poster.altNeedsReview == true || poster.needsApprovedEmbed == true || poster.needsApprovedMaster == true || poster.previewIsPlaceholder == true || poster.doNotPublishWithoutExplicitApproval == true ||    source.needsReview == true || source.prototypeOnly == true || source.altNeedsReview == true || source.needsApprovedEmbed == true || source.needsApprovedMaster == true || source.previewIsPlaceholder == true || source.doNotPublishWithoutExplicitApproval == true ||    captionsFile.needsReview == true || captionsFile.prototypeOnly == true || captionsFile.needsApprovedMaster == true || captionsFile.doNotPublishWithoutExplicitApproval == true ||    left.needsReview == true || left.prototypeOnly == true || left.altNeedsReview == true || left.doNotPublishWithoutExplicitApproval == true || left.image.needsReview == true || left.image.prototypeOnly == true || left.image.altNeedsReview == true || left.image.needsApprovedEmbed == true || left.image.needsApprovedMaster == true || left.image.previewIsPlaceholder == true || left.image.doNotPublishWithoutExplicitApproval == true ||    right.needsReview == true || right.prototypeOnly == true || right.altNeedsReview == true || right.doNotPublishWithoutExplicitApproval == true || right.image.needsReview == true || right.image.prototypeOnly == true || right.image.altNeedsReview == true || right.image.needsApprovedEmbed == true || right.image.needsApprovedMaster == true || right.image.previewIsPlaceholder == true || right.image.doNotPublishWithoutExplicitApproval == true  ]) == 0 &&  count(contentBlocks[_type == "imageGrid" && count(images[    needsReview == true || prototypeOnly == true || altNeedsReview == true || doNotPublishWithoutExplicitApproval == true ||    image.needsReview == true || image.prototypeOnly == true || image.altNeedsReview == true || image.needsApprovedEmbed == true || image.needsApprovedMaster == true || image.previewIsPlaceholder == true || image.doNotPublishWithoutExplicitApproval == true  ]) > 0]) == 0 &&  count(contentBlocks[_type in ["heroImage", "fullBleedImage", "containedImage"] && (    (!defined(image.asset) && !defined(mediaItem->image.asset)) ||    (!defined(mediaItem) && length(coalesce(alt, "")) == 0 && decorative != true)  )]) == 0 &&  count(contentBlocks[_type == "imagePair" && (    (!defined(left.image.asset) && !defined(left.mediaItem->image.asset)) || (!defined(left.mediaItem) && length(coalesce(left.alt, "")) == 0 && left.decorative != true) ||    (!defined(right.image.asset) && !defined(right.mediaItem->image.asset)) || (!defined(right.mediaItem) && length(coalesce(right.alt, "")) == 0 && right.decorative != true)  )]) == 0 &&  count(contentBlocks[_type == "imageGrid" && count(images[    (!defined(image.asset) && !defined(mediaItem->image.asset)) ||    (!defined(mediaItem) && length(coalesce(alt, "")) == 0 && decorative != true)  ]) > 0]) == 0 &&  count(contentBlocks[_type in ["heroVideo", "video"] && !defined(poster.asset) && !defined(mediaItem->poster.asset)]) == 0 &&  count(contentBlocks[_type == "shortLoop" && !defined(poster.asset)]) == 0 &&  count(contentBlocks[_type in ["heroVideo", "video"] && !defined(mediaItem) &&    !defined(source.asset) && !defined(remoteSource) && !defined(vimeoId) && !defined(youtubeId) && !defined(externalUrl)  ]) == 0 &&  count(contentBlocks[_type == "shortLoop" && length(coalesce(alt, "")) == 0 && decorative != true]) == 0]._id,  "legacyProjectCount": count(*[_type == "project" && !(_id in path("drafts.**"))]),  "notes": *[_type == "note" && !(_id in path("drafts.**"))]{    _id,    title,    "slug": slug.current,    date,    visible,    publishAt  },  "publicNoteIds": *[_type == "note" &&   !(_id in path("drafts.**")) &&  visible == true &&  needsReview != true &&  doNotPublishWithoutExplicitApproval != true &&  (!defined(publishAt) || publishAt <= now()) &&  defined(title) && length(title) > 0 &&  defined(slug.current) && length(slug.current) > 0 &&  defined(summary) && length(summary) > 0 && length(summary) <= 220 &&  dateTime(date + "T00:00:00Z") <= dateTime(now()) &&  media.needsReview != true &&  media.prototypeOnly != true &&  media.altNeedsReview != true &&  media.needsApprovedEmbed != true &&  media.needsApprovedMaster != true &&  media.previewIsPlaceholder != true &&  media.doNotPublishWithoutExplicitApproval != true &&  media.image.needsReview != true && media.image.prototypeOnly != true && media.image.altNeedsReview != true && media.image.needsApprovedEmbed != true && media.image.needsApprovedMaster != true && media.image.previewIsPlaceholder != true && media.image.doNotPublishWithoutExplicitApproval != true &&  media.file.needsReview != true && media.file.prototypeOnly != true && media.file.altNeedsReview != true && media.file.needsApprovedEmbed != true && media.file.needsApprovedMaster != true && media.file.previewIsPlaceholder != true && media.file.doNotPublishWithoutExplicitApproval != true &&  media.poster.needsReview != true && media.poster.prototypeOnly != true && media.poster.altNeedsReview != true && media.poster.needsApprovedEmbed != true && media.poster.needsApprovedMaster != true && media.poster.previewIsPlaceholder != true && media.poster.doNotPublishWithoutExplicitApproval != true &&  media.captionsFile.needsReview != true && media.captionsFile.prototypeOnly != true && media.captionsFile.needsApprovedMaster != true && media.captionsFile.doNotPublishWithoutExplicitApproval != true &&  seo.shareImage.needsReview != true && seo.shareImage.prototypeOnly != true && seo.shareImage.altNeedsReview != true && seo.shareImage.needsApprovedEmbed != true && seo.shareImage.needsApprovedMaster != true && seo.shareImage.previewIsPlaceholder != true && seo.shareImage.doNotPublishWithoutExplicitApproval != true &&  ((media.kind == "image" && defined(media.image.asset) && (length(coalesce(media.alt, "")) > 0 || media.decorative == true)) ||   (media.kind == "video" && defined(media.poster.asset) && (defined(media.file.asset) || defined(media.remoteUrl))))]._id}
 export type SANITY_RELEASE_AUDIT_QUERY_RESULT = {
   singletonCounts: {
     siteSettings: number;
@@ -1056,7 +1088,9 @@ export type SANITY_RELEASE_AUDIT_QUERY_RESULT = {
           assetId: string;
           assetType: "mediaItem";
           assetKind: "file" | "image" | "video";
+          assetSlug: string;
           workId: string | null;
+          workSlug: string | null;
           workType: "work" | null;
         }>;
       }
@@ -1097,17 +1131,19 @@ export type SANITY_RELEASE_AUDIT_QUERY_RESULT = {
 
 // Source: ../new-work-site/sanity/queries.ts
 // Variable: SITE_SETTINGS_QUERY
-// Query: *[_id == "siteSettings" &&  length(coalesce(defaultSeo.metaTitle, "")) > 0 &&  length(coalesce(defaultSeo.metaDescription, "")) > 0 &&  defined(defaultSeo.shareImage.asset) &&  length(coalesce(defaultSeo.shareImageAlt, "")) > 0 &&  wordmark.image.needsReview != true && wordmark.image.prototypeOnly != true && wordmark.image.altNeedsReview != true && wordmark.image.needsApprovedEmbed != true && wordmark.image.needsApprovedMaster != true && wordmark.image.previewIsPlaceholder != true && wordmark.image.doNotPublishWithoutExplicitApproval != true &&  wordmark.file.needsReview != true && wordmark.file.prototypeOnly != true && wordmark.file.needsApprovedEmbed != true && wordmark.file.needsApprovedMaster != true && wordmark.file.previewIsPlaceholder != true && wordmark.file.doNotPublishWithoutExplicitApproval != true &&  compactMark.image.needsReview != true && compactMark.image.prototypeOnly != true && compactMark.image.altNeedsReview != true && compactMark.image.needsApprovedEmbed != true && compactMark.image.needsApprovedMaster != true && compactMark.image.previewIsPlaceholder != true && compactMark.image.doNotPublishWithoutExplicitApproval != true &&  compactMark.file.needsReview != true && compactMark.file.prototypeOnly != true && compactMark.file.needsApprovedEmbed != true && compactMark.file.needsApprovedMaster != true && compactMark.file.previewIsPlaceholder != true && compactMark.file.doNotPublishWithoutExplicitApproval != true &&  defaultSeo.shareImage.needsReview != true && defaultSeo.shareImage.prototypeOnly != true && defaultSeo.shareImage.altNeedsReview != true && defaultSeo.shareImage.needsApprovedEmbed != true && defaultSeo.shareImage.needsApprovedMaster != true && defaultSeo.shareImage.previewIsPlaceholder != true && defaultSeo.shareImage.doNotPublishWithoutExplicitApproval != true][0]{  siteName,  navigation[]{_key, label, destination, visible},  wordmark{format, image{  _type,  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},  crop,  hotspot,    needsReview,  prototypeOnly,  altNeedsReview,  needsApprovedEmbed,  needsApprovedMaster,  previewIsPlaceholder,  doNotPublishWithoutExplicitApproval}, file{  _type,  asset->{_id, url, mimeType, size, originalFilename},    needsReview,  prototypeOnly,  altNeedsReview,  needsApprovedEmbed,  needsApprovedMaster,  previewIsPlaceholder,  doNotPublishWithoutExplicitApproval}},  compactMark{format, image{  _type,  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},  crop,  hotspot,    needsReview,  prototypeOnly,  altNeedsReview,  needsApprovedEmbed,  needsApprovedMaster,  previewIsPlaceholder,  doNotPublishWithoutExplicitApproval}, file{  _type,  asset->{_id, url, mimeType, size, originalFilename},    needsReview,  prototypeOnly,  altNeedsReview,  needsApprovedEmbed,  needsApprovedMaster,  previewIsPlaceholder,  doNotPublishWithoutExplicitApproval}},  defaultSeo{  metaTitle,  metaDescription,  shareImage{  _type,  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},  crop,  hotspot,    needsReview,  prototypeOnly,  altNeedsReview,  needsApprovedEmbed,  needsApprovedMaster,  previewIsPlaceholder,  doNotPublishWithoutExplicitApproval},  shareImageAlt,  noIndex},  "workPage": *[_id == "workPage"][0]{  introName,  manifesto,  gallery[]{_key, "workId": asset->project->_id, "assetId": asset->_id, cardSize, treatment},  reel{  enabled,  poster{  _type,  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},  crop,  hotspot,    needsReview,  prototypeOnly,  altNeedsReview,  needsApprovedEmbed,  needsApprovedMaster,  previewIsPlaceholder,  doNotPublishWithoutExplicitApproval},  desktopSource{  _type,  asset->{_id, url, mimeType, size, originalFilename},    needsReview,  prototypeOnly,  altNeedsReview,  needsApprovedEmbed,  needsApprovedMaster,  previewIsPlaceholder,  doNotPublishWithoutExplicitApproval},  desktopSourceUrl,  mobileSource{  _type,  asset->{_id, url, mimeType, size, originalFilename},    needsReview,  prototypeOnly,  altNeedsReview,  needsApprovedEmbed,  needsApprovedMaster,  previewIsPlaceholder,  doNotPublishWithoutExplicitApproval},  mobileSourceUrl,  caption,  credits[]{_key, label, value, richValue, url},  ctaLabel,  ctaUrl,  startMuted,  aspectRatio},  notesEnabled,  seo{  metaTitle,  metaDescription,  shareImage{  _type,  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},  crop,  hotspot,    needsReview,  prototypeOnly,  altNeedsReview,  needsApprovedEmbed,  needsApprovedMaster,  previewIsPlaceholder,  doNotPublishWithoutExplicitApproval},  shareImageAlt,  noIndex}},  "aboutPage": *[_id == "aboutPage"][0]{  openingLabel,  openingHeadline,  openingNote,  windingHeadline,  orbitHeadline,  indexHeadline,  chaptersHeadline,  apertureHeadline,  fallbackLabel,  fallbackHeadline,  fallbackDescription,  closingLabel,  closingHeadline,  ctaLabel,  ctaDestination,  seo{  metaTitle,  metaDescription,  shareImage{  _type,  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},  crop,  hotspot,    needsReview,  prototypeOnly,  altNeedsReview,  needsApprovedEmbed,  needsApprovedMaster,  previewIsPlaceholder,  doNotPublishWithoutExplicitApproval},  shareImageAlt,  noIndex}},  "contactPage": *[_id == "contactPage"][0]{  heading,  introduction,  email,  location,  socialLinks[]{_key, label, url},  seo{  metaTitle,  metaDescription,  shareImage{  _type,  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},  crop,  hotspot,    needsReview,  prototypeOnly,  altNeedsReview,  needsApprovedEmbed,  needsApprovedMaster,  previewIsPlaceholder,  doNotPublishWithoutExplicitApproval},  shareImageAlt,  noIndex}},  "footer": *[_id == "footerSettings"][0]{  strapline[]{_key, text, emphasis},  peopleHeading,  exploreHeading,  connectHeading,  exploreLinks[]{_key, label, destination, url},  contactLabel,  copyrightLine,  showYear}}
+// Query: *[_id == "siteSettings" &&  length(coalesce(defaultSeo.metaTitle, "")) > 0 &&  length(coalesce(defaultSeo.metaDescription, "")) > 0 &&  defined(defaultSeo.shareImage.asset) &&  length(coalesce(defaultSeo.shareImageAlt, "")) > 0 &&  wordmark.image.needsReview != true && wordmark.image.prototypeOnly != true && wordmark.image.altNeedsReview != true && wordmark.image.needsApprovedEmbed != true && wordmark.image.needsApprovedMaster != true && wordmark.image.previewIsPlaceholder != true && wordmark.image.doNotPublishWithoutExplicitApproval != true &&  wordmark.file.needsReview != true && wordmark.file.prototypeOnly != true && wordmark.file.needsApprovedEmbed != true && wordmark.file.needsApprovedMaster != true && wordmark.file.previewIsPlaceholder != true && wordmark.file.doNotPublishWithoutExplicitApproval != true &&  compactMark.image.needsReview != true && compactMark.image.prototypeOnly != true && compactMark.image.altNeedsReview != true && compactMark.image.needsApprovedEmbed != true && compactMark.image.needsApprovedMaster != true && compactMark.image.previewIsPlaceholder != true && compactMark.image.doNotPublishWithoutExplicitApproval != true &&  compactMark.file.needsReview != true && compactMark.file.prototypeOnly != true && compactMark.file.needsApprovedEmbed != true && compactMark.file.needsApprovedMaster != true && compactMark.file.previewIsPlaceholder != true && compactMark.file.doNotPublishWithoutExplicitApproval != true &&  defaultSeo.shareImage.needsReview != true && defaultSeo.shareImage.prototypeOnly != true && defaultSeo.shareImage.altNeedsReview != true && defaultSeo.shareImage.needsApprovedEmbed != true && defaultSeo.shareImage.needsApprovedMaster != true && defaultSeo.shareImage.previewIsPlaceholder != true && defaultSeo.shareImage.doNotPublishWithoutExplicitApproval != true][0]{  siteName,  navigation[]{_key, label, destination, visible},  wordmark{format, width, height, image{  _type,  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},  crop,  hotspot,    needsReview,  prototypeOnly,  altNeedsReview,  needsApprovedEmbed,  needsApprovedMaster,  previewIsPlaceholder,  doNotPublishWithoutExplicitApproval}, file{  _type,  asset->{_id, url, mimeType, size, originalFilename},    needsReview,  prototypeOnly,  altNeedsReview,  needsApprovedEmbed,  needsApprovedMaster,  previewIsPlaceholder,  doNotPublishWithoutExplicitApproval}},  compactMark{format, width, height, image{  _type,  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},  crop,  hotspot,    needsReview,  prototypeOnly,  altNeedsReview,  needsApprovedEmbed,  needsApprovedMaster,  previewIsPlaceholder,  doNotPublishWithoutExplicitApproval}, file{  _type,  asset->{_id, url, mimeType, size, originalFilename},    needsReview,  prototypeOnly,  altNeedsReview,  needsApprovedEmbed,  needsApprovedMaster,  previewIsPlaceholder,  doNotPublishWithoutExplicitApproval}},  stackedWordmark{format, width, height, image{  _type,  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},  crop,  hotspot,    needsReview,  prototypeOnly,  altNeedsReview,  needsApprovedEmbed,  needsApprovedMaster,  previewIsPlaceholder,  doNotPublishWithoutExplicitApproval}, file{  _type,  asset->{_id, url, mimeType, size, originalFilename},    needsReview,  prototypeOnly,  altNeedsReview,  needsApprovedEmbed,  needsApprovedMaster,  previewIsPlaceholder,  doNotPublishWithoutExplicitApproval}},  headerDescriptor,  defaultSeo{  metaTitle,  metaDescription,  shareImage{  _type,  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},  crop,  hotspot,    needsReview,  prototypeOnly,  altNeedsReview,  needsApprovedEmbed,  needsApprovedMaster,  previewIsPlaceholder,  doNotPublishWithoutExplicitApproval},  shareImageAlt,  noIndex},  "workPage": *[_id == "workPage"][0]{  introName,  tickerWords,  tickerCities,  btsHeading,  btsSubtitle,  behindTheScenes[]{_key, "workId": asset->project->_id, "assetId": asset->_id, cardSize, treatment},  manifesto,  gallery[]{_key, "workId": asset->project->_id, "assetId": asset->_id, cardSize, treatment},  reel{  enabled,  poster{  _type,  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},  crop,  hotspot,    needsReview,  prototypeOnly,  altNeedsReview,  needsApprovedEmbed,  needsApprovedMaster,  previewIsPlaceholder,  doNotPublishWithoutExplicitApproval},  desktopSource{  _type,  asset->{_id, url, mimeType, size, originalFilename},    needsReview,  prototypeOnly,  altNeedsReview,  needsApprovedEmbed,  needsApprovedMaster,  previewIsPlaceholder,  doNotPublishWithoutExplicitApproval},  desktopSourceUrl,  mobileSource{  _type,  asset->{_id, url, mimeType, size, originalFilename},    needsReview,  prototypeOnly,  altNeedsReview,  needsApprovedEmbed,  needsApprovedMaster,  previewIsPlaceholder,  doNotPublishWithoutExplicitApproval},  mobileSourceUrl,  caption,  credits[]{_key, label, value, richValue, url},  ctaLabel,  ctaUrl,  startMuted,  aspectRatio},  notesEnabled,  seo{  metaTitle,  metaDescription,  shareImage{  _type,  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},  crop,  hotspot,    needsReview,  prototypeOnly,  altNeedsReview,  needsApprovedEmbed,  needsApprovedMaster,  previewIsPlaceholder,  doNotPublishWithoutExplicitApproval},  shareImageAlt,  noIndex}},  "aboutPage": *[_id == "aboutPage"][0]{  openingLabel,  openingHeadline,  openingNote,  windingHeadline,  orbitHeadline,  indexHeadline,  chaptersHeadline,  apertureHeadline,  fallbackLabel,  fallbackHeadline,  fallbackDescription,  closingLabel,  closingHeadline,  ctaLabel,  ctaDestination,  seo{  metaTitle,  metaDescription,  shareImage{  _type,  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},  crop,  hotspot,    needsReview,  prototypeOnly,  altNeedsReview,  needsApprovedEmbed,  needsApprovedMaster,  previewIsPlaceholder,  doNotPublishWithoutExplicitApproval},  shareImageAlt,  noIndex}},  "contactPage": *[_id == "contactPage"][0]{  heading,  introduction,  email,  location,  socialLinks[]{_key, label, url},  seo{  metaTitle,  metaDescription,  shareImage{  _type,  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},  crop,  hotspot,    needsReview,  prototypeOnly,  altNeedsReview,  needsApprovedEmbed,  needsApprovedMaster,  previewIsPlaceholder,  doNotPublishWithoutExplicitApproval},  shareImageAlt,  noIndex}},  "footer": *[_id == "footerSettings"][0]{  clientLogos[]{_key, name, url, artwork{format, width, height, image{  _type,  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},  crop,  hotspot,    needsReview,  prototypeOnly,  altNeedsReview,  needsApprovedEmbed,  needsApprovedMaster,  previewIsPlaceholder,  doNotPublishWithoutExplicitApproval}, file{  _type,  asset->{_id, url, mimeType, size, originalFilename},    needsReview,  prototypeOnly,  altNeedsReview,  needsApprovedEmbed,  needsApprovedMaster,  previewIsPlaceholder,  doNotPublishWithoutExplicitApproval}}},  calloutText,  tickerWords,  featuredHeading,  strapline[]{_key, text, emphasis},  peopleHeading,  exploreHeading,  connectHeading,  exploreLinks[]{_key, label, destination, url},  contactLabel,  copyrightLine,  showYear}}
 export type SITE_SETTINGS_QUERY_RESULT = {
   siteName: string;
   navigation: Array<{
     _key: string;
     label: string;
-    destination: "about" | "contact" | "work";
+    destination: "contact" | "work";
     visible: boolean | null;
   }> | null;
   wordmark: {
     format: "file" | "image";
+    width: number | null;
+    height: number | null;
     image: {
       _type: "editorialImage";
       asset: {
@@ -1149,6 +1185,8 @@ export type SITE_SETTINGS_QUERY_RESULT = {
   } | null;
   compactMark: {
     format: "file" | "image";
+    width: number | null;
+    height: number | null;
     image: {
       _type: "editorialImage";
       asset: {
@@ -1188,6 +1226,50 @@ export type SITE_SETTINGS_QUERY_RESULT = {
       doNotPublishWithoutExplicitApproval: boolean | null;
     } | null;
   } | null;
+  stackedWordmark: {
+    format: "file" | "image";
+    width: number | null;
+    height: number | null;
+    image: {
+      _type: "editorialImage";
+      asset: {
+        _id: string;
+        url: string;
+        mimeType: string;
+        width: number | null;
+        height: number | null;
+        aspectRatio: number | null;
+        lqip: string | null;
+      } | null;
+      crop: SanityImageCrop | null;
+      hotspot: SanityImageHotspot | null;
+      needsReview: boolean | null;
+      prototypeOnly: boolean | null;
+      altNeedsReview: boolean | null;
+      needsApprovedEmbed: boolean | null;
+      needsApprovedMaster: boolean | null;
+      previewIsPlaceholder: boolean | null;
+      doNotPublishWithoutExplicitApproval: boolean | null;
+    } | null;
+    file: {
+      _type: "editorialFile";
+      asset: {
+        _id: string;
+        url: string;
+        mimeType: string;
+        size: number;
+        originalFilename: string | null;
+      } | null;
+      needsReview: boolean | null;
+      prototypeOnly: boolean | null;
+      altNeedsReview: boolean | null;
+      needsApprovedEmbed: boolean | null;
+      needsApprovedMaster: boolean | null;
+      previewIsPlaceholder: boolean | null;
+      doNotPublishWithoutExplicitApproval: boolean | null;
+    } | null;
+  } | null;
+  headerDescriptor: string | null;
   defaultSeo: {
     metaTitle: string | null;
     metaDescription: string | null;
@@ -1217,7 +1299,83 @@ export type SITE_SETTINGS_QUERY_RESULT = {
   };
   workPage:
     | {
+        introName: null;
+        tickerWords: null;
+        tickerCities: null;
+        btsHeading: null;
+        btsSubtitle: null;
+        behindTheScenes: null;
+        manifesto: null;
+        gallery: null;
+        reel: null;
+        notesEnabled: null;
+        seo: null;
+      }
+    | {
+        introName: null;
+        tickerWords: Array<string> | null;
+        tickerCities: null;
+        btsHeading: null;
+        btsSubtitle: null;
+        behindTheScenes: null;
+        manifesto: null;
+        gallery: null;
+        reel: null;
+        notesEnabled: null;
+        seo: null;
+      }
+    | {
+        introName: null;
+        tickerWords: null;
+        tickerCities: null;
+        btsHeading: null;
+        btsSubtitle: null;
+        behindTheScenes: null;
+        manifesto: null;
+        gallery: null;
+        reel: null;
+        notesEnabled: null;
+        seo: {
+          metaTitle: string | null;
+          metaDescription: string | null;
+          shareImage: {
+            _type: "editorialImage";
+            asset: {
+              _id: string;
+              url: string;
+              mimeType: string;
+              width: number | null;
+              height: number | null;
+              aspectRatio: number | null;
+              lqip: string | null;
+            } | null;
+            crop: SanityImageCrop | null;
+            hotspot: SanityImageHotspot | null;
+            needsReview: boolean | null;
+            prototypeOnly: boolean | null;
+            altNeedsReview: boolean | null;
+            needsApprovedEmbed: boolean | null;
+            needsApprovedMaster: boolean | null;
+            previewIsPlaceholder: boolean | null;
+            doNotPublishWithoutExplicitApproval: boolean | null;
+          } | null;
+          shareImageAlt: string | null;
+          noIndex: boolean | null;
+        } | null;
+      }
+    | {
         introName: string;
+        tickerWords: Array<string> | null;
+        tickerCities: Array<"la" | "nyc" | "sf"> | null;
+        btsHeading: string | null;
+        btsSubtitle: string | null;
+        behindTheScenes: Array<{
+          _key: string;
+          workId: string | null;
+          assetId: string;
+          cardSize: "large" | "standard" | "tall" | "wide";
+          treatment: "framed" | "masked" | "poster" | "standard";
+        }> | null;
         manifesto: string | null;
         gallery: Array<{
           _key: string;
@@ -1299,48 +1457,6 @@ export type SITE_SETTINGS_QUERY_RESULT = {
           aspectRatio: string;
         };
         notesEnabled: boolean | null;
-        seo: {
-          metaTitle: string | null;
-          metaDescription: string | null;
-          shareImage: {
-            _type: "editorialImage";
-            asset: {
-              _id: string;
-              url: string;
-              mimeType: string;
-              width: number | null;
-              height: number | null;
-              aspectRatio: number | null;
-              lqip: string | null;
-            } | null;
-            crop: SanityImageCrop | null;
-            hotspot: SanityImageHotspot | null;
-            needsReview: boolean | null;
-            prototypeOnly: boolean | null;
-            altNeedsReview: boolean | null;
-            needsApprovedEmbed: boolean | null;
-            needsApprovedMaster: boolean | null;
-            previewIsPlaceholder: boolean | null;
-            doNotPublishWithoutExplicitApproval: boolean | null;
-          } | null;
-          shareImageAlt: string | null;
-          noIndex: boolean | null;
-        } | null;
-      }
-    | {
-        introName: null;
-        manifesto: null;
-        gallery: null;
-        reel: null;
-        notesEnabled: null;
-        seo: null;
-      }
-    | {
-        introName: null;
-        manifesto: null;
-        gallery: null;
-        reel: null;
-        notesEnabled: null;
         seo: {
           metaTitle: string | null;
           metaDescription: string | null;
@@ -1562,6 +1678,10 @@ export type SITE_SETTINGS_QUERY_RESULT = {
     | null;
   footer:
     | {
+        clientLogos: null;
+        calloutText: null;
+        tickerWords: null;
+        featuredHeading: null;
         strapline: null;
         peopleHeading: null;
         exploreHeading: null;
@@ -1572,6 +1692,71 @@ export type SITE_SETTINGS_QUERY_RESULT = {
         showYear: null;
       }
     | {
+        clientLogos: null;
+        calloutText: null;
+        tickerWords: Array<string> | null;
+        featuredHeading: null;
+        strapline: null;
+        peopleHeading: null;
+        exploreHeading: null;
+        connectHeading: null;
+        exploreLinks: null;
+        contactLabel: null;
+        copyrightLine: null;
+        showYear: null;
+      }
+    | {
+        clientLogos: Array<{
+          _key: string;
+          name: string;
+          url: string | null;
+          artwork: {
+            format: "file" | "image";
+            width: number | null;
+            height: number | null;
+            image: {
+              _type: "editorialImage";
+              asset: {
+                _id: string;
+                url: string;
+                mimeType: string;
+                width: number | null;
+                height: number | null;
+                aspectRatio: number | null;
+                lqip: string | null;
+              } | null;
+              crop: SanityImageCrop | null;
+              hotspot: SanityImageHotspot | null;
+              needsReview: boolean | null;
+              prototypeOnly: boolean | null;
+              altNeedsReview: boolean | null;
+              needsApprovedEmbed: boolean | null;
+              needsApprovedMaster: boolean | null;
+              previewIsPlaceholder: boolean | null;
+              doNotPublishWithoutExplicitApproval: boolean | null;
+            } | null;
+            file: {
+              _type: "editorialFile";
+              asset: {
+                _id: string;
+                url: string;
+                mimeType: string;
+                size: number;
+                originalFilename: string | null;
+              } | null;
+              needsReview: boolean | null;
+              prototypeOnly: boolean | null;
+              altNeedsReview: boolean | null;
+              needsApprovedEmbed: boolean | null;
+              needsApprovedMaster: boolean | null;
+              previewIsPlaceholder: boolean | null;
+              doNotPublishWithoutExplicitApproval: boolean | null;
+            } | null;
+          } | null;
+        }> | null;
+        calloutText: string;
+        tickerWords: Array<string> | null;
+        featuredHeading: string | null;
         strapline: Array<{
           _key: string;
           text: string;
@@ -1595,17 +1780,95 @@ export type SITE_SETTINGS_QUERY_RESULT = {
 
 // Source: ../new-work-site/sanity/queries.ts
 // Variable: PREVIEW_SITE_SETTINGS_QUERY
-// Query: *[_id == "siteSettings"][0]{  siteName,  navigation[]{_key, label, destination, visible},  wordmark{format, image{  _type,  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},  crop,  hotspot,    needsReview,  prototypeOnly,  altNeedsReview,  needsApprovedEmbed,  needsApprovedMaster,  previewIsPlaceholder,  doNotPublishWithoutExplicitApproval}, file{  _type,  asset->{_id, url, mimeType, size, originalFilename},    needsReview,  prototypeOnly,  altNeedsReview,  needsApprovedEmbed,  needsApprovedMaster,  previewIsPlaceholder,  doNotPublishWithoutExplicitApproval}},  compactMark{format, image{  _type,  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},  crop,  hotspot,    needsReview,  prototypeOnly,  altNeedsReview,  needsApprovedEmbed,  needsApprovedMaster,  previewIsPlaceholder,  doNotPublishWithoutExplicitApproval}, file{  _type,  asset->{_id, url, mimeType, size, originalFilename},    needsReview,  prototypeOnly,  altNeedsReview,  needsApprovedEmbed,  needsApprovedMaster,  previewIsPlaceholder,  doNotPublishWithoutExplicitApproval}},  defaultSeo{  metaTitle,  metaDescription,  shareImage{  _type,  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},  crop,  hotspot,    needsReview,  prototypeOnly,  altNeedsReview,  needsApprovedEmbed,  needsApprovedMaster,  previewIsPlaceholder,  doNotPublishWithoutExplicitApproval},  shareImageAlt,  noIndex},  "workPage": *[_id == "workPage"][0]{  introName,  manifesto,  gallery[]{_key, "workId": asset->project->_id, "assetId": asset->_id, cardSize, treatment},  reel{  enabled,  poster{  _type,  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},  crop,  hotspot,    needsReview,  prototypeOnly,  altNeedsReview,  needsApprovedEmbed,  needsApprovedMaster,  previewIsPlaceholder,  doNotPublishWithoutExplicitApproval},  desktopSource{  _type,  asset->{_id, url, mimeType, size, originalFilename},    needsReview,  prototypeOnly,  altNeedsReview,  needsApprovedEmbed,  needsApprovedMaster,  previewIsPlaceholder,  doNotPublishWithoutExplicitApproval},  desktopSourceUrl,  mobileSource{  _type,  asset->{_id, url, mimeType, size, originalFilename},    needsReview,  prototypeOnly,  altNeedsReview,  needsApprovedEmbed,  needsApprovedMaster,  previewIsPlaceholder,  doNotPublishWithoutExplicitApproval},  mobileSourceUrl,  caption,  credits[]{_key, label, value, richValue, url},  ctaLabel,  ctaUrl,  startMuted,  aspectRatio},  notesEnabled,  seo{  metaTitle,  metaDescription,  shareImage{  _type,  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},  crop,  hotspot,    needsReview,  prototypeOnly,  altNeedsReview,  needsApprovedEmbed,  needsApprovedMaster,  previewIsPlaceholder,  doNotPublishWithoutExplicitApproval},  shareImageAlt,  noIndex}},  "aboutPage": *[_id == "aboutPage"][0]{  openingLabel,  openingHeadline,  openingNote,  windingHeadline,  orbitHeadline,  indexHeadline,  chaptersHeadline,  apertureHeadline,  fallbackLabel,  fallbackHeadline,  fallbackDescription,  closingLabel,  closingHeadline,  ctaLabel,  ctaDestination,  seo{  metaTitle,  metaDescription,  shareImage{  _type,  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},  crop,  hotspot,    needsReview,  prototypeOnly,  altNeedsReview,  needsApprovedEmbed,  needsApprovedMaster,  previewIsPlaceholder,  doNotPublishWithoutExplicitApproval},  shareImageAlt,  noIndex}},  "contactPage": *[_id == "contactPage"][0]{  heading,  introduction,  email,  location,  socialLinks[]{_key, label, url},  seo{  metaTitle,  metaDescription,  shareImage{  _type,  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},  crop,  hotspot,    needsReview,  prototypeOnly,  altNeedsReview,  needsApprovedEmbed,  needsApprovedMaster,  previewIsPlaceholder,  doNotPublishWithoutExplicitApproval},  shareImageAlt,  noIndex}},  "footer": *[_id == "footerSettings"][0]{  strapline[]{_key, text, emphasis},  peopleHeading,  exploreHeading,  connectHeading,  exploreLinks[]{_key, label, destination, url},  contactLabel,  copyrightLine,  showYear}}
+// Query: *[_id == "siteSettings"][0]{  siteName,  navigation[]{_key, label, destination, visible},  wordmark{format, width, height, image{  _type,  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},  crop,  hotspot,    needsReview,  prototypeOnly,  altNeedsReview,  needsApprovedEmbed,  needsApprovedMaster,  previewIsPlaceholder,  doNotPublishWithoutExplicitApproval}, file{  _type,  asset->{_id, url, mimeType, size, originalFilename},    needsReview,  prototypeOnly,  altNeedsReview,  needsApprovedEmbed,  needsApprovedMaster,  previewIsPlaceholder,  doNotPublishWithoutExplicitApproval}},  compactMark{format, width, height, image{  _type,  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},  crop,  hotspot,    needsReview,  prototypeOnly,  altNeedsReview,  needsApprovedEmbed,  needsApprovedMaster,  previewIsPlaceholder,  doNotPublishWithoutExplicitApproval}, file{  _type,  asset->{_id, url, mimeType, size, originalFilename},    needsReview,  prototypeOnly,  altNeedsReview,  needsApprovedEmbed,  needsApprovedMaster,  previewIsPlaceholder,  doNotPublishWithoutExplicitApproval}},  stackedWordmark{format, width, height, image{  _type,  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},  crop,  hotspot,    needsReview,  prototypeOnly,  altNeedsReview,  needsApprovedEmbed,  needsApprovedMaster,  previewIsPlaceholder,  doNotPublishWithoutExplicitApproval}, file{  _type,  asset->{_id, url, mimeType, size, originalFilename},    needsReview,  prototypeOnly,  altNeedsReview,  needsApprovedEmbed,  needsApprovedMaster,  previewIsPlaceholder,  doNotPublishWithoutExplicitApproval}},  headerDescriptor,  defaultSeo{  metaTitle,  metaDescription,  shareImage{  _type,  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},  crop,  hotspot,    needsReview,  prototypeOnly,  altNeedsReview,  needsApprovedEmbed,  needsApprovedMaster,  previewIsPlaceholder,  doNotPublishWithoutExplicitApproval},  shareImageAlt,  noIndex},  "workPage": *[_id == "workPage"][0]{  introName,  tickerWords,  tickerCities,  btsHeading,  btsSubtitle,  behindTheScenes[]{_key, "workId": asset->project->_id, "assetId": asset->_id, cardSize, treatment},  manifesto,  gallery[]{_key, "workId": asset->project->_id, "assetId": asset->_id, cardSize, treatment},  reel{  enabled,  poster{  _type,  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},  crop,  hotspot,    needsReview,  prototypeOnly,  altNeedsReview,  needsApprovedEmbed,  needsApprovedMaster,  previewIsPlaceholder,  doNotPublishWithoutExplicitApproval},  desktopSource{  _type,  asset->{_id, url, mimeType, size, originalFilename},    needsReview,  prototypeOnly,  altNeedsReview,  needsApprovedEmbed,  needsApprovedMaster,  previewIsPlaceholder,  doNotPublishWithoutExplicitApproval},  desktopSourceUrl,  mobileSource{  _type,  asset->{_id, url, mimeType, size, originalFilename},    needsReview,  prototypeOnly,  altNeedsReview,  needsApprovedEmbed,  needsApprovedMaster,  previewIsPlaceholder,  doNotPublishWithoutExplicitApproval},  mobileSourceUrl,  caption,  credits[]{_key, label, value, richValue, url},  ctaLabel,  ctaUrl,  startMuted,  aspectRatio},  notesEnabled,  seo{  metaTitle,  metaDescription,  shareImage{  _type,  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},  crop,  hotspot,    needsReview,  prototypeOnly,  altNeedsReview,  needsApprovedEmbed,  needsApprovedMaster,  previewIsPlaceholder,  doNotPublishWithoutExplicitApproval},  shareImageAlt,  noIndex}},  "aboutPage": *[_id == "aboutPage"][0]{  openingLabel,  openingHeadline,  openingNote,  windingHeadline,  orbitHeadline,  indexHeadline,  chaptersHeadline,  apertureHeadline,  fallbackLabel,  fallbackHeadline,  fallbackDescription,  closingLabel,  closingHeadline,  ctaLabel,  ctaDestination,  seo{  metaTitle,  metaDescription,  shareImage{  _type,  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},  crop,  hotspot,    needsReview,  prototypeOnly,  altNeedsReview,  needsApprovedEmbed,  needsApprovedMaster,  previewIsPlaceholder,  doNotPublishWithoutExplicitApproval},  shareImageAlt,  noIndex}},  "contactPage": *[_id == "contactPage"][0]{  heading,  introduction,  email,  location,  socialLinks[]{_key, label, url},  seo{  metaTitle,  metaDescription,  shareImage{  _type,  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},  crop,  hotspot,    needsReview,  prototypeOnly,  altNeedsReview,  needsApprovedEmbed,  needsApprovedMaster,  previewIsPlaceholder,  doNotPublishWithoutExplicitApproval},  shareImageAlt,  noIndex}},  "footer": *[_id == "footerSettings"][0]{  clientLogos[]{_key, name, url, artwork{format, width, height, image{  _type,  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},  crop,  hotspot,    needsReview,  prototypeOnly,  altNeedsReview,  needsApprovedEmbed,  needsApprovedMaster,  previewIsPlaceholder,  doNotPublishWithoutExplicitApproval}, file{  _type,  asset->{_id, url, mimeType, size, originalFilename},    needsReview,  prototypeOnly,  altNeedsReview,  needsApprovedEmbed,  needsApprovedMaster,  previewIsPlaceholder,  doNotPublishWithoutExplicitApproval}}},  calloutText,  tickerWords,  featuredHeading,  strapline[]{_key, text, emphasis},  peopleHeading,  exploreHeading,  connectHeading,  exploreLinks[]{_key, label, destination, url},  contactLabel,  copyrightLine,  showYear}}
 export type PREVIEW_SITE_SETTINGS_QUERY_RESULT =
   | {
       siteName: null;
       navigation: null;
       wordmark: null;
       compactMark: null;
+      stackedWordmark: null;
+      headerDescriptor: null;
       defaultSeo: null;
       workPage:
         | {
+            introName: null;
+            tickerWords: null;
+            tickerCities: null;
+            btsHeading: null;
+            btsSubtitle: null;
+            behindTheScenes: null;
+            manifesto: null;
+            gallery: null;
+            reel: null;
+            notesEnabled: null;
+            seo: null;
+          }
+        | {
+            introName: null;
+            tickerWords: Array<string> | null;
+            tickerCities: null;
+            btsHeading: null;
+            btsSubtitle: null;
+            behindTheScenes: null;
+            manifesto: null;
+            gallery: null;
+            reel: null;
+            notesEnabled: null;
+            seo: null;
+          }
+        | {
+            introName: null;
+            tickerWords: null;
+            tickerCities: null;
+            btsHeading: null;
+            btsSubtitle: null;
+            behindTheScenes: null;
+            manifesto: null;
+            gallery: null;
+            reel: null;
+            notesEnabled: null;
+            seo: {
+              metaTitle: string | null;
+              metaDescription: string | null;
+              shareImage: {
+                _type: "editorialImage";
+                asset: {
+                  _id: string;
+                  url: string;
+                  mimeType: string;
+                  width: number | null;
+                  height: number | null;
+                  aspectRatio: number | null;
+                  lqip: string | null;
+                } | null;
+                crop: SanityImageCrop | null;
+                hotspot: SanityImageHotspot | null;
+                needsReview: boolean | null;
+                prototypeOnly: boolean | null;
+                altNeedsReview: boolean | null;
+                needsApprovedEmbed: boolean | null;
+                needsApprovedMaster: boolean | null;
+                previewIsPlaceholder: boolean | null;
+                doNotPublishWithoutExplicitApproval: boolean | null;
+              } | null;
+              shareImageAlt: string | null;
+              noIndex: boolean | null;
+            } | null;
+          }
+        | {
             introName: string;
+            tickerWords: Array<string> | null;
+            tickerCities: Array<"la" | "nyc" | "sf"> | null;
+            btsHeading: string | null;
+            btsSubtitle: string | null;
+            behindTheScenes: Array<{
+              _key: string;
+              workId: string | null;
+              assetId: string;
+              cardSize: "large" | "standard" | "tall" | "wide";
+              treatment: "framed" | "masked" | "poster" | "standard";
+            }> | null;
             manifesto: string | null;
             gallery: Array<{
               _key: string;
@@ -1687,48 +1950,6 @@ export type PREVIEW_SITE_SETTINGS_QUERY_RESULT =
               aspectRatio: string;
             };
             notesEnabled: boolean | null;
-            seo: {
-              metaTitle: string | null;
-              metaDescription: string | null;
-              shareImage: {
-                _type: "editorialImage";
-                asset: {
-                  _id: string;
-                  url: string;
-                  mimeType: string;
-                  width: number | null;
-                  height: number | null;
-                  aspectRatio: number | null;
-                  lqip: string | null;
-                } | null;
-                crop: SanityImageCrop | null;
-                hotspot: SanityImageHotspot | null;
-                needsReview: boolean | null;
-                prototypeOnly: boolean | null;
-                altNeedsReview: boolean | null;
-                needsApprovedEmbed: boolean | null;
-                needsApprovedMaster: boolean | null;
-                previewIsPlaceholder: boolean | null;
-                doNotPublishWithoutExplicitApproval: boolean | null;
-              } | null;
-              shareImageAlt: string | null;
-              noIndex: boolean | null;
-            } | null;
-          }
-        | {
-            introName: null;
-            manifesto: null;
-            gallery: null;
-            reel: null;
-            notesEnabled: null;
-            seo: null;
-          }
-        | {
-            introName: null;
-            manifesto: null;
-            gallery: null;
-            reel: null;
-            notesEnabled: null;
             seo: {
               metaTitle: string | null;
               metaDescription: string | null;
@@ -1950,6 +2171,10 @@ export type PREVIEW_SITE_SETTINGS_QUERY_RESULT =
         | null;
       footer:
         | {
+            clientLogos: null;
+            calloutText: null;
+            tickerWords: null;
+            featuredHeading: null;
             strapline: null;
             peopleHeading: null;
             exploreHeading: null;
@@ -1960,6 +2185,71 @@ export type PREVIEW_SITE_SETTINGS_QUERY_RESULT =
             showYear: null;
           }
         | {
+            clientLogos: null;
+            calloutText: null;
+            tickerWords: Array<string> | null;
+            featuredHeading: null;
+            strapline: null;
+            peopleHeading: null;
+            exploreHeading: null;
+            connectHeading: null;
+            exploreLinks: null;
+            contactLabel: null;
+            copyrightLine: null;
+            showYear: null;
+          }
+        | {
+            clientLogos: Array<{
+              _key: string;
+              name: string;
+              url: string | null;
+              artwork: {
+                format: "file" | "image";
+                width: number | null;
+                height: number | null;
+                image: {
+                  _type: "editorialImage";
+                  asset: {
+                    _id: string;
+                    url: string;
+                    mimeType: string;
+                    width: number | null;
+                    height: number | null;
+                    aspectRatio: number | null;
+                    lqip: string | null;
+                  } | null;
+                  crop: SanityImageCrop | null;
+                  hotspot: SanityImageHotspot | null;
+                  needsReview: boolean | null;
+                  prototypeOnly: boolean | null;
+                  altNeedsReview: boolean | null;
+                  needsApprovedEmbed: boolean | null;
+                  needsApprovedMaster: boolean | null;
+                  previewIsPlaceholder: boolean | null;
+                  doNotPublishWithoutExplicitApproval: boolean | null;
+                } | null;
+                file: {
+                  _type: "editorialFile";
+                  asset: {
+                    _id: string;
+                    url: string;
+                    mimeType: string;
+                    size: number;
+                    originalFilename: string | null;
+                  } | null;
+                  needsReview: boolean | null;
+                  prototypeOnly: boolean | null;
+                  altNeedsReview: boolean | null;
+                  needsApprovedEmbed: boolean | null;
+                  needsApprovedMaster: boolean | null;
+                  previewIsPlaceholder: boolean | null;
+                  doNotPublishWithoutExplicitApproval: boolean | null;
+                } | null;
+              } | null;
+            }> | null;
+            calloutText: string;
+            tickerWords: Array<string> | null;
+            featuredHeading: string | null;
             strapline: Array<{
               _key: string;
               text: string;
@@ -1985,11 +2275,13 @@ export type PREVIEW_SITE_SETTINGS_QUERY_RESULT =
       navigation: Array<{
         _key: string;
         label: string;
-        destination: "about" | "contact" | "work";
+        destination: "contact" | "work";
         visible: boolean | null;
       }> | null;
       wordmark: {
         format: "file" | "image";
+        width: number | null;
+        height: number | null;
         image: {
           _type: "editorialImage";
           asset: {
@@ -2031,6 +2323,8 @@ export type PREVIEW_SITE_SETTINGS_QUERY_RESULT =
       } | null;
       compactMark: {
         format: "file" | "image";
+        width: number | null;
+        height: number | null;
         image: {
           _type: "editorialImage";
           asset: {
@@ -2070,6 +2364,50 @@ export type PREVIEW_SITE_SETTINGS_QUERY_RESULT =
           doNotPublishWithoutExplicitApproval: boolean | null;
         } | null;
       } | null;
+      stackedWordmark: {
+        format: "file" | "image";
+        width: number | null;
+        height: number | null;
+        image: {
+          _type: "editorialImage";
+          asset: {
+            _id: string;
+            url: string;
+            mimeType: string;
+            width: number | null;
+            height: number | null;
+            aspectRatio: number | null;
+            lqip: string | null;
+          } | null;
+          crop: SanityImageCrop | null;
+          hotspot: SanityImageHotspot | null;
+          needsReview: boolean | null;
+          prototypeOnly: boolean | null;
+          altNeedsReview: boolean | null;
+          needsApprovedEmbed: boolean | null;
+          needsApprovedMaster: boolean | null;
+          previewIsPlaceholder: boolean | null;
+          doNotPublishWithoutExplicitApproval: boolean | null;
+        } | null;
+        file: {
+          _type: "editorialFile";
+          asset: {
+            _id: string;
+            url: string;
+            mimeType: string;
+            size: number;
+            originalFilename: string | null;
+          } | null;
+          needsReview: boolean | null;
+          prototypeOnly: boolean | null;
+          altNeedsReview: boolean | null;
+          needsApprovedEmbed: boolean | null;
+          needsApprovedMaster: boolean | null;
+          previewIsPlaceholder: boolean | null;
+          doNotPublishWithoutExplicitApproval: boolean | null;
+        } | null;
+      } | null;
+      headerDescriptor: string | null;
       defaultSeo: {
         metaTitle: string | null;
         metaDescription: string | null;
@@ -2099,7 +2437,83 @@ export type PREVIEW_SITE_SETTINGS_QUERY_RESULT =
       };
       workPage:
         | {
+            introName: null;
+            tickerWords: null;
+            tickerCities: null;
+            btsHeading: null;
+            btsSubtitle: null;
+            behindTheScenes: null;
+            manifesto: null;
+            gallery: null;
+            reel: null;
+            notesEnabled: null;
+            seo: null;
+          }
+        | {
+            introName: null;
+            tickerWords: Array<string> | null;
+            tickerCities: null;
+            btsHeading: null;
+            btsSubtitle: null;
+            behindTheScenes: null;
+            manifesto: null;
+            gallery: null;
+            reel: null;
+            notesEnabled: null;
+            seo: null;
+          }
+        | {
+            introName: null;
+            tickerWords: null;
+            tickerCities: null;
+            btsHeading: null;
+            btsSubtitle: null;
+            behindTheScenes: null;
+            manifesto: null;
+            gallery: null;
+            reel: null;
+            notesEnabled: null;
+            seo: {
+              metaTitle: string | null;
+              metaDescription: string | null;
+              shareImage: {
+                _type: "editorialImage";
+                asset: {
+                  _id: string;
+                  url: string;
+                  mimeType: string;
+                  width: number | null;
+                  height: number | null;
+                  aspectRatio: number | null;
+                  lqip: string | null;
+                } | null;
+                crop: SanityImageCrop | null;
+                hotspot: SanityImageHotspot | null;
+                needsReview: boolean | null;
+                prototypeOnly: boolean | null;
+                altNeedsReview: boolean | null;
+                needsApprovedEmbed: boolean | null;
+                needsApprovedMaster: boolean | null;
+                previewIsPlaceholder: boolean | null;
+                doNotPublishWithoutExplicitApproval: boolean | null;
+              } | null;
+              shareImageAlt: string | null;
+              noIndex: boolean | null;
+            } | null;
+          }
+        | {
             introName: string;
+            tickerWords: Array<string> | null;
+            tickerCities: Array<"la" | "nyc" | "sf"> | null;
+            btsHeading: string | null;
+            btsSubtitle: string | null;
+            behindTheScenes: Array<{
+              _key: string;
+              workId: string | null;
+              assetId: string;
+              cardSize: "large" | "standard" | "tall" | "wide";
+              treatment: "framed" | "masked" | "poster" | "standard";
+            }> | null;
             manifesto: string | null;
             gallery: Array<{
               _key: string;
@@ -2181,48 +2595,6 @@ export type PREVIEW_SITE_SETTINGS_QUERY_RESULT =
               aspectRatio: string;
             };
             notesEnabled: boolean | null;
-            seo: {
-              metaTitle: string | null;
-              metaDescription: string | null;
-              shareImage: {
-                _type: "editorialImage";
-                asset: {
-                  _id: string;
-                  url: string;
-                  mimeType: string;
-                  width: number | null;
-                  height: number | null;
-                  aspectRatio: number | null;
-                  lqip: string | null;
-                } | null;
-                crop: SanityImageCrop | null;
-                hotspot: SanityImageHotspot | null;
-                needsReview: boolean | null;
-                prototypeOnly: boolean | null;
-                altNeedsReview: boolean | null;
-                needsApprovedEmbed: boolean | null;
-                needsApprovedMaster: boolean | null;
-                previewIsPlaceholder: boolean | null;
-                doNotPublishWithoutExplicitApproval: boolean | null;
-              } | null;
-              shareImageAlt: string | null;
-              noIndex: boolean | null;
-            } | null;
-          }
-        | {
-            introName: null;
-            manifesto: null;
-            gallery: null;
-            reel: null;
-            notesEnabled: null;
-            seo: null;
-          }
-        | {
-            introName: null;
-            manifesto: null;
-            gallery: null;
-            reel: null;
-            notesEnabled: null;
             seo: {
               metaTitle: string | null;
               metaDescription: string | null;
@@ -2444,6 +2816,10 @@ export type PREVIEW_SITE_SETTINGS_QUERY_RESULT =
         | null;
       footer:
         | {
+            clientLogos: null;
+            calloutText: null;
+            tickerWords: null;
+            featuredHeading: null;
             strapline: null;
             peopleHeading: null;
             exploreHeading: null;
@@ -2454,6 +2830,71 @@ export type PREVIEW_SITE_SETTINGS_QUERY_RESULT =
             showYear: null;
           }
         | {
+            clientLogos: null;
+            calloutText: null;
+            tickerWords: Array<string> | null;
+            featuredHeading: null;
+            strapline: null;
+            peopleHeading: null;
+            exploreHeading: null;
+            connectHeading: null;
+            exploreLinks: null;
+            contactLabel: null;
+            copyrightLine: null;
+            showYear: null;
+          }
+        | {
+            clientLogos: Array<{
+              _key: string;
+              name: string;
+              url: string | null;
+              artwork: {
+                format: "file" | "image";
+                width: number | null;
+                height: number | null;
+                image: {
+                  _type: "editorialImage";
+                  asset: {
+                    _id: string;
+                    url: string;
+                    mimeType: string;
+                    width: number | null;
+                    height: number | null;
+                    aspectRatio: number | null;
+                    lqip: string | null;
+                  } | null;
+                  crop: SanityImageCrop | null;
+                  hotspot: SanityImageHotspot | null;
+                  needsReview: boolean | null;
+                  prototypeOnly: boolean | null;
+                  altNeedsReview: boolean | null;
+                  needsApprovedEmbed: boolean | null;
+                  needsApprovedMaster: boolean | null;
+                  previewIsPlaceholder: boolean | null;
+                  doNotPublishWithoutExplicitApproval: boolean | null;
+                } | null;
+                file: {
+                  _type: "editorialFile";
+                  asset: {
+                    _id: string;
+                    url: string;
+                    mimeType: string;
+                    size: number;
+                    originalFilename: string | null;
+                  } | null;
+                  needsReview: boolean | null;
+                  prototypeOnly: boolean | null;
+                  altNeedsReview: boolean | null;
+                  needsApprovedEmbed: boolean | null;
+                  needsApprovedMaster: boolean | null;
+                  previewIsPlaceholder: boolean | null;
+                  doNotPublishWithoutExplicitApproval: boolean | null;
+                } | null;
+              } | null;
+            }> | null;
+            calloutText: string;
+            tickerWords: Array<string> | null;
+            featuredHeading: string | null;
             strapline: Array<{
               _key: string;
               text: string;
@@ -6921,9 +7362,9 @@ export type SITEMAP_QUERY_RESULT = {
 import "@sanity/client";
 declare module "@sanity/client" {
   interface SanityQueries {
-    '{\n  "singletonCounts": {\n    "siteSettings": count(*[_id == "siteSettings"]),\n    "workPage": count(*[_id == "workPage"]),\n    "aboutPage": count(*[_id == "aboutPage"]),\n    "contactPage": count(*[_id == "contactPage"]),\n    "footerSettings": count(*[_id == "footerSettings"])\n  },\n  "aboutPage": *[_id == "aboutPage"][0]{\n  openingLabel,\n  openingHeadline,\n  openingNote,\n  windingHeadline,\n  orbitHeadline,\n  indexHeadline,\n  chaptersHeadline,\n  apertureHeadline,\n  fallbackLabel,\n  fallbackHeadline,\n  fallbackDescription,\n  closingLabel,\n  closingHeadline,\n  ctaLabel,\n  ctaDestination,\n  seo{\n  metaTitle,\n  metaDescription,\n  shareImage{\n  _type,\n  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},\n  crop,\n  hotspot,\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n},\n  shareImageAlt,\n  noIndex\n}\n},\n  "workPage": *[_id == "workPage"][0]{\n    notesEnabled,\n    gallery[]{\n      _key,\n      "assetId": asset->_id,\n      "assetType": asset->_type,\n      "assetKind": asset->kind,\n      "workId": asset->project->_id,\n      "workType": asset->project->_type\n    }\n  },\n  "workDocuments": *[_type == "work" && !(_id in path("drafts.**"))]{\n    _id,\n    title,\n    legacyId,\n    "slug": slug.current,\n    template,\n    "assets": *[_type == "mediaItem" && project._ref == ^._id]{\n      _id,\n      title,\n      "slug": slug.current,\n      kind,\n      "hasMedia": select(\n        kind == "image" => defined(image.asset),\n        kind == "video" => defined(poster.asset) && (defined(videoFile.asset) || defined(videoUrl)),\n        kind == "file" => defined(file.asset),\n        false\n      ),\n      "hasAccessibilityText": kind == "file" || decorative == true || length(coalesce(alt, "")) > 0\n    },\n    editorialStatus,\n    publishAt\n  },\n  "publicWorkIds": *[_type == "work" && \n  !(_id in path("drafts.**")) &&\n  (editorialStatus == "approved" || (!defined(editorialStatus) && visible == true)) &&\n  (defined(editorialStatus) || needsReview != true) &&\n  doNotPublishWithoutExplicitApproval != true &&\n  (!defined(publishAt) || publishAt <= now()) &&\n  defined(cover.poster.asset) &&\n  (length(coalesce(cover.alt, "")) > 0 || cover.decorative == true) &&\n  count(*[_type == "mediaItem" && project._ref == ^._id]) > 0 &&\n  count(*[_type == "mediaItem" && project._ref == ^._id]) ==\n    count(*[_type == "mediaItem" && project._ref == ^._id && \n  !(_id in path("drafts.**")) &&\n  defined(project) &&\n  defined(slug.current) && length(slug.current) > 0 &&\n  (kind == "file" || decorative == true || length(coalesce(alt, "")) > 0) &&\n  select(\n    kind == "image" => defined(image.asset),\n    kind == "video" => defined(poster.asset) && (defined(videoFile.asset) || defined(videoUrl)),\n    kind == "file" => defined(file.asset),\n    false\n  )\n]) &&\n  cover.needsReview != true &&\n  cover.previewIsPlaceholder != true &&\n  cover.prototypeOnly != true &&\n  cover.focalPoint.needsReview != true &&\n  cover.poster.needsReview != true &&\n  cover.poster.prototypeOnly != true &&\n  cover.poster.altNeedsReview != true &&\n  cover.poster.needsApprovedEmbed != true &&\n  cover.poster.needsApprovedMaster != true &&\n  cover.poster.previewIsPlaceholder != true &&\n  cover.poster.doNotPublishWithoutExplicitApproval != true &&\n  cover.previewVideo.needsReview != true &&\n  cover.previewVideo.prototypeOnly != true &&\n  cover.previewVideo.altNeedsReview != true &&\n  cover.previewVideo.needsApprovedEmbed != true &&\n  cover.previewVideo.needsApprovedMaster != true &&\n  cover.previewVideo.previewIsPlaceholder != true &&\n  cover.previewVideo.doNotPublishWithoutExplicitApproval != true &&\n  cover.previewPosterOverride.needsReview != true &&\n  cover.previewPosterOverride.prototypeOnly != true &&\n  cover.previewPosterOverride.altNeedsReview != true &&\n  cover.previewPosterOverride.needsApprovedEmbed != true &&\n  cover.previewPosterOverride.needsApprovedMaster != true &&\n  cover.previewPosterOverride.previewIsPlaceholder != true &&\n  cover.previewPosterOverride.doNotPublishWithoutExplicitApproval != true &&\n  cover.mobilePoster.needsReview != true &&\n  cover.mobilePoster.prototypeOnly != true &&\n  cover.mobilePoster.altNeedsReview != true &&\n  cover.mobilePoster.needsApprovedEmbed != true &&\n  cover.mobilePoster.needsApprovedMaster != true &&\n  cover.mobilePoster.previewIsPlaceholder != true &&\n  cover.mobilePoster.doNotPublishWithoutExplicitApproval != true &&\n  seo.shareImage.needsReview != true &&\n  seo.shareImage.prototypeOnly != true &&\n  seo.shareImage.altNeedsReview != true &&\n  seo.shareImage.needsApprovedEmbed != true &&\n  seo.shareImage.needsApprovedMaster != true &&\n  seo.shareImage.previewIsPlaceholder != true &&\n  seo.shareImage.doNotPublishWithoutExplicitApproval != true &&\n  count(contentBlocks[_type in ["heroImage", "heroVideo", "fullBleedImage", "containedImage", "imagePair", "imageGrid", "video", "shortLoop"]]) > 0 &&\n  count(contentBlocks[\n    needsReview == true ||\n    prototypeOnly == true ||\n    altNeedsReview == true ||\n    needsApprovedEmbed == true ||\n    needsApprovedMaster == true ||\n    previewIsPlaceholder == true ||\n    doNotPublishWithoutExplicitApproval == true ||\n    image.needsReview == true || image.prototypeOnly == true || image.altNeedsReview == true || image.needsApprovedEmbed == true || image.needsApprovedMaster == true || image.previewIsPlaceholder == true || image.doNotPublishWithoutExplicitApproval == true ||\n    poster.needsReview == true || poster.prototypeOnly == true || poster.altNeedsReview == true || poster.needsApprovedEmbed == true || poster.needsApprovedMaster == true || poster.previewIsPlaceholder == true || poster.doNotPublishWithoutExplicitApproval == true ||\n    source.needsReview == true || source.prototypeOnly == true || source.altNeedsReview == true || source.needsApprovedEmbed == true || source.needsApprovedMaster == true || source.previewIsPlaceholder == true || source.doNotPublishWithoutExplicitApproval == true ||\n    captionsFile.needsReview == true || captionsFile.prototypeOnly == true || captionsFile.needsApprovedMaster == true || captionsFile.doNotPublishWithoutExplicitApproval == true ||\n    left.needsReview == true || left.prototypeOnly == true || left.altNeedsReview == true || left.doNotPublishWithoutExplicitApproval == true || left.image.needsReview == true || left.image.prototypeOnly == true || left.image.altNeedsReview == true || left.image.needsApprovedEmbed == true || left.image.needsApprovedMaster == true || left.image.previewIsPlaceholder == true || left.image.doNotPublishWithoutExplicitApproval == true ||\n    right.needsReview == true || right.prototypeOnly == true || right.altNeedsReview == true || right.doNotPublishWithoutExplicitApproval == true || right.image.needsReview == true || right.image.prototypeOnly == true || right.image.altNeedsReview == true || right.image.needsApprovedEmbed == true || right.image.needsApprovedMaster == true || right.image.previewIsPlaceholder == true || right.image.doNotPublishWithoutExplicitApproval == true\n  ]) == 0 &&\n  count(contentBlocks[_type == "imageGrid" && count(images[\n    needsReview == true || prototypeOnly == true || altNeedsReview == true || doNotPublishWithoutExplicitApproval == true ||\n    image.needsReview == true || image.prototypeOnly == true || image.altNeedsReview == true || image.needsApprovedEmbed == true || image.needsApprovedMaster == true || image.previewIsPlaceholder == true || image.doNotPublishWithoutExplicitApproval == true\n  ]) > 0]) == 0 &&\n  count(contentBlocks[_type in ["heroImage", "fullBleedImage", "containedImage"] && (\n    (!defined(image.asset) && !defined(mediaItem->image.asset)) ||\n    (!defined(mediaItem) && length(coalesce(alt, "")) == 0 && decorative != true)\n  )]) == 0 &&\n  count(contentBlocks[_type == "imagePair" && (\n    (!defined(left.image.asset) && !defined(left.mediaItem->image.asset)) || (!defined(left.mediaItem) && length(coalesce(left.alt, "")) == 0 && left.decorative != true) ||\n    (!defined(right.image.asset) && !defined(right.mediaItem->image.asset)) || (!defined(right.mediaItem) && length(coalesce(right.alt, "")) == 0 && right.decorative != true)\n  )]) == 0 &&\n  count(contentBlocks[_type == "imageGrid" && count(images[\n    (!defined(image.asset) && !defined(mediaItem->image.asset)) ||\n    (!defined(mediaItem) && length(coalesce(alt, "")) == 0 && decorative != true)\n  ]) > 0]) == 0 &&\n  count(contentBlocks[_type in ["heroVideo", "video"] && !defined(poster.asset) && !defined(mediaItem->poster.asset)]) == 0 &&\n  count(contentBlocks[_type == "shortLoop" && !defined(poster.asset)]) == 0 &&\n  count(contentBlocks[_type in ["heroVideo", "video"] && !defined(mediaItem) &&\n    !defined(source.asset) && !defined(remoteSource) && !defined(vimeoId) && !defined(youtubeId) && !defined(externalUrl)\n  ]) == 0 &&\n  count(contentBlocks[_type == "shortLoop" && length(coalesce(alt, "")) == 0 && decorative != true]) == 0\n]._id,\n  "legacyProjectCount": count(*[_type == "project" && !(_id in path("drafts.**"))]),\n  "notes": *[_type == "note" && !(_id in path("drafts.**"))]{\n    _id,\n    title,\n    "slug": slug.current,\n    date,\n    visible,\n    publishAt\n  },\n  "publicNoteIds": *[_type == "note" && \n  !(_id in path("drafts.**")) &&\n  visible == true &&\n  needsReview != true &&\n  doNotPublishWithoutExplicitApproval != true &&\n  (!defined(publishAt) || publishAt <= now()) &&\n  defined(title) && length(title) > 0 &&\n  defined(slug.current) && length(slug.current) > 0 &&\n  defined(summary) && length(summary) > 0 && length(summary) <= 220 &&\n  dateTime(date + "T00:00:00Z") <= dateTime(now()) &&\n  media.needsReview != true &&\n  media.prototypeOnly != true &&\n  media.altNeedsReview != true &&\n  media.needsApprovedEmbed != true &&\n  media.needsApprovedMaster != true &&\n  media.previewIsPlaceholder != true &&\n  media.doNotPublishWithoutExplicitApproval != true &&\n  media.image.needsReview != true && media.image.prototypeOnly != true && media.image.altNeedsReview != true && media.image.needsApprovedEmbed != true && media.image.needsApprovedMaster != true && media.image.previewIsPlaceholder != true && media.image.doNotPublishWithoutExplicitApproval != true &&\n  media.file.needsReview != true && media.file.prototypeOnly != true && media.file.altNeedsReview != true && media.file.needsApprovedEmbed != true && media.file.needsApprovedMaster != true && media.file.previewIsPlaceholder != true && media.file.doNotPublishWithoutExplicitApproval != true &&\n  media.poster.needsReview != true && media.poster.prototypeOnly != true && media.poster.altNeedsReview != true && media.poster.needsApprovedEmbed != true && media.poster.needsApprovedMaster != true && media.poster.previewIsPlaceholder != true && media.poster.doNotPublishWithoutExplicitApproval != true &&\n  media.captionsFile.needsReview != true && media.captionsFile.prototypeOnly != true && media.captionsFile.needsApprovedMaster != true && media.captionsFile.doNotPublishWithoutExplicitApproval != true &&\n  seo.shareImage.needsReview != true && seo.shareImage.prototypeOnly != true && seo.shareImage.altNeedsReview != true && seo.shareImage.needsApprovedEmbed != true && seo.shareImage.needsApprovedMaster != true && seo.shareImage.previewIsPlaceholder != true && seo.shareImage.doNotPublishWithoutExplicitApproval != true &&\n  ((media.kind == "image" && defined(media.image.asset) && (length(coalesce(media.alt, "")) > 0 || media.decorative == true)) ||\n   (media.kind == "video" && defined(media.poster.asset) && (defined(media.file.asset) || defined(media.remoteUrl))))\n]._id\n}': SANITY_RELEASE_AUDIT_QUERY_RESULT;
-    '*[_id == "siteSettings" &&\n  length(coalesce(defaultSeo.metaTitle, "")) > 0 &&\n  length(coalesce(defaultSeo.metaDescription, "")) > 0 &&\n  defined(defaultSeo.shareImage.asset) &&\n  length(coalesce(defaultSeo.shareImageAlt, "")) > 0 &&\n  wordmark.image.needsReview != true && wordmark.image.prototypeOnly != true && wordmark.image.altNeedsReview != true && wordmark.image.needsApprovedEmbed != true && wordmark.image.needsApprovedMaster != true && wordmark.image.previewIsPlaceholder != true && wordmark.image.doNotPublishWithoutExplicitApproval != true &&\n  wordmark.file.needsReview != true && wordmark.file.prototypeOnly != true && wordmark.file.needsApprovedEmbed != true && wordmark.file.needsApprovedMaster != true && wordmark.file.previewIsPlaceholder != true && wordmark.file.doNotPublishWithoutExplicitApproval != true &&\n  compactMark.image.needsReview != true && compactMark.image.prototypeOnly != true && compactMark.image.altNeedsReview != true && compactMark.image.needsApprovedEmbed != true && compactMark.image.needsApprovedMaster != true && compactMark.image.previewIsPlaceholder != true && compactMark.image.doNotPublishWithoutExplicitApproval != true &&\n  compactMark.file.needsReview != true && compactMark.file.prototypeOnly != true && compactMark.file.needsApprovedEmbed != true && compactMark.file.needsApprovedMaster != true && compactMark.file.previewIsPlaceholder != true && compactMark.file.doNotPublishWithoutExplicitApproval != true &&\n  defaultSeo.shareImage.needsReview != true && defaultSeo.shareImage.prototypeOnly != true && defaultSeo.shareImage.altNeedsReview != true && defaultSeo.shareImage.needsApprovedEmbed != true && defaultSeo.shareImage.needsApprovedMaster != true && defaultSeo.shareImage.previewIsPlaceholder != true && defaultSeo.shareImage.doNotPublishWithoutExplicitApproval != true\n][0]{\n  siteName,\n  navigation[]{_key, label, destination, visible},\n  wordmark{format, image{\n  _type,\n  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},\n  crop,\n  hotspot,\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n}, file{\n  _type,\n  asset->{_id, url, mimeType, size, originalFilename},\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n}},\n  compactMark{format, image{\n  _type,\n  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},\n  crop,\n  hotspot,\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n}, file{\n  _type,\n  asset->{_id, url, mimeType, size, originalFilename},\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n}},\n  defaultSeo{\n  metaTitle,\n  metaDescription,\n  shareImage{\n  _type,\n  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},\n  crop,\n  hotspot,\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n},\n  shareImageAlt,\n  noIndex\n},\n  "workPage": *[_id == "workPage"][0]{\n  introName,\n  manifesto,\n  gallery[]{_key, "workId": asset->project->_id, "assetId": asset->_id, cardSize, treatment},\n  reel{\n  enabled,\n  poster{\n  _type,\n  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},\n  crop,\n  hotspot,\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n},\n  desktopSource{\n  _type,\n  asset->{_id, url, mimeType, size, originalFilename},\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n},\n  desktopSourceUrl,\n  mobileSource{\n  _type,\n  asset->{_id, url, mimeType, size, originalFilename},\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n},\n  mobileSourceUrl,\n  caption,\n  credits[]{_key, label, value, richValue, url},\n  ctaLabel,\n  ctaUrl,\n  startMuted,\n  aspectRatio\n},\n  notesEnabled,\n  seo{\n  metaTitle,\n  metaDescription,\n  shareImage{\n  _type,\n  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},\n  crop,\n  hotspot,\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n},\n  shareImageAlt,\n  noIndex\n}\n},\n  "aboutPage": *[_id == "aboutPage"][0]{\n  openingLabel,\n  openingHeadline,\n  openingNote,\n  windingHeadline,\n  orbitHeadline,\n  indexHeadline,\n  chaptersHeadline,\n  apertureHeadline,\n  fallbackLabel,\n  fallbackHeadline,\n  fallbackDescription,\n  closingLabel,\n  closingHeadline,\n  ctaLabel,\n  ctaDestination,\n  seo{\n  metaTitle,\n  metaDescription,\n  shareImage{\n  _type,\n  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},\n  crop,\n  hotspot,\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n},\n  shareImageAlt,\n  noIndex\n}\n},\n  "contactPage": *[_id == "contactPage"][0]{\n  heading,\n  introduction,\n  email,\n  location,\n  socialLinks[]{_key, label, url},\n  seo{\n  metaTitle,\n  metaDescription,\n  shareImage{\n  _type,\n  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},\n  crop,\n  hotspot,\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n},\n  shareImageAlt,\n  noIndex\n}\n},\n  "footer": *[_id == "footerSettings"][0]{\n  strapline[]{_key, text, emphasis},\n  peopleHeading,\n  exploreHeading,\n  connectHeading,\n  exploreLinks[]{_key, label, destination, url},\n  contactLabel,\n  copyrightLine,\n  showYear\n}\n}': SITE_SETTINGS_QUERY_RESULT;
-    '*[_id == "siteSettings"][0]{\n  siteName,\n  navigation[]{_key, label, destination, visible},\n  wordmark{format, image{\n  _type,\n  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},\n  crop,\n  hotspot,\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n}, file{\n  _type,\n  asset->{_id, url, mimeType, size, originalFilename},\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n}},\n  compactMark{format, image{\n  _type,\n  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},\n  crop,\n  hotspot,\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n}, file{\n  _type,\n  asset->{_id, url, mimeType, size, originalFilename},\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n}},\n  defaultSeo{\n  metaTitle,\n  metaDescription,\n  shareImage{\n  _type,\n  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},\n  crop,\n  hotspot,\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n},\n  shareImageAlt,\n  noIndex\n},\n  "workPage": *[_id == "workPage"][0]{\n  introName,\n  manifesto,\n  gallery[]{_key, "workId": asset->project->_id, "assetId": asset->_id, cardSize, treatment},\n  reel{\n  enabled,\n  poster{\n  _type,\n  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},\n  crop,\n  hotspot,\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n},\n  desktopSource{\n  _type,\n  asset->{_id, url, mimeType, size, originalFilename},\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n},\n  desktopSourceUrl,\n  mobileSource{\n  _type,\n  asset->{_id, url, mimeType, size, originalFilename},\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n},\n  mobileSourceUrl,\n  caption,\n  credits[]{_key, label, value, richValue, url},\n  ctaLabel,\n  ctaUrl,\n  startMuted,\n  aspectRatio\n},\n  notesEnabled,\n  seo{\n  metaTitle,\n  metaDescription,\n  shareImage{\n  _type,\n  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},\n  crop,\n  hotspot,\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n},\n  shareImageAlt,\n  noIndex\n}\n},\n  "aboutPage": *[_id == "aboutPage"][0]{\n  openingLabel,\n  openingHeadline,\n  openingNote,\n  windingHeadline,\n  orbitHeadline,\n  indexHeadline,\n  chaptersHeadline,\n  apertureHeadline,\n  fallbackLabel,\n  fallbackHeadline,\n  fallbackDescription,\n  closingLabel,\n  closingHeadline,\n  ctaLabel,\n  ctaDestination,\n  seo{\n  metaTitle,\n  metaDescription,\n  shareImage{\n  _type,\n  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},\n  crop,\n  hotspot,\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n},\n  shareImageAlt,\n  noIndex\n}\n},\n  "contactPage": *[_id == "contactPage"][0]{\n  heading,\n  introduction,\n  email,\n  location,\n  socialLinks[]{_key, label, url},\n  seo{\n  metaTitle,\n  metaDescription,\n  shareImage{\n  _type,\n  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},\n  crop,\n  hotspot,\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n},\n  shareImageAlt,\n  noIndex\n}\n},\n  "footer": *[_id == "footerSettings"][0]{\n  strapline[]{_key, text, emphasis},\n  peopleHeading,\n  exploreHeading,\n  connectHeading,\n  exploreLinks[]{_key, label, destination, url},\n  contactLabel,\n  copyrightLine,\n  showYear\n}\n}': PREVIEW_SITE_SETTINGS_QUERY_RESULT;
+    '{\n  "singletonCounts": {\n    "siteSettings": count(*[_id == "siteSettings"]),\n    "workPage": count(*[_id == "workPage"]),\n    "aboutPage": count(*[_id == "aboutPage"]),\n    "contactPage": count(*[_id == "contactPage"]),\n    "footerSettings": count(*[_id == "footerSettings"])\n  },\n  "aboutPage": *[_id == "aboutPage"][0]{\n  openingLabel,\n  openingHeadline,\n  openingNote,\n  windingHeadline,\n  orbitHeadline,\n  indexHeadline,\n  chaptersHeadline,\n  apertureHeadline,\n  fallbackLabel,\n  fallbackHeadline,\n  fallbackDescription,\n  closingLabel,\n  closingHeadline,\n  ctaLabel,\n  ctaDestination,\n  seo{\n  metaTitle,\n  metaDescription,\n  shareImage{\n  _type,\n  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},\n  crop,\n  hotspot,\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n},\n  shareImageAlt,\n  noIndex\n}\n},\n  "workPage": *[_id == "workPage"][0]{\n    notesEnabled,\n    gallery[]{\n      _key,\n      "assetId": asset->_id,\n      "assetType": asset->_type,\n      "assetKind": asset->kind,\n      "assetSlug": asset->slug.current,\n      "workId": asset->project->_id,\n      "workSlug": asset->project->slug.current,\n      "workType": asset->project->_type\n    }\n  },\n  "workDocuments": *[_type == "work" && !(_id in path("drafts.**"))]{\n    _id,\n    title,\n    legacyId,\n    "slug": slug.current,\n    template,\n    "assets": *[_type == "mediaItem" && project._ref == ^._id]{\n      _id,\n      title,\n      "slug": slug.current,\n      kind,\n      "hasMedia": select(\n        kind == "image" => defined(image.asset),\n        kind == "video" => defined(poster.asset) && (defined(videoFile.asset) || defined(videoUrl)),\n        kind == "file" => defined(file.asset),\n        false\n      ),\n      "hasAccessibilityText": kind == "file" || decorative == true || length(coalesce(alt, "")) > 0\n    },\n    editorialStatus,\n    publishAt\n  },\n  "publicWorkIds": *[_type == "work" && \n  !(_id in path("drafts.**")) &&\n  (editorialStatus == "approved" || (!defined(editorialStatus) && visible == true)) &&\n  (defined(editorialStatus) || needsReview != true) &&\n  doNotPublishWithoutExplicitApproval != true &&\n  (!defined(publishAt) || publishAt <= now()) &&\n  defined(cover.poster.asset) &&\n  (length(coalesce(cover.alt, "")) > 0 || cover.decorative == true) &&\n  count(*[_type == "mediaItem" && project._ref == ^._id]) > 0 &&\n  count(*[_type == "mediaItem" && project._ref == ^._id]) ==\n    count(*[_type == "mediaItem" && project._ref == ^._id && \n  !(_id in path("drafts.**")) &&\n  defined(project) &&\n  defined(slug.current) && length(slug.current) > 0 &&\n  (kind == "file" || decorative == true || length(coalesce(alt, "")) > 0) &&\n  select(\n    kind == "image" => defined(image.asset),\n    kind == "video" => defined(poster.asset) && (defined(videoFile.asset) || defined(videoUrl)),\n    kind == "file" => defined(file.asset),\n    false\n  )\n]) &&\n  cover.needsReview != true &&\n  cover.previewIsPlaceholder != true &&\n  cover.prototypeOnly != true &&\n  cover.focalPoint.needsReview != true &&\n  cover.poster.needsReview != true &&\n  cover.poster.prototypeOnly != true &&\n  cover.poster.altNeedsReview != true &&\n  cover.poster.needsApprovedEmbed != true &&\n  cover.poster.needsApprovedMaster != true &&\n  cover.poster.previewIsPlaceholder != true &&\n  cover.poster.doNotPublishWithoutExplicitApproval != true &&\n  cover.previewVideo.needsReview != true &&\n  cover.previewVideo.prototypeOnly != true &&\n  cover.previewVideo.altNeedsReview != true &&\n  cover.previewVideo.needsApprovedEmbed != true &&\n  cover.previewVideo.needsApprovedMaster != true &&\n  cover.previewVideo.previewIsPlaceholder != true &&\n  cover.previewVideo.doNotPublishWithoutExplicitApproval != true &&\n  cover.previewPosterOverride.needsReview != true &&\n  cover.previewPosterOverride.prototypeOnly != true &&\n  cover.previewPosterOverride.altNeedsReview != true &&\n  cover.previewPosterOverride.needsApprovedEmbed != true &&\n  cover.previewPosterOverride.needsApprovedMaster != true &&\n  cover.previewPosterOverride.previewIsPlaceholder != true &&\n  cover.previewPosterOverride.doNotPublishWithoutExplicitApproval != true &&\n  cover.mobilePoster.needsReview != true &&\n  cover.mobilePoster.prototypeOnly != true &&\n  cover.mobilePoster.altNeedsReview != true &&\n  cover.mobilePoster.needsApprovedEmbed != true &&\n  cover.mobilePoster.needsApprovedMaster != true &&\n  cover.mobilePoster.previewIsPlaceholder != true &&\n  cover.mobilePoster.doNotPublishWithoutExplicitApproval != true &&\n  seo.shareImage.needsReview != true &&\n  seo.shareImage.prototypeOnly != true &&\n  seo.shareImage.altNeedsReview != true &&\n  seo.shareImage.needsApprovedEmbed != true &&\n  seo.shareImage.needsApprovedMaster != true &&\n  seo.shareImage.previewIsPlaceholder != true &&\n  seo.shareImage.doNotPublishWithoutExplicitApproval != true &&\n  count(contentBlocks[_type in ["heroImage", "heroVideo", "fullBleedImage", "containedImage", "imagePair", "imageGrid", "video", "shortLoop"]]) > 0 &&\n  count(contentBlocks[\n    needsReview == true ||\n    prototypeOnly == true ||\n    altNeedsReview == true ||\n    needsApprovedEmbed == true ||\n    needsApprovedMaster == true ||\n    previewIsPlaceholder == true ||\n    doNotPublishWithoutExplicitApproval == true ||\n    image.needsReview == true || image.prototypeOnly == true || image.altNeedsReview == true || image.needsApprovedEmbed == true || image.needsApprovedMaster == true || image.previewIsPlaceholder == true || image.doNotPublishWithoutExplicitApproval == true ||\n    poster.needsReview == true || poster.prototypeOnly == true || poster.altNeedsReview == true || poster.needsApprovedEmbed == true || poster.needsApprovedMaster == true || poster.previewIsPlaceholder == true || poster.doNotPublishWithoutExplicitApproval == true ||\n    source.needsReview == true || source.prototypeOnly == true || source.altNeedsReview == true || source.needsApprovedEmbed == true || source.needsApprovedMaster == true || source.previewIsPlaceholder == true || source.doNotPublishWithoutExplicitApproval == true ||\n    captionsFile.needsReview == true || captionsFile.prototypeOnly == true || captionsFile.needsApprovedMaster == true || captionsFile.doNotPublishWithoutExplicitApproval == true ||\n    left.needsReview == true || left.prototypeOnly == true || left.altNeedsReview == true || left.doNotPublishWithoutExplicitApproval == true || left.image.needsReview == true || left.image.prototypeOnly == true || left.image.altNeedsReview == true || left.image.needsApprovedEmbed == true || left.image.needsApprovedMaster == true || left.image.previewIsPlaceholder == true || left.image.doNotPublishWithoutExplicitApproval == true ||\n    right.needsReview == true || right.prototypeOnly == true || right.altNeedsReview == true || right.doNotPublishWithoutExplicitApproval == true || right.image.needsReview == true || right.image.prototypeOnly == true || right.image.altNeedsReview == true || right.image.needsApprovedEmbed == true || right.image.needsApprovedMaster == true || right.image.previewIsPlaceholder == true || right.image.doNotPublishWithoutExplicitApproval == true\n  ]) == 0 &&\n  count(contentBlocks[_type == "imageGrid" && count(images[\n    needsReview == true || prototypeOnly == true || altNeedsReview == true || doNotPublishWithoutExplicitApproval == true ||\n    image.needsReview == true || image.prototypeOnly == true || image.altNeedsReview == true || image.needsApprovedEmbed == true || image.needsApprovedMaster == true || image.previewIsPlaceholder == true || image.doNotPublishWithoutExplicitApproval == true\n  ]) > 0]) == 0 &&\n  count(contentBlocks[_type in ["heroImage", "fullBleedImage", "containedImage"] && (\n    (!defined(image.asset) && !defined(mediaItem->image.asset)) ||\n    (!defined(mediaItem) && length(coalesce(alt, "")) == 0 && decorative != true)\n  )]) == 0 &&\n  count(contentBlocks[_type == "imagePair" && (\n    (!defined(left.image.asset) && !defined(left.mediaItem->image.asset)) || (!defined(left.mediaItem) && length(coalesce(left.alt, "")) == 0 && left.decorative != true) ||\n    (!defined(right.image.asset) && !defined(right.mediaItem->image.asset)) || (!defined(right.mediaItem) && length(coalesce(right.alt, "")) == 0 && right.decorative != true)\n  )]) == 0 &&\n  count(contentBlocks[_type == "imageGrid" && count(images[\n    (!defined(image.asset) && !defined(mediaItem->image.asset)) ||\n    (!defined(mediaItem) && length(coalesce(alt, "")) == 0 && decorative != true)\n  ]) > 0]) == 0 &&\n  count(contentBlocks[_type in ["heroVideo", "video"] && !defined(poster.asset) && !defined(mediaItem->poster.asset)]) == 0 &&\n  count(contentBlocks[_type == "shortLoop" && !defined(poster.asset)]) == 0 &&\n  count(contentBlocks[_type in ["heroVideo", "video"] && !defined(mediaItem) &&\n    !defined(source.asset) && !defined(remoteSource) && !defined(vimeoId) && !defined(youtubeId) && !defined(externalUrl)\n  ]) == 0 &&\n  count(contentBlocks[_type == "shortLoop" && length(coalesce(alt, "")) == 0 && decorative != true]) == 0\n]._id,\n  "legacyProjectCount": count(*[_type == "project" && !(_id in path("drafts.**"))]),\n  "notes": *[_type == "note" && !(_id in path("drafts.**"))]{\n    _id,\n    title,\n    "slug": slug.current,\n    date,\n    visible,\n    publishAt\n  },\n  "publicNoteIds": *[_type == "note" && \n  !(_id in path("drafts.**")) &&\n  visible == true &&\n  needsReview != true &&\n  doNotPublishWithoutExplicitApproval != true &&\n  (!defined(publishAt) || publishAt <= now()) &&\n  defined(title) && length(title) > 0 &&\n  defined(slug.current) && length(slug.current) > 0 &&\n  defined(summary) && length(summary) > 0 && length(summary) <= 220 &&\n  dateTime(date + "T00:00:00Z") <= dateTime(now()) &&\n  media.needsReview != true &&\n  media.prototypeOnly != true &&\n  media.altNeedsReview != true &&\n  media.needsApprovedEmbed != true &&\n  media.needsApprovedMaster != true &&\n  media.previewIsPlaceholder != true &&\n  media.doNotPublishWithoutExplicitApproval != true &&\n  media.image.needsReview != true && media.image.prototypeOnly != true && media.image.altNeedsReview != true && media.image.needsApprovedEmbed != true && media.image.needsApprovedMaster != true && media.image.previewIsPlaceholder != true && media.image.doNotPublishWithoutExplicitApproval != true &&\n  media.file.needsReview != true && media.file.prototypeOnly != true && media.file.altNeedsReview != true && media.file.needsApprovedEmbed != true && media.file.needsApprovedMaster != true && media.file.previewIsPlaceholder != true && media.file.doNotPublishWithoutExplicitApproval != true &&\n  media.poster.needsReview != true && media.poster.prototypeOnly != true && media.poster.altNeedsReview != true && media.poster.needsApprovedEmbed != true && media.poster.needsApprovedMaster != true && media.poster.previewIsPlaceholder != true && media.poster.doNotPublishWithoutExplicitApproval != true &&\n  media.captionsFile.needsReview != true && media.captionsFile.prototypeOnly != true && media.captionsFile.needsApprovedMaster != true && media.captionsFile.doNotPublishWithoutExplicitApproval != true &&\n  seo.shareImage.needsReview != true && seo.shareImage.prototypeOnly != true && seo.shareImage.altNeedsReview != true && seo.shareImage.needsApprovedEmbed != true && seo.shareImage.needsApprovedMaster != true && seo.shareImage.previewIsPlaceholder != true && seo.shareImage.doNotPublishWithoutExplicitApproval != true &&\n  ((media.kind == "image" && defined(media.image.asset) && (length(coalesce(media.alt, "")) > 0 || media.decorative == true)) ||\n   (media.kind == "video" && defined(media.poster.asset) && (defined(media.file.asset) || defined(media.remoteUrl))))\n]._id\n}': SANITY_RELEASE_AUDIT_QUERY_RESULT;
+    '*[_id == "siteSettings" &&\n  length(coalesce(defaultSeo.metaTitle, "")) > 0 &&\n  length(coalesce(defaultSeo.metaDescription, "")) > 0 &&\n  defined(defaultSeo.shareImage.asset) &&\n  length(coalesce(defaultSeo.shareImageAlt, "")) > 0 &&\n  wordmark.image.needsReview != true && wordmark.image.prototypeOnly != true && wordmark.image.altNeedsReview != true && wordmark.image.needsApprovedEmbed != true && wordmark.image.needsApprovedMaster != true && wordmark.image.previewIsPlaceholder != true && wordmark.image.doNotPublishWithoutExplicitApproval != true &&\n  wordmark.file.needsReview != true && wordmark.file.prototypeOnly != true && wordmark.file.needsApprovedEmbed != true && wordmark.file.needsApprovedMaster != true && wordmark.file.previewIsPlaceholder != true && wordmark.file.doNotPublishWithoutExplicitApproval != true &&\n  compactMark.image.needsReview != true && compactMark.image.prototypeOnly != true && compactMark.image.altNeedsReview != true && compactMark.image.needsApprovedEmbed != true && compactMark.image.needsApprovedMaster != true && compactMark.image.previewIsPlaceholder != true && compactMark.image.doNotPublishWithoutExplicitApproval != true &&\n  compactMark.file.needsReview != true && compactMark.file.prototypeOnly != true && compactMark.file.needsApprovedEmbed != true && compactMark.file.needsApprovedMaster != true && compactMark.file.previewIsPlaceholder != true && compactMark.file.doNotPublishWithoutExplicitApproval != true &&\n  defaultSeo.shareImage.needsReview != true && defaultSeo.shareImage.prototypeOnly != true && defaultSeo.shareImage.altNeedsReview != true && defaultSeo.shareImage.needsApprovedEmbed != true && defaultSeo.shareImage.needsApprovedMaster != true && defaultSeo.shareImage.previewIsPlaceholder != true && defaultSeo.shareImage.doNotPublishWithoutExplicitApproval != true\n][0]{\n  siteName,\n  navigation[]{_key, label, destination, visible},\n  wordmark{format, width, height, image{\n  _type,\n  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},\n  crop,\n  hotspot,\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n}, file{\n  _type,\n  asset->{_id, url, mimeType, size, originalFilename},\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n}},\n  compactMark{format, width, height, image{\n  _type,\n  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},\n  crop,\n  hotspot,\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n}, file{\n  _type,\n  asset->{_id, url, mimeType, size, originalFilename},\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n}},\n  stackedWordmark{format, width, height, image{\n  _type,\n  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},\n  crop,\n  hotspot,\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n}, file{\n  _type,\n  asset->{_id, url, mimeType, size, originalFilename},\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n}},\n  headerDescriptor,\n  defaultSeo{\n  metaTitle,\n  metaDescription,\n  shareImage{\n  _type,\n  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},\n  crop,\n  hotspot,\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n},\n  shareImageAlt,\n  noIndex\n},\n  "workPage": *[_id == "workPage"][0]{\n  introName,\n  tickerWords,\n  tickerCities,\n  btsHeading,\n  btsSubtitle,\n  behindTheScenes[]{_key, "workId": asset->project->_id, "assetId": asset->_id, cardSize, treatment},\n  manifesto,\n  gallery[]{_key, "workId": asset->project->_id, "assetId": asset->_id, cardSize, treatment},\n  reel{\n  enabled,\n  poster{\n  _type,\n  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},\n  crop,\n  hotspot,\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n},\n  desktopSource{\n  _type,\n  asset->{_id, url, mimeType, size, originalFilename},\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n},\n  desktopSourceUrl,\n  mobileSource{\n  _type,\n  asset->{_id, url, mimeType, size, originalFilename},\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n},\n  mobileSourceUrl,\n  caption,\n  credits[]{_key, label, value, richValue, url},\n  ctaLabel,\n  ctaUrl,\n  startMuted,\n  aspectRatio\n},\n  notesEnabled,\n  seo{\n  metaTitle,\n  metaDescription,\n  shareImage{\n  _type,\n  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},\n  crop,\n  hotspot,\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n},\n  shareImageAlt,\n  noIndex\n}\n},\n  "aboutPage": *[_id == "aboutPage"][0]{\n  openingLabel,\n  openingHeadline,\n  openingNote,\n  windingHeadline,\n  orbitHeadline,\n  indexHeadline,\n  chaptersHeadline,\n  apertureHeadline,\n  fallbackLabel,\n  fallbackHeadline,\n  fallbackDescription,\n  closingLabel,\n  closingHeadline,\n  ctaLabel,\n  ctaDestination,\n  seo{\n  metaTitle,\n  metaDescription,\n  shareImage{\n  _type,\n  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},\n  crop,\n  hotspot,\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n},\n  shareImageAlt,\n  noIndex\n}\n},\n  "contactPage": *[_id == "contactPage"][0]{\n  heading,\n  introduction,\n  email,\n  location,\n  socialLinks[]{_key, label, url},\n  seo{\n  metaTitle,\n  metaDescription,\n  shareImage{\n  _type,\n  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},\n  crop,\n  hotspot,\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n},\n  shareImageAlt,\n  noIndex\n}\n},\n  "footer": *[_id == "footerSettings"][0]{\n  clientLogos[]{_key, name, url, artwork{format, width, height, image{\n  _type,\n  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},\n  crop,\n  hotspot,\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n}, file{\n  _type,\n  asset->{_id, url, mimeType, size, originalFilename},\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n}}},\n  calloutText,\n  tickerWords,\n  featuredHeading,\n  strapline[]{_key, text, emphasis},\n  peopleHeading,\n  exploreHeading,\n  connectHeading,\n  exploreLinks[]{_key, label, destination, url},\n  contactLabel,\n  copyrightLine,\n  showYear\n}\n}': SITE_SETTINGS_QUERY_RESULT;
+    '*[_id == "siteSettings"][0]{\n  siteName,\n  navigation[]{_key, label, destination, visible},\n  wordmark{format, width, height, image{\n  _type,\n  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},\n  crop,\n  hotspot,\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n}, file{\n  _type,\n  asset->{_id, url, mimeType, size, originalFilename},\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n}},\n  compactMark{format, width, height, image{\n  _type,\n  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},\n  crop,\n  hotspot,\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n}, file{\n  _type,\n  asset->{_id, url, mimeType, size, originalFilename},\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n}},\n  stackedWordmark{format, width, height, image{\n  _type,\n  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},\n  crop,\n  hotspot,\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n}, file{\n  _type,\n  asset->{_id, url, mimeType, size, originalFilename},\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n}},\n  headerDescriptor,\n  defaultSeo{\n  metaTitle,\n  metaDescription,\n  shareImage{\n  _type,\n  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},\n  crop,\n  hotspot,\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n},\n  shareImageAlt,\n  noIndex\n},\n  "workPage": *[_id == "workPage"][0]{\n  introName,\n  tickerWords,\n  tickerCities,\n  btsHeading,\n  btsSubtitle,\n  behindTheScenes[]{_key, "workId": asset->project->_id, "assetId": asset->_id, cardSize, treatment},\n  manifesto,\n  gallery[]{_key, "workId": asset->project->_id, "assetId": asset->_id, cardSize, treatment},\n  reel{\n  enabled,\n  poster{\n  _type,\n  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},\n  crop,\n  hotspot,\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n},\n  desktopSource{\n  _type,\n  asset->{_id, url, mimeType, size, originalFilename},\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n},\n  desktopSourceUrl,\n  mobileSource{\n  _type,\n  asset->{_id, url, mimeType, size, originalFilename},\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n},\n  mobileSourceUrl,\n  caption,\n  credits[]{_key, label, value, richValue, url},\n  ctaLabel,\n  ctaUrl,\n  startMuted,\n  aspectRatio\n},\n  notesEnabled,\n  seo{\n  metaTitle,\n  metaDescription,\n  shareImage{\n  _type,\n  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},\n  crop,\n  hotspot,\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n},\n  shareImageAlt,\n  noIndex\n}\n},\n  "aboutPage": *[_id == "aboutPage"][0]{\n  openingLabel,\n  openingHeadline,\n  openingNote,\n  windingHeadline,\n  orbitHeadline,\n  indexHeadline,\n  chaptersHeadline,\n  apertureHeadline,\n  fallbackLabel,\n  fallbackHeadline,\n  fallbackDescription,\n  closingLabel,\n  closingHeadline,\n  ctaLabel,\n  ctaDestination,\n  seo{\n  metaTitle,\n  metaDescription,\n  shareImage{\n  _type,\n  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},\n  crop,\n  hotspot,\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n},\n  shareImageAlt,\n  noIndex\n}\n},\n  "contactPage": *[_id == "contactPage"][0]{\n  heading,\n  introduction,\n  email,\n  location,\n  socialLinks[]{_key, label, url},\n  seo{\n  metaTitle,\n  metaDescription,\n  shareImage{\n  _type,\n  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},\n  crop,\n  hotspot,\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n},\n  shareImageAlt,\n  noIndex\n}\n},\n  "footer": *[_id == "footerSettings"][0]{\n  clientLogos[]{_key, name, url, artwork{format, width, height, image{\n  _type,\n  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},\n  crop,\n  hotspot,\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n}, file{\n  _type,\n  asset->{_id, url, mimeType, size, originalFilename},\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n}}},\n  calloutText,\n  tickerWords,\n  featuredHeading,\n  strapline[]{_key, text, emphasis},\n  peopleHeading,\n  exploreHeading,\n  connectHeading,\n  exploreLinks[]{_key, label, destination, url},\n  contactLabel,\n  copyrightLine,\n  showYear\n}\n}': PREVIEW_SITE_SETTINGS_QUERY_RESULT;
     '*[_type == "work" && featuredOnHome == true && \n  !(_id in path("drafts.**")) &&\n  (editorialStatus == "approved" || (!defined(editorialStatus) && visible == true)) &&\n  (defined(editorialStatus) || needsReview != true) &&\n  doNotPublishWithoutExplicitApproval != true &&\n  (!defined(publishAt) || publishAt <= now()) &&\n  defined(cover.poster.asset) &&\n  (length(coalesce(cover.alt, "")) > 0 || cover.decorative == true) &&\n  count(*[_type == "mediaItem" && project._ref == ^._id]) > 0 &&\n  count(*[_type == "mediaItem" && project._ref == ^._id]) ==\n    count(*[_type == "mediaItem" && project._ref == ^._id && \n  !(_id in path("drafts.**")) &&\n  defined(project) &&\n  defined(slug.current) && length(slug.current) > 0 &&\n  (kind == "file" || decorative == true || length(coalesce(alt, "")) > 0) &&\n  select(\n    kind == "image" => defined(image.asset),\n    kind == "video" => defined(poster.asset) && (defined(videoFile.asset) || defined(videoUrl)),\n    kind == "file" => defined(file.asset),\n    false\n  )\n]) &&\n  cover.needsReview != true &&\n  cover.previewIsPlaceholder != true &&\n  cover.prototypeOnly != true &&\n  cover.focalPoint.needsReview != true &&\n  cover.poster.needsReview != true &&\n  cover.poster.prototypeOnly != true &&\n  cover.poster.altNeedsReview != true &&\n  cover.poster.needsApprovedEmbed != true &&\n  cover.poster.needsApprovedMaster != true &&\n  cover.poster.previewIsPlaceholder != true &&\n  cover.poster.doNotPublishWithoutExplicitApproval != true &&\n  cover.previewVideo.needsReview != true &&\n  cover.previewVideo.prototypeOnly != true &&\n  cover.previewVideo.altNeedsReview != true &&\n  cover.previewVideo.needsApprovedEmbed != true &&\n  cover.previewVideo.needsApprovedMaster != true &&\n  cover.previewVideo.previewIsPlaceholder != true &&\n  cover.previewVideo.doNotPublishWithoutExplicitApproval != true &&\n  cover.previewPosterOverride.needsReview != true &&\n  cover.previewPosterOverride.prototypeOnly != true &&\n  cover.previewPosterOverride.altNeedsReview != true &&\n  cover.previewPosterOverride.needsApprovedEmbed != true &&\n  cover.previewPosterOverride.needsApprovedMaster != true &&\n  cover.previewPosterOverride.previewIsPlaceholder != true &&\n  cover.previewPosterOverride.doNotPublishWithoutExplicitApproval != true &&\n  cover.mobilePoster.needsReview != true &&\n  cover.mobilePoster.prototypeOnly != true &&\n  cover.mobilePoster.altNeedsReview != true &&\n  cover.mobilePoster.needsApprovedEmbed != true &&\n  cover.mobilePoster.needsApprovedMaster != true &&\n  cover.mobilePoster.previewIsPlaceholder != true &&\n  cover.mobilePoster.doNotPublishWithoutExplicitApproval != true &&\n  seo.shareImage.needsReview != true &&\n  seo.shareImage.prototypeOnly != true &&\n  seo.shareImage.altNeedsReview != true &&\n  seo.shareImage.needsApprovedEmbed != true &&\n  seo.shareImage.needsApprovedMaster != true &&\n  seo.shareImage.previewIsPlaceholder != true &&\n  seo.shareImage.doNotPublishWithoutExplicitApproval != true &&\n  count(contentBlocks[_type in ["heroImage", "heroVideo", "fullBleedImage", "containedImage", "imagePair", "imageGrid", "video", "shortLoop"]]) > 0 &&\n  count(contentBlocks[\n    needsReview == true ||\n    prototypeOnly == true ||\n    altNeedsReview == true ||\n    needsApprovedEmbed == true ||\n    needsApprovedMaster == true ||\n    previewIsPlaceholder == true ||\n    doNotPublishWithoutExplicitApproval == true ||\n    image.needsReview == true || image.prototypeOnly == true || image.altNeedsReview == true || image.needsApprovedEmbed == true || image.needsApprovedMaster == true || image.previewIsPlaceholder == true || image.doNotPublishWithoutExplicitApproval == true ||\n    poster.needsReview == true || poster.prototypeOnly == true || poster.altNeedsReview == true || poster.needsApprovedEmbed == true || poster.needsApprovedMaster == true || poster.previewIsPlaceholder == true || poster.doNotPublishWithoutExplicitApproval == true ||\n    source.needsReview == true || source.prototypeOnly == true || source.altNeedsReview == true || source.needsApprovedEmbed == true || source.needsApprovedMaster == true || source.previewIsPlaceholder == true || source.doNotPublishWithoutExplicitApproval == true ||\n    captionsFile.needsReview == true || captionsFile.prototypeOnly == true || captionsFile.needsApprovedMaster == true || captionsFile.doNotPublishWithoutExplicitApproval == true ||\n    left.needsReview == true || left.prototypeOnly == true || left.altNeedsReview == true || left.doNotPublishWithoutExplicitApproval == true || left.image.needsReview == true || left.image.prototypeOnly == true || left.image.altNeedsReview == true || left.image.needsApprovedEmbed == true || left.image.needsApprovedMaster == true || left.image.previewIsPlaceholder == true || left.image.doNotPublishWithoutExplicitApproval == true ||\n    right.needsReview == true || right.prototypeOnly == true || right.altNeedsReview == true || right.doNotPublishWithoutExplicitApproval == true || right.image.needsReview == true || right.image.prototypeOnly == true || right.image.altNeedsReview == true || right.image.needsApprovedEmbed == true || right.image.needsApprovedMaster == true || right.image.previewIsPlaceholder == true || right.image.doNotPublishWithoutExplicitApproval == true\n  ]) == 0 &&\n  count(contentBlocks[_type == "imageGrid" && count(images[\n    needsReview == true || prototypeOnly == true || altNeedsReview == true || doNotPublishWithoutExplicitApproval == true ||\n    image.needsReview == true || image.prototypeOnly == true || image.altNeedsReview == true || image.needsApprovedEmbed == true || image.needsApprovedMaster == true || image.previewIsPlaceholder == true || image.doNotPublishWithoutExplicitApproval == true\n  ]) > 0]) == 0 &&\n  count(contentBlocks[_type in ["heroImage", "fullBleedImage", "containedImage"] && (\n    (!defined(image.asset) && !defined(mediaItem->image.asset)) ||\n    (!defined(mediaItem) && length(coalesce(alt, "")) == 0 && decorative != true)\n  )]) == 0 &&\n  count(contentBlocks[_type == "imagePair" && (\n    (!defined(left.image.asset) && !defined(left.mediaItem->image.asset)) || (!defined(left.mediaItem) && length(coalesce(left.alt, "")) == 0 && left.decorative != true) ||\n    (!defined(right.image.asset) && !defined(right.mediaItem->image.asset)) || (!defined(right.mediaItem) && length(coalesce(right.alt, "")) == 0 && right.decorative != true)\n  )]) == 0 &&\n  count(contentBlocks[_type == "imageGrid" && count(images[\n    (!defined(image.asset) && !defined(mediaItem->image.asset)) ||\n    (!defined(mediaItem) && length(coalesce(alt, "")) == 0 && decorative != true)\n  ]) > 0]) == 0 &&\n  count(contentBlocks[_type in ["heroVideo", "video"] && !defined(poster.asset) && !defined(mediaItem->poster.asset)]) == 0 &&\n  count(contentBlocks[_type == "shortLoop" && !defined(poster.asset)]) == 0 &&\n  count(contentBlocks[_type in ["heroVideo", "video"] && !defined(mediaItem) &&\n    !defined(source.asset) && !defined(remoteSource) && !defined(vimeoId) && !defined(youtubeId) && !defined(externalUrl)\n  ]) == 0 &&\n  count(contentBlocks[_type == "shortLoop" && length(coalesce(alt, "")) == 0 && decorative != true]) == 0\n]\n  | order(homeOrder asc) {\n  _id,\n  _type,\n  title,\n  "slug": slug.current,\n  owner,\n  client,\n  types,\n  "template": coalesce(template, select(layoutVariant == "photoEssay" => "photo", layoutVariant in ["campaign", "experimental"] => "featured", "video")),\n  "assets": *[\n  _type == "mediaItem" &&\n  project._ref == ^._id &&\n  \n  !(_id in path("drafts.**")) &&\n  defined(project) &&\n  defined(slug.current) && length(slug.current) > 0 &&\n  (kind == "file" || decorative == true || length(coalesce(alt, "")) > 0) &&\n  select(\n    kind == "image" => defined(image.asset),\n    kind == "video" => defined(poster.asset) && (defined(videoFile.asset) || defined(videoUrl)),\n    kind == "file" => defined(file.asset),\n    false\n  )\n\n] | order(projectOrder asc, _createdAt asc) {\n  _id,\n  title,\n  "slug": slug.current,\n  kind,\n  image{\n  _type,\n  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},\n  crop,\n  hotspot,\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n},\n  poster{\n  _type,\n  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},\n  crop,\n  hotspot,\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n},\n  "source": videoFile{\n  _type,\n  asset->{_id, url, mimeType, size, originalFilename},\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n},\n  videoUrl,\n  file{\n  _type,\n  asset->{_id, url, mimeType, size, originalFilename},\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n},\n  alt,\n  decorative,\n  caption,\n  credit,\n  projectOrder,\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n},\n  cover{\n  poster{\n  _type,\n  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},\n  crop,\n  hotspot,\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n},\n  alt,\n  decorative,\n  previewVideo{\n  _type,\n  asset->{_id, url, mimeType, size, originalFilename},\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n},\n  previewVideoUrl,\n  previewPosterOverride{\n  _type,\n  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},\n  crop,\n  hotspot,\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n},\n  mediaType,\n  cardRatio,\n  mobilePoster{\n  _type,\n  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},\n  crop,\n  hotspot,\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n},\n  focalPoint{x, y, needsReview},\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n},\n  homeOrder,\n  homeCardSize,\n  homeColumn,\n  homeOffset,\n  homeTreatment,\n  projectTheme,\n  accentColor,\n  titleTreatment,\n  heroTreatment,\n  layoutVariant,\n  motionIntensity\n}': HOME_PROJECTS_QUERY_RESULT;
     '*[_type == "work" && \n  !(_id in path("drafts.**")) &&\n  (editorialStatus == "approved" || (!defined(editorialStatus) && visible == true)) &&\n  (defined(editorialStatus) || needsReview != true) &&\n  doNotPublishWithoutExplicitApproval != true &&\n  (!defined(publishAt) || publishAt <= now()) &&\n  defined(cover.poster.asset) &&\n  (length(coalesce(cover.alt, "")) > 0 || cover.decorative == true) &&\n  count(*[_type == "mediaItem" && project._ref == ^._id]) > 0 &&\n  count(*[_type == "mediaItem" && project._ref == ^._id]) ==\n    count(*[_type == "mediaItem" && project._ref == ^._id && \n  !(_id in path("drafts.**")) &&\n  defined(project) &&\n  defined(slug.current) && length(slug.current) > 0 &&\n  (kind == "file" || decorative == true || length(coalesce(alt, "")) > 0) &&\n  select(\n    kind == "image" => defined(image.asset),\n    kind == "video" => defined(poster.asset) && (defined(videoFile.asset) || defined(videoUrl)),\n    kind == "file" => defined(file.asset),\n    false\n  )\n]) &&\n  cover.needsReview != true &&\n  cover.previewIsPlaceholder != true &&\n  cover.prototypeOnly != true &&\n  cover.focalPoint.needsReview != true &&\n  cover.poster.needsReview != true &&\n  cover.poster.prototypeOnly != true &&\n  cover.poster.altNeedsReview != true &&\n  cover.poster.needsApprovedEmbed != true &&\n  cover.poster.needsApprovedMaster != true &&\n  cover.poster.previewIsPlaceholder != true &&\n  cover.poster.doNotPublishWithoutExplicitApproval != true &&\n  cover.previewVideo.needsReview != true &&\n  cover.previewVideo.prototypeOnly != true &&\n  cover.previewVideo.altNeedsReview != true &&\n  cover.previewVideo.needsApprovedEmbed != true &&\n  cover.previewVideo.needsApprovedMaster != true &&\n  cover.previewVideo.previewIsPlaceholder != true &&\n  cover.previewVideo.doNotPublishWithoutExplicitApproval != true &&\n  cover.previewPosterOverride.needsReview != true &&\n  cover.previewPosterOverride.prototypeOnly != true &&\n  cover.previewPosterOverride.altNeedsReview != true &&\n  cover.previewPosterOverride.needsApprovedEmbed != true &&\n  cover.previewPosterOverride.needsApprovedMaster != true &&\n  cover.previewPosterOverride.previewIsPlaceholder != true &&\n  cover.previewPosterOverride.doNotPublishWithoutExplicitApproval != true &&\n  cover.mobilePoster.needsReview != true &&\n  cover.mobilePoster.prototypeOnly != true &&\n  cover.mobilePoster.altNeedsReview != true &&\n  cover.mobilePoster.needsApprovedEmbed != true &&\n  cover.mobilePoster.needsApprovedMaster != true &&\n  cover.mobilePoster.previewIsPlaceholder != true &&\n  cover.mobilePoster.doNotPublishWithoutExplicitApproval != true &&\n  seo.shareImage.needsReview != true &&\n  seo.shareImage.prototypeOnly != true &&\n  seo.shareImage.altNeedsReview != true &&\n  seo.shareImage.needsApprovedEmbed != true &&\n  seo.shareImage.needsApprovedMaster != true &&\n  seo.shareImage.previewIsPlaceholder != true &&\n  seo.shareImage.doNotPublishWithoutExplicitApproval != true &&\n  count(contentBlocks[_type in ["heroImage", "heroVideo", "fullBleedImage", "containedImage", "imagePair", "imageGrid", "video", "shortLoop"]]) > 0 &&\n  count(contentBlocks[\n    needsReview == true ||\n    prototypeOnly == true ||\n    altNeedsReview == true ||\n    needsApprovedEmbed == true ||\n    needsApprovedMaster == true ||\n    previewIsPlaceholder == true ||\n    doNotPublishWithoutExplicitApproval == true ||\n    image.needsReview == true || image.prototypeOnly == true || image.altNeedsReview == true || image.needsApprovedEmbed == true || image.needsApprovedMaster == true || image.previewIsPlaceholder == true || image.doNotPublishWithoutExplicitApproval == true ||\n    poster.needsReview == true || poster.prototypeOnly == true || poster.altNeedsReview == true || poster.needsApprovedEmbed == true || poster.needsApprovedMaster == true || poster.previewIsPlaceholder == true || poster.doNotPublishWithoutExplicitApproval == true ||\n    source.needsReview == true || source.prototypeOnly == true || source.altNeedsReview == true || source.needsApprovedEmbed == true || source.needsApprovedMaster == true || source.previewIsPlaceholder == true || source.doNotPublishWithoutExplicitApproval == true ||\n    captionsFile.needsReview == true || captionsFile.prototypeOnly == true || captionsFile.needsApprovedMaster == true || captionsFile.doNotPublishWithoutExplicitApproval == true ||\n    left.needsReview == true || left.prototypeOnly == true || left.altNeedsReview == true || left.doNotPublishWithoutExplicitApproval == true || left.image.needsReview == true || left.image.prototypeOnly == true || left.image.altNeedsReview == true || left.image.needsApprovedEmbed == true || left.image.needsApprovedMaster == true || left.image.previewIsPlaceholder == true || left.image.doNotPublishWithoutExplicitApproval == true ||\n    right.needsReview == true || right.prototypeOnly == true || right.altNeedsReview == true || right.doNotPublishWithoutExplicitApproval == true || right.image.needsReview == true || right.image.prototypeOnly == true || right.image.altNeedsReview == true || right.image.needsApprovedEmbed == true || right.image.needsApprovedMaster == true || right.image.previewIsPlaceholder == true || right.image.doNotPublishWithoutExplicitApproval == true\n  ]) == 0 &&\n  count(contentBlocks[_type == "imageGrid" && count(images[\n    needsReview == true || prototypeOnly == true || altNeedsReview == true || doNotPublishWithoutExplicitApproval == true ||\n    image.needsReview == true || image.prototypeOnly == true || image.altNeedsReview == true || image.needsApprovedEmbed == true || image.needsApprovedMaster == true || image.previewIsPlaceholder == true || image.doNotPublishWithoutExplicitApproval == true\n  ]) > 0]) == 0 &&\n  count(contentBlocks[_type in ["heroImage", "fullBleedImage", "containedImage"] && (\n    (!defined(image.asset) && !defined(mediaItem->image.asset)) ||\n    (!defined(mediaItem) && length(coalesce(alt, "")) == 0 && decorative != true)\n  )]) == 0 &&\n  count(contentBlocks[_type == "imagePair" && (\n    (!defined(left.image.asset) && !defined(left.mediaItem->image.asset)) || (!defined(left.mediaItem) && length(coalesce(left.alt, "")) == 0 && left.decorative != true) ||\n    (!defined(right.image.asset) && !defined(right.mediaItem->image.asset)) || (!defined(right.mediaItem) && length(coalesce(right.alt, "")) == 0 && right.decorative != true)\n  )]) == 0 &&\n  count(contentBlocks[_type == "imageGrid" && count(images[\n    (!defined(image.asset) && !defined(mediaItem->image.asset)) ||\n    (!defined(mediaItem) && length(coalesce(alt, "")) == 0 && decorative != true)\n  ]) > 0]) == 0 &&\n  count(contentBlocks[_type in ["heroVideo", "video"] && !defined(poster.asset) && !defined(mediaItem->poster.asset)]) == 0 &&\n  count(contentBlocks[_type == "shortLoop" && !defined(poster.asset)]) == 0 &&\n  count(contentBlocks[_type in ["heroVideo", "video"] && !defined(mediaItem) &&\n    !defined(source.asset) && !defined(remoteSource) && !defined(vimeoId) && !defined(youtubeId) && !defined(externalUrl)\n  ]) == 0 &&\n  count(contentBlocks[_type == "shortLoop" && length(coalesce(alt, "")) == 0 && decorative != true]) == 0\n]\n  | order(homeOrder asc) {\n  _id,\n  _type,\n  title,\n  "slug": slug.current,\n  owner,\n  client,\n  types,\n  "template": coalesce(template, select(layoutVariant == "photoEssay" => "photo", layoutVariant in ["campaign", "experimental"] => "featured", "video")),\n  "assets": *[\n  _type == "mediaItem" &&\n  project._ref == ^._id &&\n  \n  !(_id in path("drafts.**")) &&\n  defined(project) &&\n  defined(slug.current) && length(slug.current) > 0 &&\n  (kind == "file" || decorative == true || length(coalesce(alt, "")) > 0) &&\n  select(\n    kind == "image" => defined(image.asset),\n    kind == "video" => defined(poster.asset) && (defined(videoFile.asset) || defined(videoUrl)),\n    kind == "file" => defined(file.asset),\n    false\n  )\n\n] | order(projectOrder asc, _createdAt asc) {\n  _id,\n  title,\n  "slug": slug.current,\n  kind,\n  image{\n  _type,\n  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},\n  crop,\n  hotspot,\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n},\n  poster{\n  _type,\n  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},\n  crop,\n  hotspot,\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n},\n  "source": videoFile{\n  _type,\n  asset->{_id, url, mimeType, size, originalFilename},\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n},\n  videoUrl,\n  file{\n  _type,\n  asset->{_id, url, mimeType, size, originalFilename},\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n},\n  alt,\n  decorative,\n  caption,\n  credit,\n  projectOrder,\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n},\n  cover{\n  poster{\n  _type,\n  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},\n  crop,\n  hotspot,\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n},\n  alt,\n  decorative,\n  previewVideo{\n  _type,\n  asset->{_id, url, mimeType, size, originalFilename},\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n},\n  previewVideoUrl,\n  previewPosterOverride{\n  _type,\n  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},\n  crop,\n  hotspot,\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n},\n  mediaType,\n  cardRatio,\n  mobilePoster{\n  _type,\n  asset->{_id, url, mimeType, "width": metadata.dimensions.width, "height": metadata.dimensions.height, "aspectRatio": metadata.dimensions.aspectRatio, "lqip": metadata.lqip},\n  crop,\n  hotspot,\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n},\n  focalPoint{x, y, needsReview},\n  \n  needsReview,\n  prototypeOnly,\n  altNeedsReview,\n  needsApprovedEmbed,\n  needsApprovedMaster,\n  previewIsPlaceholder,\n  doNotPublishWithoutExplicitApproval\n\n},\n  homeOrder,\n  homeCardSize,\n  homeColumn,\n  homeOffset,\n  homeTreatment,\n  projectTheme,\n  accentColor,\n  titleTreatment,\n  heroTreatment,\n  layoutVariant,\n  motionIntensity\n}': ALL_PUBLIC_PROJECTS_QUERY_RESULT;
     '*[_type == "work" && \n  !(_id in path("drafts.**")) &&\n  (editorialStatus == "approved" || (!defined(editorialStatus) && visible == true)) &&\n  (defined(editorialStatus) || needsReview != true) &&\n  doNotPublishWithoutExplicitApproval != true &&\n  (!defined(publishAt) || publishAt <= now()) &&\n  defined(cover.poster.asset) &&\n  (length(coalesce(cover.alt, "")) > 0 || cover.decorative == true) &&\n  count(*[_type == "mediaItem" && project._ref == ^._id]) > 0 &&\n  count(*[_type == "mediaItem" && project._ref == ^._id]) ==\n    count(*[_type == "mediaItem" && project._ref == ^._id && \n  !(_id in path("drafts.**")) &&\n  defined(project) &&\n  defined(slug.current) && length(slug.current) > 0 &&\n  (kind == "file" || decorative == true || length(coalesce(alt, "")) > 0) &&\n  select(\n    kind == "image" => defined(image.asset),\n    kind == "video" => defined(poster.asset) && (defined(videoFile.asset) || defined(videoUrl)),\n    kind == "file" => defined(file.asset),\n    false\n  )\n]) &&\n  cover.needsReview != true &&\n  cover.previewIsPlaceholder != true &&\n  cover.prototypeOnly != true &&\n  cover.focalPoint.needsReview != true &&\n  cover.poster.needsReview != true &&\n  cover.poster.prototypeOnly != true &&\n  cover.poster.altNeedsReview != true &&\n  cover.poster.needsApprovedEmbed != true &&\n  cover.poster.needsApprovedMaster != true &&\n  cover.poster.previewIsPlaceholder != true &&\n  cover.poster.doNotPublishWithoutExplicitApproval != true &&\n  cover.previewVideo.needsReview != true &&\n  cover.previewVideo.prototypeOnly != true &&\n  cover.previewVideo.altNeedsReview != true &&\n  cover.previewVideo.needsApprovedEmbed != true &&\n  cover.previewVideo.needsApprovedMaster != true &&\n  cover.previewVideo.previewIsPlaceholder != true &&\n  cover.previewVideo.doNotPublishWithoutExplicitApproval != true &&\n  cover.previewPosterOverride.needsReview != true &&\n  cover.previewPosterOverride.prototypeOnly != true &&\n  cover.previewPosterOverride.altNeedsReview != true &&\n  cover.previewPosterOverride.needsApprovedEmbed != true &&\n  cover.previewPosterOverride.needsApprovedMaster != true &&\n  cover.previewPosterOverride.previewIsPlaceholder != true &&\n  cover.previewPosterOverride.doNotPublishWithoutExplicitApproval != true &&\n  cover.mobilePoster.needsReview != true &&\n  cover.mobilePoster.prototypeOnly != true &&\n  cover.mobilePoster.altNeedsReview != true &&\n  cover.mobilePoster.needsApprovedEmbed != true &&\n  cover.mobilePoster.needsApprovedMaster != true &&\n  cover.mobilePoster.previewIsPlaceholder != true &&\n  cover.mobilePoster.doNotPublishWithoutExplicitApproval != true &&\n  seo.shareImage.needsReview != true &&\n  seo.shareImage.prototypeOnly != true &&\n  seo.shareImage.altNeedsReview != true &&\n  seo.shareImage.needsApprovedEmbed != true &&\n  seo.shareImage.needsApprovedMaster != true &&\n  seo.shareImage.previewIsPlaceholder != true &&\n  seo.shareImage.doNotPublishWithoutExplicitApproval != true &&\n  count(contentBlocks[_type in ["heroImage", "heroVideo", "fullBleedImage", "containedImage", "imagePair", "imageGrid", "video", "shortLoop"]]) > 0 &&\n  count(contentBlocks[\n    needsReview == true ||\n    prototypeOnly == true ||\n    altNeedsReview == true ||\n    needsApprovedEmbed == true ||\n    needsApprovedMaster == true ||\n    previewIsPlaceholder == true ||\n    doNotPublishWithoutExplicitApproval == true ||\n    image.needsReview == true || image.prototypeOnly == true || image.altNeedsReview == true || image.needsApprovedEmbed == true || image.needsApprovedMaster == true || image.previewIsPlaceholder == true || image.doNotPublishWithoutExplicitApproval == true ||\n    poster.needsReview == true || poster.prototypeOnly == true || poster.altNeedsReview == true || poster.needsApprovedEmbed == true || poster.needsApprovedMaster == true || poster.previewIsPlaceholder == true || poster.doNotPublishWithoutExplicitApproval == true ||\n    source.needsReview == true || source.prototypeOnly == true || source.altNeedsReview == true || source.needsApprovedEmbed == true || source.needsApprovedMaster == true || source.previewIsPlaceholder == true || source.doNotPublishWithoutExplicitApproval == true ||\n    captionsFile.needsReview == true || captionsFile.prototypeOnly == true || captionsFile.needsApprovedMaster == true || captionsFile.doNotPublishWithoutExplicitApproval == true ||\n    left.needsReview == true || left.prototypeOnly == true || left.altNeedsReview == true || left.doNotPublishWithoutExplicitApproval == true || left.image.needsReview == true || left.image.prototypeOnly == true || left.image.altNeedsReview == true || left.image.needsApprovedEmbed == true || left.image.needsApprovedMaster == true || left.image.previewIsPlaceholder == true || left.image.doNotPublishWithoutExplicitApproval == true ||\n    right.needsReview == true || right.prototypeOnly == true || right.altNeedsReview == true || right.doNotPublishWithoutExplicitApproval == true || right.image.needsReview == true || right.image.prototypeOnly == true || right.image.altNeedsReview == true || right.image.needsApprovedEmbed == true || right.image.needsApprovedMaster == true || right.image.previewIsPlaceholder == true || right.image.doNotPublishWithoutExplicitApproval == true\n  ]) == 0 &&\n  count(contentBlocks[_type == "imageGrid" && count(images[\n    needsReview == true || prototypeOnly == true || altNeedsReview == true || doNotPublishWithoutExplicitApproval == true ||\n    image.needsReview == true || image.prototypeOnly == true || image.altNeedsReview == true || image.needsApprovedEmbed == true || image.needsApprovedMaster == true || image.previewIsPlaceholder == true || image.doNotPublishWithoutExplicitApproval == true\n  ]) > 0]) == 0 &&\n  count(contentBlocks[_type in ["heroImage", "fullBleedImage", "containedImage"] && (\n    (!defined(image.asset) && !defined(mediaItem->image.asset)) ||\n    (!defined(mediaItem) && length(coalesce(alt, "")) == 0 && decorative != true)\n  )]) == 0 &&\n  count(contentBlocks[_type == "imagePair" && (\n    (!defined(left.image.asset) && !defined(left.mediaItem->image.asset)) || (!defined(left.mediaItem) && length(coalesce(left.alt, "")) == 0 && left.decorative != true) ||\n    (!defined(right.image.asset) && !defined(right.mediaItem->image.asset)) || (!defined(right.mediaItem) && length(coalesce(right.alt, "")) == 0 && right.decorative != true)\n  )]) == 0 &&\n  count(contentBlocks[_type == "imageGrid" && count(images[\n    (!defined(image.asset) && !defined(mediaItem->image.asset)) ||\n    (!defined(mediaItem) && length(coalesce(alt, "")) == 0 && decorative != true)\n  ]) > 0]) == 0 &&\n  count(contentBlocks[_type in ["heroVideo", "video"] && !defined(poster.asset) && !defined(mediaItem->poster.asset)]) == 0 &&\n  count(contentBlocks[_type == "shortLoop" && !defined(poster.asset)]) == 0 &&\n  count(contentBlocks[_type in ["heroVideo", "video"] && !defined(mediaItem) &&\n    !defined(source.asset) && !defined(remoteSource) && !defined(vimeoId) && !defined(youtubeId) && !defined(externalUrl)\n  ]) == 0 &&\n  count(contentBlocks[_type == "shortLoop" && length(coalesce(alt, "")) == 0 && decorative != true]) == 0\n]\n  | order(homeOrder asc)[]{"slug": slug.current}': PUBLIC_PROJECT_SLUGS_QUERY_RESULT;

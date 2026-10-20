@@ -523,7 +523,7 @@
     "title": "Cradlewise",
     "slug": "cradlewise",
     "owner": "michael",
-    "client": "",
+    "client": "Cradlewise",
     "types": [
       "Photography"
     ],
@@ -593,7 +593,7 @@
     "title": "Specialized Globe",
     "slug": "specialized-globe",
     "owner": "michael",
-    "client": "",
+    "client": "Specialized",
     "types": [
       "Animation"
     ],
@@ -665,7 +665,7 @@
     "title": "Arc",
     "slug": "arc",
     "owner": "michael",
-    "client": "",
+    "client": "Arc",
     "types": [
       "Photography"
     ],
@@ -735,7 +735,7 @@
     "title": "Brava",
     "slug": "brava",
     "owner": "michael",
-    "client": "",
+    "client": "Brava",
     "types": [
       "Animation"
     ],
@@ -807,7 +807,7 @@
     "title": "Chanel Test",
     "slug": "chanel-test",
     "owner": "michael",
-    "client": "",
+    "client": "Client 03",
     "types": [
       "Photography"
     ],
@@ -878,7 +878,7 @@
     "title": "Fellow",
     "slug": "fellow",
     "owner": "michael",
-    "client": "",
+    "client": "Client 04",
     "types": [
       "Photography"
     ],
@@ -948,7 +948,7 @@
     "title": "Miss Jones — Pancake",
     "slug": "miss-jones-pancake",
     "owner": "michael",
-    "client": "",
+    "client": "Client 05",
     "types": [
       "Photography"
     ],
@@ -1018,7 +1018,7 @@
     "title": "Dune / Tansy — Title to Confirm",
     "slug": "dune-tansy",
     "owner": "michael",
-    "client": "",
+    "client": "Client 02",
     "types": [
       "Photography"
     ],
@@ -1088,7 +1088,7 @@
     "title": "Molekule — In Office",
     "slug": "molekule-in-office",
     "owner": "michael",
-    "client": "",
+    "client": "Client 06",
     "types": [
       "Photography"
     ],

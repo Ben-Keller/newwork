@@ -75,7 +75,7 @@ const actions = [
   {href: '/structure/work;work-live', title: 'Project pages', description: 'Edit approved work, shape project stories or create a new film, photo or featured project.'},
   {href: '/structure/assets', title: 'Asset library', description: 'Keep images, short clips and brand files organized by project, with useful descriptions.'},
   {href: '/structure/contactPage', title: 'Contact details', description: 'Update the public email, address and social links. Current placeholders can stay until ready.'},
-  {href: '/structure/footerSettings', title: 'Footer & callout', description: 'Edit the contact invitation, footer train-board messages, Featured heading and copyright.'},
+  {href: '/structure/footerSettings', title: 'Footer & callout', description: 'Edit the contact invitation, footer train-board messages, client logos and copyright.'},
   {href: '/structure/siteSettings', title: 'Brand & navigation', description: 'Manage the approved logo arrangements, header wording, navigation and search information.'},
 ]
 

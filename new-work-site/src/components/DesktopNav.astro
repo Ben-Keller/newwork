@@ -17,7 +17,7 @@ export interface Props {
 
 const {
   items = [
-    { href: withBase('/'), label: 'Work', match: 'section' },
+    { href: withBase('/#work-gallery'), label: 'Work', match: 'section' },
     { href: withBase('/contact'), label: 'Contact', match: 'section' },
   ],
   currentPath = withoutBase(Astro.url.pathname),

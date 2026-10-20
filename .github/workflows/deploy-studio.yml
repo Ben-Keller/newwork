@@ -5,7 +5,7 @@ on:
     branches: [main]
     paths:
       - studio-new-work/**
-      - new-work-oliver-review/sanity/**
+      - new-work-site/sanity/**
       - .github/workflows/deploy-studio.yml
   workflow_dispatch:
 
@@ -43,7 +43,7 @@ jobs:
         with:
           version: 11.19.0
       - name: Install active website dependencies
-        working-directory: new-work-oliver-review
+        working-directory: new-work-site
         run: pnpm install --frozen-lockfile
 
       - name: Validate, type-check, and build Studio
@@ -54,7 +54,7 @@ jobs:
         run: >-
           git diff --exit-code --
           studio-new-work/schema.json
-          new-work-oliver-review/src/sanity.types.ts
+          new-work-site/src/sanity.types.ts
 
       - name: Deploy Studio and require schema upload
         working-directory: studio-new-work

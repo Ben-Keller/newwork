@@ -1,7 +1,7 @@
 /* v8 ignore file -- pointer and ScrollTrigger integration is covered by Playwright. */
 import type { MotionCleanup, MotionEnvironment } from './types';
 import { MOTION_DURATION, MOTION_EASE, MOTION_LIMIT, clampMotionValue } from './tokens';
-import { ScrollTrigger, gsap } from './vendor';
+import { refreshMotionLayout, gsap } from './vendor';
 
 const galleryIsRetained = (gallery: HTMLElement): boolean => (
   Boolean(gallery.closest('[data-gallery-layer-state="background"]'))
@@ -71,10 +71,10 @@ const initializeGalleryEntrance = (gallery: HTMLElement): MotionCleanup => {
 
 const initializeGalleryScroll = (gallery: HTMLElement): MotionCleanup => {
   gallery.dataset.galleryMotion = 'true';
-  ScrollTrigger.refresh();
+  refreshMotionLayout();
 
   return () => {
-    zeroGalleryMotion(gallery);
+    zeroGalleryMotion(gallery, {preservePointerOffset: galleryIsRetained(gallery)});
   };
 };
 
@@ -87,6 +87,7 @@ const initializeGalleryPointer = (gallery: HTMLElement): MotionCleanup => {
 
   const apply = (): void => {
     animationFrame = 0;
+    if (galleryIsRetained(gallery)) return;
     currentX += (targetX - currentX) * 0.18;
     if (Math.abs(currentX - targetX) < 0.05) currentX = targetX;
     gallery.style.setProperty('--gallery-pointer-x', `${currentX.toFixed(2)}px`);

@@ -39,7 +39,8 @@ const columnResponse = desktopColumn ? COLUMN_SCROLL_RESPONSES[desktopColumn - 1
 const tabletColumnResponse = tabletColumn
   ? COMPACT_COLUMN_SCROLL_RESPONSES[tabletColumn - 1]
   : undefined;
-const usesWideCard = project.cover.cardRatio === 'wideFeature' && index >= 8;
+// The review's four-column selection never consumes two lanes.
+const usesWideCard = false;
 const doorwayVideo = entry.asset?.kind === 'video' ? entry.asset.video : undefined;
 const previewSource = doorwayVideo?.src
   || (!entry.asset && !entry.photo ? project.cover.previewVideo : undefined);
@@ -58,6 +59,8 @@ const galleryImageSizes = buildGalleryImageSizes(entry.image, {
   id={`project-${project.slug}`}
   data-project-card
   data-gallery-item-id={entry.id}
+  data-ticker-client={project.client}
+  data-ticker-title={project.title}
   data-home-size={homeCardSize}
   data-home-treatment={homeTreatment}
   data-desktop-column={desktopColumn}

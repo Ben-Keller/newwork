@@ -13,7 +13,7 @@ import {WEBSITE_URL} from './website'
 const SINGLETONS = ['siteSettings', 'workPage', 'aboutPage', 'contactPage', 'footerSettings']
 const CLIENT_HIDDEN_TYPES = ['note']
 const CONFIGURED_PREVIEW_ORIGIN = process.env.SANITY_STUDIO_PREVIEW_ORIGIN
-const PREVIEW_ORIGIN = CONFIGURED_PREVIEW_ORIGIN || (process.env.NODE_ENV === 'development' ? 'http://127.0.0.1:4329' : undefined)
+const PREVIEW_ORIGIN = CONFIGURED_PREVIEW_ORIGIN || (process.env.NODE_ENV === 'development' ? 'http://127.0.0.1:4327' : undefined)
 
 export default defineConfig({
   name: 'new-work',

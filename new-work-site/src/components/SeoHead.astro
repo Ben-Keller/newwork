@@ -31,7 +31,8 @@ const {
   structuredData,
 } = Astro.props;
 const siteUrl = Astro.site || new URL(import.meta.env.PUBLIC_SITE_URL || 'http://localhost:4321');
-const canonical = new URL(pathname, siteUrl).href;
+const homePath = `${import.meta.env.BASE_URL.replace(/\/$/u, '')}/`;
+const canonical = new URL(pathname === homePath.slice(0, -1) ? homePath : pathname, siteUrl).href;
 const resolvedSeo = resolvePageSeo({ siteName, title, description, mode, seo, defaultSeo });
 const absoluteImage = socialImageUrl(resolvedSeo.shareImage, siteUrl);
 const schema = mode === 'production' && structuredData
@@ -41,7 +42,7 @@ const schema = mode === 'production' && structuredData
 
 <title>{resolvedSeo.title}</title>
 <meta name="description" content={resolvedSeo.description} />
-<meta name="robots" content={resolvedSeo.noIndex ? 'noindex, nofollow' : 'index, follow'} />
+<meta name="robots" content={resolvedSeo.noIndex || import.meta.env.PUBLIC_REVIEW_NOINDEX === 'true' ? 'noindex, nofollow' : 'index, follow'} />
 <link rel="canonical" href={canonical} />
 <meta property="og:type" content={kind === 'project' ? 'article' : kind} />
 <meta property="og:site_name" content={siteName} />

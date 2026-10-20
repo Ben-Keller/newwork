@@ -15,7 +15,7 @@ jobs:
     timeout-minutes: 25
     defaults:
       run:
-        working-directory: new-work-oliver-review
+        working-directory: new-work-site
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -25,10 +25,10 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-          cache-dependency-path: new-work-oliver-review/pnpm-lock.yaml
+          cache-dependency-path: new-work-site/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: npm run typecheck && npm run lint && npm test
-      - run: node --test ../hosting/root-release.test.mjs && node ../hosting/check-review-baseline.mjs --source-only
+      - run: node --test ../hosting/root-release.test.mjs
       - name: Prepare the root-domain artifact
         env:
           CONTENT_MODE: ${{ inputs.content_mode }}

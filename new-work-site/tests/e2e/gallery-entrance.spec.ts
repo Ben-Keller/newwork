@@ -14,14 +14,14 @@ test('columns land without a second scale or position adjustment', async ({ page
   await expect(page.locator('[data-logo-work-page]')).toHaveAttribute('data-handoff', 'true');
   await page.waitForTimeout(350);
   const rising = await geometry();
-  rising.forEach((card, index) => expect(Math.abs(card.width - before[index].width)).toBeLessThan(.5));
+  rising.forEach((card, index) => expect(Math.abs(card.width - before[index]!.width)).toBeLessThan(.5));
   await expect(page.locator('[data-logo-intro]')).toHaveAttribute('data-title-motion', 'settled');
   const landed = await geometry();
   await page.waitForTimeout(1100);
   const final = await geometry();
   final.forEach((card, index) => {
-    expect(Math.abs(card.y - landed[index].y)).toBeLessThan(.5);
-    expect(Math.abs(card.x - landed[index].x)).toBeLessThan(.5);
-    expect(Math.abs(card.width - landed[index].width)).toBeLessThan(.5);
+    expect(Math.abs(card.y - landed[index]!.y)).toBeLessThan(.5);
+    expect(Math.abs(card.x - landed[index]!.x)).toBeLessThan(.5);
+    expect(Math.abs(card.width - landed[index]!.width)).toBeLessThan(.5);
   });
 });

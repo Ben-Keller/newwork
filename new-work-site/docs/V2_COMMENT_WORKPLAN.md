@@ -1,5 +1,7 @@
 # V2 website review workplan
 
+> Historical workplan: dated implementation assumptions below are retained as source evidence. The current app is `new-work-site/` at port 4327; the baseline/revision workflow was retired on 20 October 2026. Follow the root README and AGENTS.md for current editing and launch commands.
+
 Prepared 13 October 2026 from `/Users/ben/Downloads/V2 (1).pptx`, Oliver's follow-up supplied in this chat, the supplied logo-arrangement image, and the current local website source on `main`, commit `5f747cc`. Updated with Ben's confirmation that the four-row request applies to the main work gallery and that `newworkagency.com` is already registered.
 
 **Coverage:** all 14 embedded comments across all six slides. Oliver Hamilton authored every comment, dated 11 October 2026 in the file. Slide counts are 1, 5, 1, 1, 3, and 3. No additional comment threads or replies were found. The deck has no substantive speaker notes.

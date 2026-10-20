@@ -13,7 +13,7 @@ import {
   MOTION_PHYSICS,
   parseMotionValue,
 } from './tokens';
-import { ScrollTrigger, SplitText, gsap } from './vendor';
+import { refreshMotionLayout, SplitText, gsap } from './vendor';
 
 declare global {
   interface Window {
@@ -290,6 +290,10 @@ const initializeColumns = (environment: MotionEnvironment): MotionCleanup => {
 
     const tick = (time: number): void => {
       if (disposed) return;
+      if (gallery.closest('[data-gallery-layer-state="background"]')) {
+        animationFrame = 0;
+        return;
+      }
       const delta = Math.min(
         previousTime ? (time - previousTime) / 1_000 : 1 / 60,
         MOTION_PHYSICS.maximumFrameStep,
@@ -334,7 +338,14 @@ const initializeColumns = (environment: MotionEnvironment): MotionCleanup => {
       if (animationFrame) window.cancelAnimationFrame(animationFrame);
       animationFrame = 0;
       previousTime = 0;
+      if (gallery.closest('[data-gallery-layer-state="background"]')) return;
       settleTransforms(window.scrollY);
+    };
+    const freezeRetainedGallery = (): void => {
+      if (!gallery.closest('[data-gallery-layer-state="background"]')) return;
+      if (animationFrame) window.cancelAnimationFrame(animationFrame);
+      animationFrame = 0;
+      previousTime = 0;
     };
     const onVisibilityChange = (): void => {
       if (document.hidden) resetFiltering();
@@ -344,6 +355,7 @@ const initializeColumns = (environment: MotionEnvironment): MotionCleanup => {
     window.addEventListener('scroll', startFiltering, { passive: true });
     window.addEventListener('resize', resetFiltering, { passive: true });
     document.addEventListener('visibilitychange', onVisibilityChange);
+    document.addEventListener('new-work:gallery-layer-retained', freezeRetainedGallery);
 
     return () => {
       disposed = true;
@@ -351,10 +363,13 @@ const initializeColumns = (environment: MotionEnvironment): MotionCleanup => {
       window.removeEventListener('scroll', startFiltering);
       window.removeEventListener('resize', resetFiltering);
       document.removeEventListener('visibilitychange', onVisibilityChange);
+      document.removeEventListener('new-work:gallery-layer-retained', freezeRetainedGallery);
       debugPanel?.remove();
       gallery.removeAttribute('data-column-motion');
       columns.forEach((column) => {
-        column.style.removeProperty('transform');
+        if (!column.closest('[data-gallery-layer-state="background"]')) {
+          column.style.removeProperty('transform');
+        }
         column.style.removeProperty('will-change');
         if (column.dataset.motionReady === 'animated') delete column.dataset.motionReady;
       });
@@ -372,9 +387,10 @@ const initializeColumns = (environment: MotionEnvironment): MotionCleanup => {
 
   return () => {
     responsiveMotion.revert();
-    gsap.set(columns, { clearProps: 'transform' });
     columns.forEach((column) => {
-      column.style.removeProperty('transform');
+      if (!column.closest('[data-gallery-layer-state="background"]')) {
+        column.style.removeProperty('transform');
+      }
       column.style.removeProperty('will-change');
       if (column.dataset.motionReady === 'animated') delete column.dataset.motionReady;
     });
@@ -492,7 +508,7 @@ export const initializeDeclarativeMotion = (environment: MotionEnvironment): Mot
   if (!environment.reducedMotion) {
     refreshFrame = window.requestAnimationFrame(() => {
       refreshFrame = 0;
-      ScrollTrigger.refresh();
+      refreshMotionLayout();
     });
   }
 

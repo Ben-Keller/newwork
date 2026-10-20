@@ -120,6 +120,7 @@ if (isProductionContent) {
 }
 
 export default defineConfig({
+  devToolbar: { enabled: false },
   site,
   base,
   output: 'static',

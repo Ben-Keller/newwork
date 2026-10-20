@@ -1,113 +1,44 @@
 ---
 import SplitFlapTicker from './SplitFlapTicker.astro';
-import type { BrandAssetView, ProjectView } from '../lib/types';
+import OliverBrand from './OliverBrand.astro';
+import type { BrandAssetView, ClientLogoView } from '../lib/types';
 import type { WordmarkTone } from './Wordmark.astro';
 import { withBase } from '../lib/base-path';
-import { buildResponsiveSrcset, pickResponsiveSource } from '../lib/responsive-images';
-
-export interface FooterLink {
-  href?: string;
-  url?: string;
-  label: string;
+interface Props {
+  tickerWords?: string[]; siteName?: string; clientLogos?: ClientLogoView[];
+  copyrightLine?: string; wordmarkAsset?: BrandAssetView; tone?: WordmarkTone;
+  showYear?: boolean; class?: string;
 }
-
-export interface Props {
-  siteName?: string;
-  featuredProjects?: readonly Pick<ProjectView, 'title' | 'slug' | 'cover'>[];
-  people?: readonly FooterLink[];
-  peopleHeading?: string;
-  copyrightLine?: string;
-  wordmarkAsset?: BrandAssetView;
-  tone?: WordmarkTone;
-  showYear?: boolean;
-  class?: string;
-}
-
-const {
-  siteName = 'New Work Agency',
-  featuredProjects = [],
-  people = [],
-  peopleHeading = 'People',
-  copyrightLine = 'All rights reserved.',
-  showYear = true,
-  class: className,
-} = Astro.props;
-
+const { siteName = 'New Work Agency', tickerWords = ['Arriving', 'In transit', 'Departing', 'Early'],
+  clientLogos = [], copyrightLine = 'All rights reserved.', wordmarkAsset,
+  showYear = true, class: className } = Astro.props;
 const year = new Date().getFullYear();
-// A project can occupy several gallery tiles. List it once, in the featured
-// gallery order, and keep the footer edit to a maximum of eight projects.
-const featuredLinks = featuredProjects
-  .filter((project, index, projects) => project.slug
-    && projects.findIndex((candidate) => candidate.slug === project.slug) === index)
-  .slice(0, 8)
-  .map((project) => ({
-    href: withBase(`/work/${project.slug}`),
-    label: project.title,
-    image: project.cover.previewPosterOverride || project.cover.poster,
-  }));
-const resolvedPeople = people.flatMap((link) => {
-  const href = link.href ?? link.url;
-  return href ? [{ href, label: link.label }] : [];
-});
 ---
-
 <footer class:list={['site-footer', className]} data-site-footer>
   <div class="site-footer__inner">
     <div class="site-footer__main">
-      <nav class="site-footer__directory" aria-label="Footer">
-        {resolvedPeople.length ? (
-          <div class="site-footer__group site-footer__group--people">
-            <h2>{peopleHeading}</h2>
-            <ul role="list">
-              {resolvedPeople.map((link) => <li><a href={link.href}>{link.label}</a></li>)}
-            </ul>
-          </div>
-        ) : null}
-
-        {featuredLinks.length ? (
-          <div class="site-footer__group site-footer__group--featured">
-            <h2>Featured</h2>
-            <ul role="list">
-              {featuredLinks.map((link) => (
-                <li>
-                  <a class="site-footer__featured-link" href={link.href}>
-                    <span class="site-footer__featured-label">{link.label}</span>
-                    {link.image.src ? (
-                      <span class="site-footer__preview" aria-hidden="true">
-                        <img
-                          src={pickResponsiveSource(link.image, 480)}
-                          srcset={buildResponsiveSrcset(link.image)}
-                          sizes="(min-width: 1334px) 240px, (min-width: 889px) 18vw, 160px"
-                          width={link.image.width}
-                          height={link.image.height}
-                          alt=""
-                          loading="lazy"
-                          decoding="async"
-                          style={`object-position:${link.image.objectPosition || '50% 50%'}`}
-                        />
-                      </span>
-                    ) : null}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
-      </nav>
+      <div class="site-footer__directory">
+        {clientLogos.length > 0 && <ul class="client-logos" aria-label="Clients" role="list">
+          {clientLogos.map(client => {
+            const Tag = client.url ? 'a' : 'span';
+            return <li><Tag class="client-logos__mark" href={client.url} aria-label={client.name}>
+              {client.artwork ? <img src={client.artwork.src} alt={client.name}
+                width={client.artwork.width || 230} height={client.artwork.height || 60}
+                loading="lazy" decoding="async" /> : <span>{client.name}</span>}
+            </Tag></li>;
+          })}
+        </ul>}
+      </div>
       <div class="site-footer__signature">
         <a
           class="site-footer__brand"
           href={withBase('/')}
           aria-label={siteName}
         >
-          <span class="site-footer__wordmark" aria-hidden="true">
-            <span class="site-footer__wordmark-outline">new</span>
-            <span>work.</span>
-          </span>
+          <OliverBrand variant="stacked" asset={wordmarkAsset} class="site-footer__wordmark" />
         </a>
         <span class="site-footer__discipline">
-          <span>IS</span>
-          <SplitFlapTicker class="site-footer__ticker" size="var(--footer-ticker-height)" />
+          <SplitFlapTicker words={tickerWords} cells={10} class="site-footer__ticker" size="var(--footer-ticker-height)" label={tickerWords.join('. ')} />
         </span>
       </div>
       {showYear && (
@@ -118,3 +49,13 @@ const resolvedPeople = people.flatMap((link) => {
     </div>
   </div>
 </footer>
+
+<style>
+  .client-logos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: center; gap: clamp(.9rem, 1.8vw, 1.8rem) clamp(.9rem, 2vw, 2rem); margin: 0; padding: 0; list-style: none; }
+  .client-logos li { min-width: 0; }
+  .client-logos__mark { display: flex; align-items: center; justify-content: center; min-height: 44px; color: inherit; text-decoration: none; }
+  .client-logos__mark img { display: block; width: 100%; height: clamp(32px, 3.5vw, 56px); object-fit: contain; filter: brightness(0) invert(var(--brand-asset-invert, 0)); }
+  .client-logos__mark > span { font-weight: 700; overflow-wrap: anywhere; }
+  a.client-logos__mark:focus-visible { outline: 2px solid currentColor; outline-offset: 6px; }
+  @media (max-width: 599px) { .client-logos { grid-template-columns: minmax(0, 1fr); } .client-logos__mark img { max-width: 180px; } }
+</style>

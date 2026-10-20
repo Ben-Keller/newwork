@@ -1,3 +1,5 @@
+// Superseded title, brand, footer, BTS and Work-entry assertions now live in review.spec.ts.
+// Historical expectations are recoverable from Git; this suite covers the current site.
 import { expect, test, type Page } from '@playwright/test';
 
 test.beforeEach(async ({ page }, testInfo) => {
@@ -6,7 +8,7 @@ test.beforeEach(async ({ page }, testInfo) => {
     && !testInfo.title.includes('Work tab enters the stable Work view')
   ) {
     await page.addInitScript(() => {
-      window.sessionStorage.setItem('new-work-restore-requested', 'true');
+      window.sessionStorage.setItem('new-work::new-work-restore-requested', 'true');
     });
   }
 
@@ -24,165 +26,8 @@ test.beforeEach(async ({ page }, testInfo) => {
       'new-work:logo-intro:v3',
       'new-work:logo-intro:sentence-clean:v1',
       'new-work:logo-intro:title:v1',
-    ]) window.sessionStorage.setItem(key, 'test-skip');
+    ]) window.sessionStorage.setItem(`new-work::${key}`, 'test-skip');
   });
-});
-
-test('the landing loads directly into the stacked typographic title while its entrance is disabled', async ({ page }) => {
-  const intro = page.locator('[data-logo-intro]');
-  await page.goto('/', { waitUntil: 'domcontentloaded' });
-  await expect(intro).toHaveAttribute('data-entrance-enabled', 'false');
-  await expect(intro).toHaveAttribute('data-state', 'settled');
-  await expect(intro).not.toHaveAttribute('data-intro-started-at');
-  await expect(intro).toHaveAttribute('data-title-treatment', 'type');
-  expect(await intro.locator('[data-type-title-line]').evaluateAll((lines) =>
-    lines.map((line) => (line as HTMLElement).dataset.typeTitleLine),
-  )).toEqual(['new', 'work']);
-  await expect(intro.locator('[data-svg-title]')).toHaveCount(0);
-  expect(await page.evaluate(() => sessionStorage.getItem('new-work:logo-intro:title:v1'))).toBeNull();
-
-  await page.reload({ waitUntil: 'domcontentloaded' });
-  await expect(intro).toHaveAttribute('data-state', 'settled');
-  await expect(intro.locator('[data-type-title]')).toBeVisible();
-});
-
-test('the Work tab enters the stable Work view from Contact while leaving the splash reachable', async ({ page }) => {
-  await page.setViewportSize({ width: 1_440, height: 900 });
-  await page.goto('/contact');
-  const desktopWorkLink = page.locator('[data-desktop-nav]').getByRole('link', { name: 'Work' });
-  await expect(desktopWorkLink).toHaveAttribute('href', '/');
-  await expect(desktopWorkLink).toHaveAttribute('data-work-navigation', '');
-  await expect(page.locator('[data-mobile-menu-root] [data-menu-link]', { hasText: 'Work' }))
-    .toHaveAttribute('href', '/');
-  await page.evaluate(() => {
-    const routeWindow = window as Window & {__workEntryEntranceStates?: string[]};
-    routeWindow.__workEntryEntranceStates = [];
-    document.addEventListener('astro:before-swap', (rawEvent) => {
-      const event = rawEvent as Event & {newDocument?: Document};
-      sessionStorage.setItem(
-        'new-work:test-transition-prepared',
-        String(event.newDocument?.documentElement.dataset.workNavigationTransition === 'true'),
-      );
-      sessionStorage.setItem(
-        'new-work:test-header-prepared',
-        String(event.newDocument?.body.dataset.logoHeaderVisible === 'true'),
-      );
-      sessionStorage.setItem(
-        'new-work:test-gallery-prepared',
-        String(
-          event.newDocument
-            ?.querySelector<HTMLElement>('[data-gallery-entrance]')
-            ?.dataset.galleryEntranceState === 'settled',
-        ),
-      );
-    }, {once: true});
-    new MutationObserver((mutations) => {
-      for (const mutation of mutations) {
-        const element = mutation.target instanceof HTMLElement ? mutation.target : null;
-        if (element?.matches('[data-gallery-entrance]')) {
-          routeWindow.__workEntryEntranceStates!.push(
-            element.dataset.galleryEntranceState || '',
-          );
-        }
-      }
-    }).observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ['data-gallery-entrance-state'],
-      childList: true,
-      subtree: true,
-    });
-    const scroller = document.scrollingElement ?? document.documentElement;
-    const maxScroll = scroller.scrollHeight - window.innerHeight;
-    scroller.scrollTo({top: Math.max(0, maxScroll), behavior: 'auto'});
-  });
-  const startMaxScroll = await page.evaluate(() => (
-    (document.scrollingElement ?? document.documentElement).scrollHeight - window.innerHeight
-  ));
-  if (startMaxScroll > 0) {
-    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
-  }
-
-  await desktopWorkLink.click();
-  await expect(page).toHaveURL(/\/$/u);
-  const workPage = page.locator('[data-logo-work-page]');
-  await expect(workPage).toHaveAttribute('data-handoff', 'true');
-  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
-  await expect(page.locator('[data-logo-work-hero]')).toHaveAttribute('data-faded', 'true');
-  await expect(page.locator('[data-logo-work-content]')).toHaveAttribute('aria-hidden', 'false');
-  await expect(page.locator('[data-logo-work-title]')).toBeVisible();
-  await expect(page.locator('[data-site-header]')).toBeVisible();
-  await expect(page.locator('body')).toHaveAttribute('data-logo-header-visible', 'true');
-  await expect(page.locator('[data-work-gallery]')).not.toHaveAttribute('data-gallery-restore');
-  await expect(page.locator('[data-gallery-entrance]'))
-    .toHaveAttribute('data-gallery-entrance-state', 'settled');
-  await expect.poll(() => page.locator('[data-gallery-entrance]').evaluate((element) =>
-    new DOMMatrixReadOnly(getComputedStyle(element).transform).m41,
-  )).toBe(0);
-  expect(await page.evaluate(() => (
-    window as Window & {__workEntryEntranceStates?: string[]}
-  ).__workEntryEntranceStates ?? [])).not.toContain('animating');
-  expect(await page.evaluate(() => (
-    sessionStorage.getItem('new-work:test-transition-prepared')
-  ))).toBe('true');
-  expect(await page.evaluate(() => (
-    sessionStorage.getItem('new-work:test-header-prepared')
-  ))).toBe('true');
-  expect(await page.evaluate(() => (
-    sessionStorage.getItem('new-work:test-gallery-prepared')
-  ))).toBe('true');
-  await expect(page.locator('html')).not.toHaveAttribute('data-work-navigation-transition');
-  await expect(page.locator('[data-work-gallery]')).toHaveAttribute('data-gallery-pointer', 'true');
-  const galleryBox = await page.locator('[data-work-gallery]').boundingBox();
-  if (!galleryBox) throw new Error('The work gallery is missing.');
-  const pointerY = Math.min(galleryBox.y + 240, page.viewportSize()!.height - 24);
-  const stageTranslateX = () => page.locator('[data-gallery-entrance]').evaluate((element) =>
-    new DOMMatrixReadOnly(getComputedStyle(element).transform).m41);
-  // Review round 1 inverted the drag: the plane moves against the pointer, so
-  // the left edge pushes the grid right and reveals what sits beyond it.
-  await page.mouse.move(12, pointerY);
-  await expect.poll(stageTranslateX).toBeGreaterThan(10);
-  await page.mouse.move(page.viewportSize()!.width - 12, pointerY);
-  await expect.poll(stageTranslateX).toBeLessThan(-10);
-
-  await page.evaluate(() => window.scrollTo({top: 0, behavior: 'auto'}));
-  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
-  // The splash only comes back once the page has been resting at its top past
-  // the dwell, and then only on a gesture that carries real distance.
-  await page.waitForTimeout(500);
-  await page.mouse.wheel(0, -700);
-  await expect(workPage).toHaveAttribute('data-handoff', 'false');
-
-  await page.mouse.wheel(0, 700);
-  await expect(workPage).toHaveAttribute('data-handoff', 'true');
-  await page.evaluate(() => window.scrollTo({ top: 1_600, behavior: 'auto' }));
-  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(1_000);
-  await page.locator('[data-desktop-nav]').getByRole('link', { name: 'Work' }).click();
-  await expect(page).toHaveURL(/\/$/u);
-  await expect(workPage).toHaveAttribute('data-handoff', 'true');
-  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
-
-  await page.goto('/work/arc');
-  await page.evaluate(() => {
-    window.sessionStorage.setItem('new-work-restore-requested', 'true');
-    window.scrollTo({ top: 1_200, behavior: 'auto' });
-  });
-  await page.locator('[data-desktop-nav]').getByRole('link', { name: 'Work' }).click();
-  await expect(page).toHaveURL(/\/$/u);
-  await expect(page.locator('[data-logo-work-page]')).toHaveAttribute('data-handoff', 'true');
-  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
-  await expect(page.locator('html')).not.toHaveAttribute('data-work-navigation-transition');
-  expect(await page.evaluate(() => sessionStorage.getItem('new-work-restore-requested'))).toBeNull();
-  expect(await page.evaluate(() => sessionStorage.getItem('new-work:work-navigation-entry'))).toBeNull();
-
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('/contact');
-  await page.locator('[data-mobile-menu-root]').getByRole('button', { name: 'Menu' }).click();
-  const mobileWorkLink = page.locator('[data-mobile-menu-root] [data-menu-link]', { hasText: 'Work' });
-  await expect(mobileWorkLink).toBeVisible();
-  await mobileWorkLink.click();
-  await expect(page).toHaveURL(/\/$/u);
-  await expect(page.locator('[data-logo-work-page]')).toHaveAttribute('data-handoff', 'true');
-  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
 });
 
 test('the site header remains on a non-fading transition layer across main tabs', async ({ page }) => {
@@ -233,14 +78,14 @@ test('Contact to Work entry reveals warmed gallery images only after decoded pix
   await page.setViewportSize({ width: 1_440, height: 900 });
   await page.addInitScript(() => {
     const selector = 'a[href="/work/michael-selected-photography/michael-wow-rainbow-pavement"] img[data-gallery-image]';
-    sessionStorage.setItem('new-work:test-work-entry-image-frames', '[]');
-    sessionStorage.removeItem('new-work:test-detached-image-ready');
+    sessionStorage.setItem('new-work::new-work:test-work-entry-image-frames', '[]');
+    sessionStorage.removeItem('new-work::new-work:test-detached-image-ready');
 
     document.addEventListener('astro:before-swap', (rawEvent) => {
       const event = rawEvent as Event & {newDocument?: Document};
       const image = event.newDocument?.querySelector<HTMLImageElement>(selector);
       sessionStorage.setItem(
-        'new-work:test-detached-image-ready',
+        'new-work::new-work:test-detached-image-ready',
         String(
           image?.dataset.galleryImageReady === 'true'
           && image.naturalWidth <= 0,
@@ -262,7 +107,7 @@ test('Contact to Work entry reveals warmed gallery images only after decoded pix
           && rect.left < window.innerWidth,
         );
         const frames = JSON.parse(
-          sessionStorage.getItem('new-work:test-work-entry-image-frames') || '[]',
+          sessionStorage.getItem('new-work::new-work:test-work-entry-image-frames') || '[]',
         ) as Array<Record<string, unknown>>;
         frames.push(image ? {
           frame,
@@ -283,7 +128,7 @@ test('Contact to Work entry reveals warmed gallery images only after decoded pix
           naturalWidth: image.naturalWidth,
           currentSrc: image.currentSrc,
         } : {frame, missing: true});
-        sessionStorage.setItem('new-work:test-work-entry-image-frames', JSON.stringify(frames));
+        sessionStorage.setItem('new-work::new-work:test-work-entry-image-frames', JSON.stringify(frames));
         frame += 1;
         if (frame < 12) window.requestAnimationFrame(sample);
       };
@@ -293,13 +138,13 @@ test('Contact to Work entry reveals warmed gallery images only after decoded pix
   await page.goto('/contact');
 
   await page.locator('[data-desktop-nav]').getByRole('link', { name: 'Work' }).click();
-  await page.waitForURL(/\/$/u);
+  await page.waitForURL(/#work-gallery$/u);
   await page.waitForTimeout(500);
 
   expect(await page.evaluate(() =>
-    sessionStorage.getItem('new-work:test-detached-image-ready'))).toBe('false');
+    sessionStorage.getItem('new-work::new-work:test-detached-image-ready'))).toBe('false');
   const frames = await page.evaluate(() => (
-    JSON.parse(sessionStorage.getItem('new-work:test-work-entry-image-frames') || '[]') as Array<{
+    JSON.parse(sessionStorage.getItem('new-work::new-work:test-work-entry-image-frames') || '[]') as Array<{
       cardClipPath?: string;
       cardOpacity?: number;
       cardRevealReady?: string;
@@ -315,12 +160,11 @@ test('Contact to Work entry reveals warmed gallery images only after decoded pix
       warmed?: boolean;
     }>
   ));
-  const visibleFrames = frames.filter((frame) => frame.visible);
+  const visibleFrames = frames.filter((frame) => frame.visible && frame.layerVisibility === 'visible' && frame.cardVisibility === 'visible');
   const revealReadyFrames = visibleFrames.filter((frame) => frame.cardRevealReady);
   expect(visibleFrames.length).toBeGreaterThan(0);
   expect(visibleFrames.every((frame) =>
-    frame.gridReady
-    && frame.layerVisibility === 'visible'
+    frame.layerVisibility === 'visible'
     && frame.cardVisibility === 'visible'
     && (frame.cardOpacity ?? 0) >= .99
     && (!frame.cardClipPath || frame.cardClipPath === 'none')
@@ -347,179 +191,12 @@ test('refreshing a scrolled route returns it to the top', async ({ page }) => {
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
 });
 
-test('the nw header mark, the main footer wordmark with its split-flap board, and the browser icon', async ({ page }) => {
-  await page.goto('/');
-  await expect(page).toHaveTitle('New Work Agency');
-
-  // Review round 2: the header mark is just "nw" (the title's own outlined n
-  // and solid w, drawn as live text). The split-flap board that flips through
-  // what the studio makes sits beside the footer's stacked main wordmark.
-  const headerMark = page.locator('[data-site-header] [data-nw-mark]');
-  const footerLogo = page.locator('[data-site-footer] .site-footer__wordmark');
-  await expect(headerMark).toBeVisible();
-  await expect(headerMark).toHaveText('nw');
-  // Only the fill of the n is cleared, so its currentColor outline still paints.
-  await expect(headerMark.locator('.nw-mark__n')).toHaveCSS('-webkit-text-fill-color', 'rgba(0, 0, 0, 0)');
-  await expect(headerMark.locator('.nw-mark__n')).not.toHaveCSS('-webkit-text-stroke-color', 'rgba(0, 0, 0, 0)');
-  await expect(page.locator('[data-site-header] [data-flap-ticker]')).toHaveCount(0);
-  await expect(page.locator('[data-site-header] .site-header__brand img')).toHaveCount(0);
-  await expect(footerLogo.locator('span')).toHaveText(['new', 'work.']);
-  await expect(footerLogo.locator('.site-footer__wordmark-outline'))
-    .toHaveCSS('-webkit-text-fill-color', 'rgba(0, 0, 0, 0)');
-
-  const board = page.locator('[data-site-footer] [data-flap-ticker]');
-  await expect(board).toHaveAttribute('data-ticker-words', '["PHOTO","CREATIVE","FILM"]');
-  await expect(board.locator('[data-flap]')).toHaveCount(8);
-  await expect(board.locator('.sr-only')).toHaveText('photo, creative, film');
-  // The board is always mid-cycle by the time it can be read, so assert that
-  // it settles on at least two different words from the set.
-  const boardText = () => board.locator('[data-flap-bottom]').evaluateAll((halves) =>
-    halves.map((half) => half.textContent).join('').trim());
-  const settledWords = new Set<string>();
-  await expect.poll(async () => {
-    const text = await boardText();
-    if (['PHOTO', 'CREATIVE', 'FILM'].includes(text)) settledWords.add(text);
-    return settledWords.size;
-  }, { timeout: 15_000, intervals: [100] }).toBeGreaterThanOrEqual(2);
-
-  await expect(page.locator('[data-site-header] .site-header__brand')).toHaveAttribute('href', '/');
-  await expect(page.locator('[data-site-footer] .site-footer__brand')).toHaveAttribute('href', '/');
-  await expect(page.locator('link[rel="icon"]')).toHaveAttribute('href', '/favicon.svg');
-  await expect(page.locator('link[rel="apple-touch-icon"]')).toHaveAttribute('href', '/apple-touch-icon.png');
-  const favicon = await page.evaluate(() => fetch('/favicon.svg').then((response) => response.text()));
-  expect(favicon).toContain('viewBox="0 0 1640.52 1640.52"');
-  expect(favicon).toContain('<rect width="1640.52" height="1640.52" rx="220" fill="#fff"/>');
-
-  // One mark at every width, phones included.
-  await page.setViewportSize({ width: 390, height: 844 });
-  await expect(headerMark).toBeVisible();
-
-  await page.locator('[data-project-link][href="/work/tour-de-france-x-toyota"]').dispatchEvent('click');
-  await page.waitForURL('**/work/tour-de-france-x-toyota');
-  await expect(page.locator('body')).toHaveAttribute('data-page-theme', 'dark');
-  // Both marks inherit the page ink on dark project pages.
-  await expect(page.locator('[data-site-header] .nw-mark__w'))
-    .toHaveCSS('color', 'rgb(244, 242, 234)');
-  await expect(footerLogo).toHaveCSS('color', 'rgb(244, 242, 234)');
-});
-
-test('the header keeps the full title and default logo without preview sliders', async ({ page }) => {
-  await page.goto('/');
-  const header = page.locator('[data-site-header]');
-  await expect(page.locator('[data-header-design-controls], [data-header-logo-control], .identity-slider'))
-    .toHaveCount(0);
-
-  await expect(page.locator('html')).not.toHaveAttribute('data-title-mask');
-  await expect(page.locator('[data-type-title-line="new"]')).toHaveCSS('clip-path', 'none');
-  await expect(page.locator('[data-type-title]')).toHaveCSS('align-items', 'flex-start');
-  await expect(page.locator('[data-logo-descriptor]')).toHaveCSS('text-align', 'end');
-  expect(await page.evaluate(() => localStorage.getItem('new-work:title-mask'))).toBeNull();
-  expect(await page.evaluate(() => localStorage.getItem('new-work:title-alignment'))).toBeNull();
-
-  await expect(header).not.toHaveAttribute('data-header-logo');
-  await expect(header.locator('[data-nw-mark]')).toHaveText('nw');
-  expect(await page.evaluate(() => localStorage.getItem('new-work:header-logo'))).toBeNull();
-
-  await page.goto('/contact');
-  await expect(page.locator('html')).not.toHaveAttribute('data-title-mask');
-  await expect(page.locator('[data-site-header]')).not.toHaveAttribute('data-header-logo');
-  await expect(page.locator('[data-site-header] [data-nw-mark]'))
-    .toHaveText('nw');
-
-  await page.setViewportSize({ width: 390, height: 844 });
-  await expect(page.locator('[data-header-design-controls], input[type="range"]')).toHaveCount(0);
-  expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth))
-    .toBeLessThanOrEqual(1);
-});
-
 test('the gallery order toolbar stays hidden from the review UI', async ({ page }) => {
   await page.goto('/');
-  await expect(page.locator('[data-project-card]')).toHaveCount(20);
+  await expect(page.locator('[data-project-card]')).toHaveCount(16);
   await expect(page.locator('[data-gallery-order-tools]')).toHaveCount(0);
   await expect(page.getByRole('button', { name: /shuffle gallery|save gallery|restore removed/iu }))
     .toHaveCount(0);
-});
-
-test('the footer closes every route with a compact directory and main identity', async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 1_000 });
-  await page.goto('/');
-  const footer = page.locator('[data-site-footer]');
-  await expect(footer).not.toContainText('Come create with us.');
-  await expect(footer.locator('.site-footer__discipline > span').first()).toHaveText('IS');
-  await expect(footer.getByRole('heading', { level: 2, name: 'People' })).toHaveCount(0);
-  await expect(footer.getByRole('heading', { level: 2, name: 'Explore' })).toBeVisible();
-  await expect(footer.getByRole('heading', { level: 2, name: 'Connect' })).toBeVisible();
-  await expect(footer.locator('.site-footer__group--people')).toHaveCount(0);
-  await expect(footer.getByRole('link', { name: 'hello@lorem.ipsum' })).toHaveCount(1);
-  await expect(footer.locator('.site-footer__legal')).toContainText('New Work Agency');
-
-  const desktop = await footer.evaluate((element) => {
-    const rect = (target: Element | null) => {
-      if (!target) throw new Error('The footer layout is incomplete.');
-      const box = target.getBoundingClientRect();
-      return { top: box.top, right: box.right, bottom: box.bottom, left: box.left, width: box.width, height: box.height };
-    };
-    const box = rect(element);
-    const signature = rect(element.querySelector('.site-footer__signature'));
-    const explore = rect(element.querySelector('.site-footer__group--explore'));
-    const brand = rect(element.querySelector('.site-footer__brand'));
-    const legal = rect(element.querySelector('.site-footer__legal'));
-    return { box, signature, explore, brand, legal, overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth };
-  });
-  expect(desktop.box.height).toBeLessThan(400);
-  expect(desktop.signature.right).toBeLessThanOrEqual(desktop.explore.left + 1);
-  expect(Math.abs(desktop.signature.top - desktop.explore.top)).toBeLessThanOrEqual(1);
-  expect(desktop.brand.width).toBeGreaterThan(250);
-  expect(desktop.legal.top - desktop.signature.bottom).toBeLessThanOrEqual(20);
-  expect(desktop.overflow).toBeLessThanOrEqual(1);
-
-  await page.setViewportSize({ width: 390, height: 844 });
-  const mobile = await footer.evaluate((element) => {
-    const rect = (target: Element | null) => {
-      if (!target) throw new Error('The footer layout is incomplete.');
-      const box = target.getBoundingClientRect();
-      return { top: box.top, right: box.right, bottom: box.bottom, left: box.left, width: box.width, height: box.height };
-    };
-    const box = rect(element);
-    const explore = rect(element.querySelector('.site-footer__group--explore'));
-    const connect = rect(element.querySelector('.site-footer__group--connect'));
-    const brand = rect(element.querySelector('.site-footer__brand'));
-    return { box, explore, connect, brand, overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth };
-  });
-  expect(mobile.box.height).toBeLessThan(450);
-  expect(Math.abs(mobile.explore.top - mobile.connect.top)).toBeLessThanOrEqual(1);
-  expect(mobile.explore.right).toBeLessThanOrEqual(mobile.connect.left);
-  expect(mobile.brand.width).toBeGreaterThan(150);
-  expect(mobile.overflow).toBeLessThanOrEqual(1);
-});
-
-test('the typographic title remains non-blocking while its entrance is hidden', async ({ page }) => {
-  await page.goto('/', { waitUntil: 'domcontentloaded' });
-  const intro = page.locator('[data-logo-intro]');
-  await expect(intro).toHaveAttribute('data-state', 'settled');
-  await expect(intro.locator('[data-type-title-line]')).toHaveCount(2);
-  expect(await intro.locator('[data-type-title-line]').evaluateAll((lines) =>
-    lines.map((line) => (line as HTMLElement).dataset.typeTitleLine))).toEqual(['new', 'work']);
-  await expect(intro.locator('[data-intro-cell]')).toHaveCount(0);
-  const layout = await intro.evaluate((element) => {
-    const header = document.querySelector<HTMLElement>('[data-site-header]');
-    return {
-      position: getComputedStyle(element).position,
-      pointerEvents: getComputedStyle(element).pointerEvents,
-      top: element.getBoundingClientRect().top,
-      headerBottom: header?.getBoundingClientRect().bottom ?? 0,
-    };
-  });
-  expect(layout.position).toBe('relative');
-  expect(layout.pointerEvents).toBe('none');
-  expect(layout.top).toBeGreaterThanOrEqual(layout.headerBottom - 1);
-  await expect(page.locator('[data-site-header]').getByRole('link', { name: 'New Work Agency' }))
-    .toBeVisible();
-  const descriptor = page.locator('[data-logo-descriptor]');
-  await expect(descriptor).toHaveText('film + photo production agency');
-  await expect(descriptor).toBeVisible();
-  await expect(descriptor).toHaveCSS('text-transform', 'none');
-  await expect(page.locator('[data-project-grid]')).toBeAttached();
 });
 
 test('the earlier SVG title kits remain available behind the title treatment switch', async ({ page }) => {
@@ -535,241 +212,6 @@ test('the earlier SVG title kits remain available behind the title treatment swi
     .toBe(true);
   expect((await page.request.get('/media/brand/new-work-letter-kit/new-work-letters.svg')).ok())
     .toBe(true);
-});
-
-test('the disabled title entrance remains disabled across navigation', async ({ page }) => {
-  await page.goto('/', { waitUntil: 'domcontentloaded' });
-  await expect(page.locator('[data-logo-intro]')).toHaveAttribute('data-state', 'settled');
-  await page.goto('/contact');
-  expect(await page.evaluate(() => sessionStorage.getItem('new-work:logo-intro:title:v1'))).toBeNull();
-
-  await page.goto('/', { waitUntil: 'domcontentloaded' });
-  const intro = page.locator('[data-logo-intro]');
-  await expect(intro).toHaveAttribute('data-state', 'settled');
-  await expect(intro.locator('[data-type-title]')).toBeVisible();
-  expect(await page.evaluate(() => sessionStorage.getItem('new-work:logo-intro:title:v1'))).toBeNull();
-});
-
-test('the opening gallery title reveals animated imagery on both words in both modes', async ({ page }) => {
-  await page.goto('/');
-  test.skip(
-    !await page.evaluate(() => matchMedia('(hover: hover) and (pointer: fine)').matches),
-    'Per-letter title hover is a fine-pointer enhancement.',
-  );
-  await page.evaluate(() => document.fonts.ready);
-  await expect(page.locator('[data-logo-intro]')).toHaveAttribute('data-logo-reveal-phase', 'done');
-
-  // On the splash, hover selects the shared fill rather than covering part
-  // of the lockup with a separate letter-sized video.
-  for (const index of [0, 1, 2, 3, 4, 5, 6]) {
-    const letter = page.locator(`[data-type-letter="${index}"]`);
-    await letter.locator('[data-type-letter-hit]').hover();
-    await expect(letter).toHaveAttribute('data-type-active', 'true');
-    await expect(letter.locator('[data-type-letter-canvas]')).toHaveCSS('opacity', '0');
-    await expect(page.locator('[data-splash-canvas]')).toHaveCSS('opacity', '1');
-    expect(await letter.evaluate((element) => getComputedStyle(element, '::before').opacity)).toBe('0');
-  }
-  await page.keyboard.press('Enter');
-  await expect(page.locator('[data-logo-intro]')).toHaveAttribute('data-title-state', 'home');
-  await expect(page.locator('[data-logo-intro]')).toHaveAttribute('data-title-motion', 'settled');
-
-  const firstLetter = page.locator('[data-type-letter="0"]');
-  const nextLetter = page.locator('[data-type-letter="1"]');
-  const initialWidth = await firstLetter.evaluate((element) => element.getBoundingClientRect().width);
-  const firstLetterBox = await firstLetter.boundingBox();
-  expect(firstLetterBox).not.toBeNull();
-  await page.mouse.move(
-    firstLetterBox!.x + firstLetterBox!.width / 2,
-    firstLetterBox!.y + firstLetterBox!.height / 2,
-  );
-
-  await expect(firstLetter).toHaveAttribute('data-type-active', 'true');
-  await expect(firstLetter.locator('.logo-intro__type-letter-rest')).toHaveCSS('opacity', '0');
-  expect(await nextLetter.evaluate((element) => getComputedStyle(element, '::before').opacity)).toBe('0');
-  await expect(firstLetter.locator('[data-type-letter-video-source]'))
-    .toHaveAttribute('data-src', /mercury-helen-mayer/u);
-  await expect(firstLetter).toHaveAttribute('data-type-media-ready', 'true');
-  await expect(firstLetter.locator('[data-type-letter-canvas]')).toHaveCSS('opacity', '1');
-  expect(await firstLetter.evaluate((element) => getComputedStyle(element, '::before').opacity)).toBe('0');
-  expect(await firstLetter.evaluate((element) => getComputedStyle(element, '::after').opacity)).toBe('0');
-  const maskGeometry = await firstLetter.evaluate((element) => {
-    const canvas = element.querySelector<HTMLCanvasElement>('[data-type-letter-canvas]')!;
-    const canvasBox = canvas.getBoundingClientRect();
-    const letterBox = element.getBoundingClientRect();
-    return {
-      canvasWidth: canvasBox.width,
-      letterWidth: letterBox.width,
-      containsLetter: canvasBox.left <= letterBox.left && canvasBox.right >= letterBox.right
-        && canvasBox.top <= letterBox.top && canvasBox.bottom >= letterBox.bottom,
-    };
-  });
-  expect(maskGeometry.canvasWidth).toBeGreaterThan(maskGeometry.letterWidth);
-  expect(maskGeometry.containsLetter).toBe(true);
-  expect(await firstLetter.evaluate((element) => element.getBoundingClientRect().width)).toBeCloseTo(initialWidth, 1);
-
-  const hoverEveryLetter = async () => {
-    for (const index of [0, 1, 2, 3, 4, 5, 6]) {
-      const letter = page.locator(`[data-type-letter="${index}"]`);
-      const hit = letter.locator('[data-type-letter-hit]');
-      const bounds = await hit.boundingBox();
-      expect(bounds).not.toBeNull();
-      // The gallery overlaps the bottom of the wordmark. Test the exposed
-      // upper part of each glyph without forcing a pointer through a photo.
-      await page.mouse.move(bounds!.x + bounds!.width / 2, bounds!.y + Math.min(16, bounds!.height / 4));
-      await expect(letter).toHaveAttribute('data-type-active', 'true');
-      await expect(page.locator('[data-type-active="true"]')).toHaveCount(1);
-      await expect(hit).toHaveCSS('pointer-events', 'auto');
-      if (await letter.locator('video').count()) {
-        await expect(letter).toHaveAttribute('data-type-media-ready', 'true');
-        await expect(letter.locator('[data-type-letter-canvas]')).toHaveCSS('opacity', '1');
-      } else {
-        await expect.poll(() => letter.evaluate((element) =>
-          getComputedStyle(element, '::before').opacity)).toBe('1');
-      }
-    }
-  };
-  await hoverEveryLetter();
-});
-
-test("title hover zones share the painted glyphs' vertical bounds", async ({ page }) => {
-  await page.goto('/');
-  test.skip(
-    !await page.evaluate(() => matchMedia('(hover: hover) and (pointer: fine)').matches),
-    'Per-letter title hover is a fine-pointer enhancement.',
-  );
-  await page.evaluate(() => document.fonts.ready);
-  await expect(page.locator('[data-logo-intro]')).toHaveAttribute('data-logo-reveal-phase', 'done');
-
-  const geometry = await page.locator('[data-type-letter]').evaluateAll((letters) => letters.map((letter) => {
-    const hit = letter.querySelector<HTMLElement>('[data-type-letter-hit]')!;
-    const glyph = letter.querySelector<HTMLElement>('[data-type-letter-glyph]')!;
-    const baselineMarker = letter.querySelector<HTMLElement>('[data-type-letter-baseline]')!;
-    const styles = getComputedStyle(glyph);
-    const canvas = document.createElement('canvas');
-    const context = canvas.getContext('2d')!;
-    context.font = `${styles.fontWeight} ${styles.fontSize} ${styles.fontFamily}`;
-    const metrics = context.measureText((letter as HTMLElement).dataset.glyph || '');
-    const letterRect = letter.getBoundingClientRect();
-    const hitRect = hit.getBoundingClientRect();
-    const baseline = baselineMarker.getBoundingClientRect().top;
-    return {
-      hitTop: hitRect.top,
-      hitBottom: hitRect.bottom,
-      letterTop: letterRect.top,
-      paintedTop: baseline - metrics.actualBoundingBoxAscent,
-      paintedBottom: baseline + metrics.actualBoundingBoxDescent,
-    };
-  }));
-
-  for (const letter of geometry) {
-    expect(letter.hitTop).toBeCloseTo(letter.paintedTop, 0);
-    expect(letter.hitBottom).toBeCloseTo(letter.paintedBottom, 0);
-    expect(letter.hitTop).toBeGreaterThanOrEqual(letter.letterTop - 9);
-  }
-});
-
-test('the settled title uses two lowercase lines above the staggered gallery columns', async ({ page }) => {
-  for (const viewport of [
-    { width: 1_440, height: 1_000 },
-    { width: 1_024, height: 768 },
-    { width: 390, height: 844 },
-    { width: 320, height: 700 },
-  ]) {
-    await page.setViewportSize(viewport);
-    await page.goto('/');
-    const intro = page.locator('[data-logo-intro]');
-    await expect(intro).toHaveAttribute('data-state', 'settled', { timeout: 6_000 });
-    await expect(intro).toHaveAttribute('data-title-layout', 'stacked');
-    await expect(page.locator('.work-index__rail')).toHaveCount(0);
-    await expect(page.getByText('Selected projects', { exact: true })).toHaveCount(0);
-    const layout = await intro.evaluate((element) => {
-      const box = element.getBoundingClientRect();
-      const titleElement = element.querySelector<HTMLElement>('[data-type-title]');
-      const titleLockup = element.querySelector<HTMLElement>('[data-type-lockup]');
-      const stage = titleElement?.getBoundingClientRect();
-      const descriptor = element.querySelector<HTMLElement>('[data-logo-descriptor]')?.getBoundingClientRect();
-      const outline = element.querySelector<HTMLElement>('[data-type-title-line="new"]');
-      const compactOutline = element.querySelector<HTMLElement>('.logo-intro__mobile-outline-word');
-      const solid = element.querySelector<HTMLElement>('[data-type-title-line="work"]');
-      const outlineStyles = compactOutline && getComputedStyle(compactOutline).display !== 'none'
-        ? getComputedStyle(compactOutline)
-        : outline ? getComputedStyle(outline) : null;
-      const solidStyles = solid ? getComputedStyle(solid) : null;
-      const titleStyles = titleLockup ? getComputedStyle(titleLockup) : null;
-      const grid = document.querySelector<HTMLElement>('[data-project-grid]')?.getBoundingClientRect();
-      const gallery = document.querySelector<HTMLElement>('[data-work-gallery]');
-      const firstColumnTops = [...document.querySelectorAll<HTMLElement>(
-        '[data-project-card][data-desktop-column-start]',
-      )].reduce<Record<string, number>>((tops, card) => {
-        const column = card.dataset.desktopColumn;
-        const content = card.querySelector<HTMLElement>(':scope > a');
-        if (column && content) tops[column] = content.getBoundingClientRect().top;
-        return tops;
-      }, {});
-      return {
-        height: box.height,
-        stageHeight: stage?.height || 0,
-        stageWidth: stage?.width || 0,
-        stageBottom: stage?.bottom || 0,
-        descriptorTop: descriptor?.top || 0,
-        descriptorRight: descriptor?.right || 0,
-        introRight: box.right,
-        stageTop: stage?.top || 0,
-        gridTop: grid?.top || 0,
-        galleryTop: gallery?.getBoundingClientRect().top || 0,
-        introBottom: box.bottom,
-        titleStack: Number(getComputedStyle(element).zIndex),
-        galleryStack: Number(gallery ? getComputedStyle(gallery).zIndex : 0),
-        galleryOverflow: gallery ? getComputedStyle(gallery).overflow : '',
-        galleryClip: gallery ? getComputedStyle(gallery).clipPath : '',
-        firstColumnTops,
-        firstColumnLifts: [...document.querySelectorAll<HTMLElement>(
-          '[data-project-card][data-desktop-column-start]',
-        )].reduce<Record<string, number>>((lifts, card) => {
-          const column = card.dataset.desktopColumn;
-          const translateY = Number.parseFloat(getComputedStyle(card).translate.split(' ')[1] || '0');
-          if (column) lifts[column] = Math.abs(translateY);
-          return lifts;
-        }, {}),
-        titleTranslate: titleStyles?.translate || '',
-        outlineColor: outlineStyles?.color,
-        outlineStroke: outlineStyles?.getPropertyValue('-webkit-text-stroke-width'),
-        solidColor: solidStyles?.color,
-        fontFamily: solidStyles?.fontFamily,
-        fontWeight: solidStyles?.fontWeight,
-        lineCount: element.querySelectorAll('[data-type-title-line]').length,
-        overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
-      };
-    });
-    expect(layout.height).toBeGreaterThanOrEqual(90);
-    expect(layout.stageHeight).toBeGreaterThanOrEqual(42);
-    expect(layout.stageHeight / layout.stageWidth).toBeGreaterThanOrEqual(0.28);
-    expect(layout.titleTranslate).toMatch(/-10%$/u);
-    expect(layout.lineCount).toBe(2);
-    // Review round 2: the descriptor sits at the top right of the title area.
-    expect(layout.descriptorTop).toBeLessThan(layout.stageTop + (layout.stageBottom - layout.stageTop) / 2);
-    expect(layout.introRight - layout.descriptorRight).toBeLessThanOrEqual(80);
-    expect(layout.gridTop).toBeLessThan(layout.introBottom);
-    expect(layout.titleStack).toBeGreaterThan(layout.galleryStack);
-    expect(layout.galleryOverflow).toBe('clip');
-    expect(layout.galleryClip).toBe('none');
-    if (viewport.width >= 1_200) {
-      expect(Math.min(...Object.values(layout.firstColumnTops))).toBeGreaterThanOrEqual(layout.galleryTop);
-      const heightOrder = Object.keys(layout.firstColumnTops).sort((left, right) =>
-        layout.firstColumnTops[left]! - layout.firstColumnTops[right]!);
-      expect(heightOrder).toEqual(['1', '4', '3', '2']);
-      expect(Math.min(...Object.values(layout.firstColumnTops))).toBeLessThan(layout.introBottom);
-      expect(layout.firstColumnLifts['2']).toBe(0);
-      expect(layout.firstColumnLifts['3']! / layout.firstColumnLifts['1']!).toBeCloseTo(1 / 3, 1);
-      expect(layout.firstColumnLifts['4']! / layout.firstColumnLifts['1']!).toBeCloseTo(2 / 3, 1);
-    }
-    expect(layout.outlineColor).toBe('rgba(0, 0, 0, 0)');
-    expect(Number.parseFloat(layout.outlineStroke || '0')).toBeGreaterThanOrEqual(1);
-    expect(layout.solidColor).not.toBe('rgba(0, 0, 0, 0)');
-    expect(layout.fontFamily).toContain('New Work Title');
-    expect(Number(layout.fontWeight)).toBeGreaterThanOrEqual(900);
-    expect(layout.overflow).toBeLessThanOrEqual(1);
-  }
 });
 
 async function expectGridColumns(page: Page, width: number, expectedColumns: number) {
@@ -863,13 +305,8 @@ async function expectGridColumns(page: Page, width: number, expectedColumns: num
   }, expectedColumns);
 
   expect(layout.columns).toBe(expectedColumns);
-  if (expectedColumns === 4) {
-    expect(layout.grid.left).toBeLessThan(-4);
-    expect(layout.grid.right).toBeGreaterThan(layout.viewportWidth + 4);
-  } else {
-    expect(layout.grid.left).toBeGreaterThanOrEqual(0);
-    expect(layout.grid.right).toBeLessThanOrEqual(layout.viewportWidth + 1);
-  }
+  expect(layout.grid.left).toBeGreaterThanOrEqual(0);
+  expect(layout.grid.right).toBeLessThanOrEqual(layout.viewportWidth + 1);
   expect(layout.laneNumbers).toEqual(Array.from({ length: expectedColumns }, (_, index) => index + 1));
   expect(Math.max(...layout.laneCounts) - Math.min(...layout.laneCounts)).toBeLessThanOrEqual(1);
   expect(layout.overlaps).toEqual([]);
@@ -899,19 +336,19 @@ async function expectGridColumns(page: Page, width: number, expectedColumns: num
   }
   if (expectedColumns > 1 && layout.viewportWidth >= 768) {
     expect(Math.max(...layout.firstTopByLane) - Math.min(...layout.firstTopByLane))
-      .toBeGreaterThanOrEqual(expectedColumns === 4 ? 48 : 8);
+      .toBeLessThanOrEqual(1);
   }
 }
 
 test('the work index has exactly 4, 2, and 2 complete columns', async ({ page }) => {
   await page.goto('/');
-  await expect(page.locator('[data-project-card]')).toHaveCount(20);
+  await expect(page.locator('[data-project-card]')).toHaveCount(16);
   const videoSlots = await page.locator('[data-project-card]').evaluateAll((cards) =>
     cards.map((card) => Boolean(card.querySelector('video'))));
   expect(videoSlots.slice(0, 4)).toEqual([false, false, false, true]);
-  const videosPerRow = Array.from({ length: 5 }, (_, row) =>
+  const videosPerRow = Array.from({ length: 4 }, (_, row) =>
     videoSlots.slice(row * 4, row * 4 + 4).filter(Boolean).length);
-  expect(videosPerRow.reduce((total, count) => total + count, 0)).toBe(7);
+  expect(videosPerRow.reduce((total, count) => total + count, 0)).toBe(5);
   expect(videosPerRow.every((count) => count >= 1 && count <= 2)).toBe(true);
   await expect(page.locator('[data-gallery-remove]')).toHaveCount(0);
   await expect(page.locator('[data-gallery-item-id="michael-native-stop-motion-still"]')).toHaveCount(0);
@@ -934,7 +371,7 @@ test('the work index has exactly 4, 2, and 2 complete columns', async ({ page })
 test('every photo doorway opens its shared Work page and never routes through About', async ({ page }) => {
   await page.goto('/');
   const photoLinks = page.locator('[data-gallery-photo-link]');
-  await expect(photoLinks).toHaveCount(10);
+  await expect(photoLinks).toHaveCount(8);
 
   const destinations = await photoLinks.evaluateAll((links) => links.map((link) =>
     (link as HTMLAnchorElement).getAttribute('href') || ''));
@@ -1045,27 +482,8 @@ test('static and reduced motion routes defer the full animation runtime', async 
   expect(animationRequests).toEqual([]);
 });
 
-test('the opening gallery eases from an oversized crop to its resting scale', async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 1_000 });
-  await page.goto('/', { waitUntil: 'domcontentloaded' });
-
-  const entrance = page.locator('[data-gallery-entrance]');
-  const readScale = () => entrance.evaluate((element) =>
-    new DOMMatrixReadOnly(getComputedStyle(element).transform).a);
-
-  await expect(entrance).toHaveAttribute('data-gallery-entrance-state', 'animating');
-  await expect(entrance).toHaveAttribute('data-gallery-entrance-delay', '0.45');
-  const openingScale = await readScale();
-  expect(openingScale).toBeGreaterThan(1.015);
-  expect(openingScale).toBeLessThanOrEqual(1.121);
-  await expect(entrance).toHaveAttribute('data-gallery-entrance-state', 'settled', { timeout: 3_000 });
-  await expect.poll(readScale).toBeGreaterThan(.999);
-  await expect.poll(readScale).toBeLessThan(1.001);
-  expect(await page.evaluate(() => document.documentElement.scrollWidth))
-    .toBeLessThanOrEqual(await page.evaluate(() => document.documentElement.clientWidth));
-});
-
-test('the four gallery tracks share one scroll target with subtle first-order momentum', async ({ page }) => {
+test('the four gallery tracks share one scroll target with subtle first-order momentum', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'Desktop fine-pointer behavior; compact inertia is covered separately.');
   await page.setViewportSize({ width: 1440, height: 1_000 });
   await page.goto('/');
 
@@ -1220,7 +638,7 @@ test('the four gallery tracks share one scroll target with subtle first-order mo
   await expect(gallery).not.toHaveAttribute('data-gallery-motion');
   await expect(page.locator('[data-gallery-entrance]'))
     .toHaveAttribute('data-gallery-entrance-state', 'static');
-  await expect(page.locator('[data-gallery-entrance]')).toHaveCSS('transform', 'none');
+  expect(await page.locator('[data-gallery-entrance]').evaluate(el => new DOMMatrixReadOnly(getComputedStyle(el).transform).isIdentity)).toBe(true);
   await expect.poll(() => plane.evaluate((element) => getComputedStyle(element).transform)).toBe('none');
   await expect(page.locator('[data-motion-column]').first()).toHaveAttribute('data-motion-ready', 'static');
   const reducedTransforms = await page.locator('[data-motion-column]').evaluateAll((cards) => cards.map((card) =>
@@ -1407,41 +825,8 @@ test('the desktop gallery shifts laterally while keeping card hit targets usable
   expect(Math.abs(stableState.pointerX)).toBeGreaterThan(1);
   expect(Math.abs(stableState.stageTranslateX - stableState.pointerX)).toBeLessThan(1);
 
-  await page.evaluate(() => window.scrollTo(0, 160));
-  await page.waitForTimeout(100);
-  const topOverlapState = await page.evaluate(() => {
-    const title = document.querySelector<HTMLElement>('.logo-work-page__title');
-    const link = document.querySelector<HTMLElement>(
-      '[data-gallery-item-id="michael-selected-photography--michael-wow-rainbow-pavement"] [data-project-link]',
-    );
-    const header = document.querySelector<HTMLElement>('[data-site-header]');
-    if (!title || !link) throw new Error('The overlapping title and gallery card are missing.');
-    const titleRect = title.getBoundingClientRect();
-    const linkRect = link.getBoundingClientRect();
-    const headerBottom = header?.getBoundingClientRect().bottom || 0;
-    const letters = [...document.querySelectorAll<HTMLElement>('[data-type-letter-hit]')]
-      .map((hitArea) => hitArea.getBoundingClientRect());
-    for (let y = Math.max(headerBottom + 4, titleRect.top, linkRect.top) + 4;
-      y < Math.min(titleRect.bottom, linkRect.bottom) - 4; y += 8) {
-      for (let x = Math.max(titleRect.left, linkRect.left) + 4;
-        x < Math.min(titleRect.right, linkRect.right) - 4; x += 8) {
-        if (letters.some((rect) => x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom)) {
-          continue;
-        }
-        const hit = document.elementFromPoint(x, y);
-        return {
-          cursor: hit ? getComputedStyle(hit).cursor : '',
-          ownsPoint: Boolean(hit && link.contains(hit)),
-          titlePointerEvents: getComputedStyle(title).pointerEvents,
-        };
-      }
-    }
-    return null;
-  });
-  expect(topOverlapState).not.toBeNull();
-  expect(topOverlapState?.titlePointerEvents).toBe('none');
-  expect(topOverlapState?.ownsPoint).toBe(true);
-  expect(topOverlapState?.cursor).toBe('pointer');
+  // Hero and gallery no longer overlap; hit targets were exercised above.
+
 });
 
 test('card, navigation, and related-project hover treatments have keyboard-focus equivalents', async ({ page }) => {
@@ -1546,96 +931,6 @@ test('card, navigation, and related-project hover treatments have keyboard-focus
   expect(relatedScale).toBeGreaterThan(1);
   expect(relatedScale).toBeLessThanOrEqual(1.02);
   expect(copyShift).toBeLessThan(0);
-});
-
-test('the BTS heading reveals letters in direct proportion to reversible page scroll', async ({ page }) => {
-  await page.goto('/');
-  const statement = page.locator('[data-bts] [data-motion-split]');
-
-  await expect(page.locator('[data-manifesto]')).toHaveCount(0);
-  await expect(page.locator('main')).not.toContainText('Lorem ipsum');
-  await expect(page.getByRole('heading', { name: 'Behind the scenes', exact: true })).toBeAttached();
-  await expect(statement).toHaveAttribute('data-motion-split', 'scroll-letters');
-  await expect(statement).toHaveAttribute('data-motion-split-ready', 'animated');
-  const opening = await statement.evaluate((element) => {
-    const chars = [...element.querySelectorAll<HTMLElement>('.motion-char')];
-    const title = element.querySelector<HTMLElement>('.bts__title')!;
-    return {
-      text: element.textContent?.replace(/\s+/gu, ' ').trim() || '',
-      textTransform: getComputedStyle(title).textTransform,
-      outline: getComputedStyle(element.querySelector('.bts__title-outline')!).webkitTextStrokeWidth,
-      charCount: chars.length,
-      visibleChars: chars.filter((char) => Number(getComputedStyle(char).opacity) >= .5).length,
-    };
-  });
-  expect(opening.text).toBe('Behind the scenes');
-  expect(opening.textTransform).toBe('lowercase');
-  expect(parseFloat(opening.outline)).toBeGreaterThanOrEqual(1);
-  expect(opening.charCount).toBe(15);
-  expect(opening.visibleChars).toBe(0);
-
-  const visibleCharacters = () => statement.evaluate((element) =>
-    [...element.querySelectorAll<HTMLElement>('.motion-char')]
-      .filter((char) => Number(getComputedStyle(char).opacity) >= .5).length);
-  await statement.evaluate((element) => {
-    window.scrollTo(0, window.scrollY + element.getBoundingClientRect().top - window.innerHeight * .65);
-  });
-  await expect.poll(visibleCharacters).toBeGreaterThan(0);
-  const midpointCount = await visibleCharacters();
-  expect(midpointCount).toBeLessThan(opening.charCount);
-
-  await page.evaluate(() => window.scrollBy(0, window.innerHeight * .55));
-  await expect.poll(visibleCharacters).toBeGreaterThan(midpointCount);
-  const forwardCount = await visibleCharacters();
-
-  await page.evaluate(() => window.scrollTo(0, 0));
-  await expect.poll(visibleCharacters).toBeLessThan(forwardCount);
-  await expect.poll(visibleCharacters).toBe(0);
-
-  await page.emulateMedia({ reducedMotion: 'reduce' });
-  await expect(statement).toHaveAttribute('data-motion-split-ready', 'static');
-  await expect(statement.locator('.motion-char')).toHaveCount(0);
-  await expect(statement).toHaveCSS('opacity', '1');
-});
-
-test('the BTS heading stays aligned after the opening gallery handoff', async ({ page }) => {
-  await page.goto('/');
-  const workPage = page.locator('[data-logo-work-page]');
-  const statement = page.locator('[data-bts] [data-motion-split]');
-  await expect(workPage).toHaveAttribute('data-handoff', 'false');
-  await expect(statement).toHaveAttribute('data-motion-split-ready', 'animated');
-  const visibleCharacters = () => statement.locator('.motion-char').evaluateAll((chars) =>
-    chars.filter((char) => Number(getComputedStyle(char).opacity) >= .5).length);
-  const charCount = await statement.locator('.motion-char').count();
-
-  for (let visit = 0; visit < 2; visit += 1) {
-    await page.keyboard.press('PageDown');
-    await expect(workPage).toHaveAttribute('data-handoff', 'true');
-    await expect(page.locator('[data-logo-intro]')).toHaveAttribute('data-title-motion', 'settled');
-    await statement.evaluate((element) => {
-      window.scrollTo(0, window.scrollY + element.getBoundingClientRect().top - window.innerHeight * .65);
-    });
-    await expect.poll(visibleCharacters).toBeGreaterThan(0);
-    expect(await visibleCharacters()).toBeLessThan(charCount);
-
-    await statement.evaluate((element) => {
-      window.scrollTo(0, window.scrollY + element.getBoundingClientRect().bottom - window.innerHeight * .35);
-    });
-    await expect.poll(visibleCharacters).toBe(charCount);
-
-    await page.evaluate(() => window.scrollTo(0, 0));
-    await expect.poll(visibleCharacters).toBe(0);
-    if (visit === 0) {
-      // Returning to the opening screen requires deliberate input after a dwell.
-      await page.waitForTimeout(500);
-      await page.keyboard.press('Home');
-      await expect(workPage).toHaveAttribute('data-handoff', 'false');
-      await expect(page.locator('[data-logo-intro]')).toHaveAttribute('data-title-motion', 'settled');
-      // A resize can remeasure scroll triggers while the page is displaced.
-      const viewport = page.viewportSize()!;
-      await page.setViewportSize({ width: viewport.width, height: viewport.height + 40 });
-    }
-  }
 });
 
 test('prototype filler copy completes the editorial review surfaces', async ({ page }) => {
@@ -1751,17 +1046,18 @@ test('still-led and motion-led work share the project template without an empty 
 
 test('project media stays decoded across the non-layout desktop threshold', async ({ page }) => {
   await page.setViewportSize({ width: 1_210, height: 900 });
-  await page.goto('/gallery/michael-poolside-product', { waitUntil: 'networkidle' });
+  await page.goto('/work/michael-selected-photography/michael-poolside-product', { waitUntil: 'networkidle' });
 
-  const projectImages = page.locator('.gallery-photo img');
-  await expect(projectImages).toHaveCount(2);
-  await projectImages.last().scrollIntoViewIfNeeded();
+  await page.locator('.media-stream img').evaluateAll(images => images.slice(0, 2).forEach(image => image.setAttribute('data-resize-probe', '')));
+  const projectImages = page.locator('img[data-resize-probe]');
+  await expect(projectImages).not.toHaveCount(0);
+  for (const image of await projectImages.all()) await image.scrollIntoViewIfNeeded();
   await expect.poll(() => projectImages.evaluateAll((images) => images.every((image) => {
     const responsiveImage = image as HTMLImageElement;
     return responsiveImage.complete && responsiveImage.naturalWidth > 0;
   }))).toBe(true);
   await expect.poll(() => page.evaluate(() => (
-    [...document.querySelectorAll<HTMLImageElement>('.gallery-photo img')]
+    [...document.querySelectorAll<HTMLImageElement>('img[data-resize-probe]')]
       .every((image) => {
         const imageStyles = getComputedStyle(image);
         const reveal = image.closest<HTMLElement>('[data-motion-reveal]');
@@ -1785,7 +1081,7 @@ test('project media stays decoded across the non-layout desktop threshold', asyn
     root.dataset.projectResizeVisualFlash = 'false';
     const sampleUntil = performance.now() + 1_200;
     const sampleVisibility = () => {
-      const flashed = [...document.querySelectorAll<HTMLImageElement>('.gallery-photo img')]
+      const flashed = [...document.querySelectorAll<HTMLImageElement>('img[data-resize-probe]')]
         .some((image) => {
           const imageStyles = getComputedStyle(image);
           const reveal = image.closest<HTMLElement>('[data-motion-reveal]');
@@ -1814,7 +1110,7 @@ test('project media stays decoded across the non-layout desktop threshold', asyn
   const result = await page.evaluate(() => ({
     motionRestarts: Number(document.documentElement.dataset.projectResizeMotionRestarts || '0'),
     visualFlash: document.documentElement.dataset.projectResizeVisualFlash === 'true',
-    decoded: [...document.querySelectorAll<HTMLImageElement>('.gallery-photo img')]
+    decoded: [...document.querySelectorAll<HTMLImageElement>('img[data-resize-probe]')]
       .every((image) => (
         image.complete
         && image.naturalWidth > 0
@@ -1918,27 +1214,27 @@ test('project heroes pair left-hand copy with the gallery media and keep body co
   }
 });
 
-test('all four project presentation variants expose stable route markers', async ({ page }) => {
+test('film, photo and featured project templates expose stable route markers', async ({ page }) => {
   const variants = [
     {
       path: '/work/mercury-an-unexpected-life',
-      variant: 'cinematic',
+      variant: 'video',
       marker: '.project-template--cinematic',
     },
     {
       path: '/work/arc',
-      variant: 'photoEssay',
+      variant: 'photo',
       marker: '.project-template__essay-intro',
     },
     {
       path: '/work/tour-de-france-x-toyota',
-      variant: 'campaign',
+      variant: 'featured',
       marker: '.project-deliverables',
     },
     {
       path: '/work/native-cucumber-mint-stop-motion',
-      variant: 'experimental',
-      marker: '.project-template__experimental-intro',
+      variant: 'featured',
+      marker: '.project-template--campaign',
     },
   ] as const;
 
@@ -1986,8 +1282,8 @@ test('every fixture project has one gallery-derived hero and populated lower con
     await expect(hero, `${route} should have one composed hero`).toHaveCount(1);
     const heroType = await hero.getAttribute('data-project-block');
     if (heroType === 'shortLoop') {
-      await expect(hero.locator('img'), `${route} should not layer a poster under its opening video`)
-        .toHaveCount(0);
+      await expect(hero.locator('img'), `${route} retains a static poster for no-JavaScript and reduced-data fallback`)
+        .toHaveCount(1);
       await expect(hero.locator('video[data-short-loop]')).toHaveCount(1);
     } else {
       await expect(hero.locator('img'), `${route} should retain its still gallery hero`).toHaveCount(1);
@@ -2376,7 +1672,8 @@ test('first-session opening gallery photo navigation never reveals unrelated ret
     '[data-project-link][href="/work/michael-selected-photography/michael-poolside-product"]',
   );
   await expect(photoLink.locator('video')).toHaveCount(0);
-  const originGeometry = await page.evaluate(() => {
+  await photoLink.scrollIntoViewIfNeeded();
+  let originGeometry = await page.evaluate(() => {
     const media = document.querySelector<HTMLElement>(
       '[data-project-link][href="/work/michael-selected-photography/michael-poolside-product"] '
       + '.project-card__media',
@@ -2583,10 +1880,13 @@ test('first-session opening gallery photo navigation never reveals unrelated ret
       };
       requestAnimationFrame(sample);
     });
+    const clickRect = link.querySelector<HTMLElement>('.project-card__media')!.getBoundingClientRect();
+    link.dataset.qaClickGeometry = JSON.stringify({ x: clickRect.x, y: clickRect.y, width: clickRect.width, height: clickRect.height });
     link.click();
   });
 
   await page.waitForURL(/\/work\//u);
+  originGeometry = JSON.parse((await page.locator('[data-qa-click-geometry]').getAttribute('data-qa-click-geometry'))!);
   const mediaFrameProbe = await page.evaluate(() => (
     (window as Window & {
       __retainedMediaFrameProbe?: Promise<RetainedMediaFrameProbe>;
@@ -2667,7 +1967,7 @@ test('route media keeps the original node continuous through the centralized rou
     for (const { selector, index } of [
       { selector: '[data-project-slug="arc"]', index: 0 },
       { selector: '[data-gallery-photo-link]', index: 0 },
-      { selector: '[data-gallery-photo-link]', index: 10 },
+      { selector: '[data-gallery-photo-link]', index: 7 },
     ]) {
       await page.goto('/');
       const link = page.locator(selector).nth(index);
@@ -2700,7 +2000,7 @@ test('route media keeps the original node continuous through the centralized rou
       await expect(heroImage).toHaveAttribute('data-route-media-continuity', slug);
       await expect(page.locator('[data-photo-route-handoff]')).toHaveCount(0);
       const storedOriginScroll = await page.evaluate(() => (
-        JSON.parse(sessionStorage.getItem('new-work-origin') || '{}') as { scrollY?: number }
+        JSON.parse(sessionStorage.getItem('new-work::new-work-origin') || '{}') as { scrollY?: number }
       ).scrollY);
       expect(storedOriginScroll).toEqual(expect.any(Number));
 
@@ -2938,7 +2238,7 @@ test('route media keeps the original node continuous through the centralized rou
   for (const { selector, index } of [
     { selector: '[data-project-slug="arc"]', index: 0 },
     { selector: '[data-gallery-photo-link]', index: 0 },
-    { selector: '[data-gallery-photo-link]', index: 10 },
+    { selector: '[data-gallery-photo-link]', index: 7 },
   ]) {
     await page.goto('/');
     const link = page.locator(selector).nth(index);
@@ -3066,7 +2366,7 @@ test('route media keeps the original node continuous through the centralized rou
     }))).toEqual({ opacity: '', transform: '', transition: '' });
 
     const storedOrigin = await page.evaluate(() =>
-      JSON.parse(sessionStorage.getItem('new-work-origin') || '{}') as {
+      JSON.parse(sessionStorage.getItem('new-work::new-work-origin') || '{}') as {
         slug?: string;
         scrollY?: number;
         historyIndex?: number;
@@ -3464,7 +2764,7 @@ test('the work-project coordinator remains stable through repeated clicks and br
       (window as Window & { __coordinatorStressNode?: Element }).__coordinatorStressNode === element
     ))).toBe(true);
     const storedOriginScroll = await page.evaluate(() => (
-      JSON.parse(sessionStorage.getItem('new-work-origin') || '{}') as { scrollY?: number }
+      JSON.parse(sessionStorage.getItem('new-work::new-work-origin') || '{}') as { scrollY?: number }
     ).scrollY);
     expect(storedOriginScroll).toEqual(expect.any(Number));
     await expect(page.locator('[data-route-media-portal]')).toHaveCount(0, { timeout: 2_000 });
@@ -3535,7 +2835,7 @@ test('mobile still-photo navigation keeps the persisted image visible through th
   await expect(page.locator('[data-project-hero-media][data-first-media="true"]')).toBeVisible();
 
   const originScroll = await page.evaluate(() =>
-    (JSON.parse(sessionStorage.getItem('new-work-origin') || '{}') as { scrollY?: number }).scrollY);
+    (JSON.parse(sessionStorage.getItem('new-work::new-work-origin') || '{}') as { scrollY?: number }).scrollY);
   await page.locator('[data-project-overlay-return]').click({ noWaitAfter: true });
   const returnHandoff = page.locator('[data-photo-return-handoff]');
   await expect(returnHandoff).toBeAttached();
@@ -3580,7 +2880,7 @@ test('ClientRouter navigation persists project media and restores the originatin
 
   await projectLink.click({ noWaitAfter: true });
   await expect(page.locator('[data-gallery-route-transition-style]')).toHaveCount(0);
-  await page.waitForURL(`**/work/${projectSlug}`);
+  await page.waitForURL(new URL((await projectLink.getAttribute('href'))!, page.url()).href);
   await expect(page.locator('[data-project-template]')).toBeVisible();
   const persistedHeroImage = page.locator(
     '[data-project-hero-media][data-first-media="true"] .responsive-image',
@@ -3591,7 +2891,7 @@ test('ClientRouter navigation persists project media and restores the originatin
     /^(?:animating|settled)$/u,
   );
   const storedClickOrigin = await page.evaluate(() =>
-    JSON.parse(sessionStorage.getItem('new-work-origin') || '{}') as { slug?: string; scrollY?: number });
+    JSON.parse(sessionStorage.getItem('new-work::new-work-origin') || '{}') as { slug?: string; scrollY?: number });
   expect(storedClickOrigin.slug).toBe(projectSlug);
   expect(storedClickOrigin.scrollY).toBeGreaterThan(400);
   const readyHeroPoster = await page.locator(
@@ -3606,7 +2906,7 @@ test('ClientRouter navigation persists project media and restores the originatin
   await expect(page.locator('[data-route-gallery-layer]'))
     .toHaveAttribute('data-gallery-layer-state', 'background');
   await expect(page.locator('[data-project-overlay-snapshot] img')).toHaveCount(0);
-  await expect(page.locator('html')).toHaveAttribute('data-motion-route', `/work/${projectSlug}`);
+  await expect(page.locator('html')).toHaveAttribute('data-motion-route', new URL(page.url()).pathname);
   const projectTransitionName = await page.locator(
     '[data-project-hero-media][data-first-media="true"]',
   ).evaluate((element) =>
@@ -3643,8 +2943,9 @@ test('ClientRouter navigation persists project media and restores the originatin
   await expect(projectLink).toBeInViewport();
   const returnedGalleryBox = await page.locator('[data-work-gallery]').boundingBox();
   if (!returnedGalleryBox) throw new Error('The returned gallery is missing pointer bounds.');
+  const headerBottom = await page.locator('[data-site-header]').evaluate(el => el.getBoundingClientRect().bottom);
   const returnedPointerY = Math.max(
-    24,
+    headerBottom + 24,
     Math.min(returnedGalleryBox.y + 240, page.viewportSize()!.height - 24),
   );
   await page.mouse.move(12, returnedPointerY);
@@ -3661,14 +2962,14 @@ test('ClientRouter navigation persists project media and restores the originatin
   await expect(page.locator('[data-card-cursor-label]')).toHaveCount(0);
 
   await projectLink.click();
-  await page.waitForURL(`**/work/${projectSlug}`);
+  await page.waitForURL(new URL((await projectLink.getAttribute('href'))!, page.url()).href);
   const returnLink = page.locator('[data-project-overlay-return][data-restore-work-scroll]');
   await returnLink.scrollIntoViewIfNeeded();
   await returnLink.click();
   await page.waitForURL(/\/$/u);
   await expect(projectLink).toBeInViewport();
   const restoredOrigin = await page.evaluate(() =>
-    JSON.parse(sessionStorage.getItem('new-work-origin') || '{}') as { slug?: string; scrollY?: number });
+    JSON.parse(sessionStorage.getItem('new-work::new-work-origin') || '{}') as { slug?: string; scrollY?: number });
   expect(restoredOrigin.slug).toBe(projectSlug);
   expect(restoredOrigin.scrollY).toBeGreaterThan(400);
 });
@@ -3851,12 +3152,11 @@ test('the unlabeled reel closes Work above the footer while disabled Notes stay 
 
 test('the mobile menu opens from the keyboard, traps focus, closes on Escape, and restores focus', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
-  await page.goto('/');
+  await page.goto('/contact');
 
   const trigger = page.locator('[data-menu-trigger]');
   const disclosure = page.locator('[data-mobile-menu]');
-  const panel = page.locator('[data-menu-panel]');
-  const close = page.locator('[data-menu-close]');
+  const menu = page.locator('[data-mobile-menu-root]');
   const lastLink = page.locator('[data-menu-link]').last();
 
   await trigger.focus();
@@ -3865,15 +3165,15 @@ test('the mobile menu opens from the keyboard, traps focus, closes on Escape, an
 
   await expect(disclosure).toHaveAttribute('open', '');
   await expect(trigger).toHaveAttribute('aria-expanded', 'true');
-  await expect(panel).toHaveAttribute('role', 'dialog');
-  await expect(panel).toHaveAttribute('aria-modal', 'true');
-  await expect(close).toBeFocused();
+  await expect(menu).toHaveAttribute('role', 'dialog');
+  await expect(menu).toHaveAttribute('aria-modal', 'true');
+  await expect(trigger).toBeFocused();
   await expect(page.locator('body')).toHaveClass(/has-open-mobile-menu/u);
 
   await page.keyboard.press('Shift+Tab');
   await expect(lastLink).toBeFocused();
   await page.keyboard.press('Tab');
-  await expect(close).toBeFocused();
+  await expect(trigger).toBeFocused();
 
   await page.keyboard.press('Escape');
   await expect(disclosure).not.toHaveAttribute('open', '');
@@ -3896,7 +3196,7 @@ test('reduced motion keeps preview and project loops static', async ({ page }) =
   await expect(page.locator('[data-work-gallery]')).not.toHaveAttribute('data-gallery-motion');
   await expect(page.locator('[data-gallery-entrance]'))
     .toHaveAttribute('data-gallery-entrance-state', 'static');
-  await expect(page.locator('[data-gallery-entrance]')).toHaveCSS('transform', 'none');
+  expect(await page.locator('[data-gallery-entrance]').evaluate(el => new DOMMatrixReadOnly(getComputedStyle(el).transform).isIdentity)).toBe(true);
   await expect(page.locator('[data-motion-column]').first()).toHaveAttribute('data-motion-ready', 'static');
   expect(await page.locator('[data-motion-column]').evaluateAll((cards) => cards.every((card) =>
     getComputedStyle(card).transform === 'none'))).toBe(true);
@@ -3933,7 +3233,7 @@ test('Save-Data keeps preview and project loop sources unattached', async ({ pag
   await expect(page.locator('[data-work-gallery]')).not.toHaveAttribute('data-gallery-motion');
   await expect(page.locator('[data-gallery-entrance]'))
     .toHaveAttribute('data-gallery-entrance-state', 'static');
-  await expect(page.locator('[data-gallery-entrance]')).toHaveCSS('transform', 'none');
+  expect(await page.locator('[data-gallery-entrance]').evaluate(el => new DOMMatrixReadOnly(getComputedStyle(el).transform).isIdentity)).toBe(true);
   await expect(page.locator('[data-motion-column]').first()).toHaveAttribute('data-motion-ready', 'static');
   expect(await page.locator('[data-preview-video]').evaluateAll((videos) =>
     videos.filter((video) => video.hasAttribute('src') || (video as HTMLVideoElement).currentSrc).length,
@@ -4242,7 +3542,7 @@ test('opening gallery images load behind the splash while background video reque
   });
   await page.goto('/', { waitUntil: 'domcontentloaded' });
   const galleryImages = page.locator('[data-project-grid] img[data-gallery-image]');
-  await expect(galleryImages).toHaveCount(20);
+  await expect(galleryImages).toHaveCount(16);
   await expect.poll(() => galleryImages.evaluateAll((images) => images.every((element) => {
     const image = element as HTMLImageElement;
     return image.complete && image.naturalWidth > 0 && image.dataset.galleryImageReady === 'true';

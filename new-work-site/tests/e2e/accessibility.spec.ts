@@ -7,11 +7,11 @@ test.beforeEach(async ({page}) => {
       'new-work:logo-intro:v3',
       'new-work:logo-intro:sentence-clean:v1',
       'new-work:logo-intro:title:v1',
-    ]) window.sessionStorage.setItem(key, 'test-skip');
+    ]) window.sessionStorage.setItem(`new-work::${key}`, 'test-skip');
   });
 });
 
-for (const route of ['/', '/contact', '/work/mercury-an-unexpected-life']) {
+for (const route of ['/', '/#work-gallery', '/contact', '/work/mercury-an-unexpected-life']) {
   test(`has no serious automated accessibility violations: ${route}`, async ({page}) => {
     await page.goto(route);
     await page.locator('[data-site-header]').waitFor();

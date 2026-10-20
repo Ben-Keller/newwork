@@ -273,6 +273,11 @@ const REEL_PROJECTION = `{
 
 const WORK_PAGE_PROJECTION = `{
   introName,
+  tickerWords,
+  tickerCities,
+  btsHeading,
+  btsSubtitle,
+  behindTheScenes[]{_key, "workId": asset->project->_id, "assetId": asset->_id, cardSize, treatment},
   manifesto,
   gallery[]{_key, "workId": asset->project->_id, "assetId": asset->_id, cardSize, treatment},
   reel${REEL_PROJECTION},
@@ -309,6 +314,10 @@ const CONTACT_PAGE_PROJECTION = `{
 }`
 
 const FOOTER_PROJECTION = `{
+  clientLogos[]{_key, name, url, artwork{format, width, height, image${IMAGE_PROJECTION}, file${FILE_PROJECTION}}},
+  calloutText,
+  tickerWords,
+  featuredHeading,
   strapline[]{_key, text, emphasis},
   peopleHeading,
   exploreHeading,
@@ -385,8 +394,10 @@ export const SANITY_RELEASE_AUDIT_QUERY = defineQuery(/* groq */ `{
 const SITE_SETTINGS_PROJECTION = `{
   siteName,
   navigation[]{_key, label, destination, visible},
-  wordmark{format, image${IMAGE_PROJECTION}, file${FILE_PROJECTION}},
-  compactMark{format, image${IMAGE_PROJECTION}, file${FILE_PROJECTION}},
+  wordmark{format, width, height, image${IMAGE_PROJECTION}, file${FILE_PROJECTION}},
+  compactMark{format, width, height, image${IMAGE_PROJECTION}, file${FILE_PROJECTION}},
+  stackedWordmark{format, width, height, image${IMAGE_PROJECTION}, file${FILE_PROJECTION}},
+  headerDescriptor,
   defaultSeo${SEO_PROJECTION},
   "workPage": *[_id == "workPage"][0]${WORK_PAGE_PROJECTION},
   "aboutPage": *[_id == "aboutPage"][0]${ABOUT_PAGE_PROJECTION},
@@ -397,8 +408,10 @@ const SITE_SETTINGS_PROJECTION = `{
 const PREVIEW_SITE_SETTINGS_PROJECTION = `{
   siteName,
   navigation[]{_key, label, destination, visible},
-  wordmark{format, image${IMAGE_PROJECTION}, file${FILE_PROJECTION}},
-  compactMark{format, image${IMAGE_PROJECTION}, file${FILE_PROJECTION}},
+  wordmark{format, width, height, image${IMAGE_PROJECTION}, file${FILE_PROJECTION}},
+  compactMark{format, width, height, image${IMAGE_PROJECTION}, file${FILE_PROJECTION}},
+  stackedWordmark{format, width, height, image${IMAGE_PROJECTION}, file${FILE_PROJECTION}},
+  headerDescriptor,
   defaultSeo${SEO_PROJECTION},
   "workPage": *[_id == "workPage"][0]${WORK_PAGE_PROJECTION},
   "aboutPage": *[_id == "aboutPage"][0]${ABOUT_PAGE_PROJECTION},

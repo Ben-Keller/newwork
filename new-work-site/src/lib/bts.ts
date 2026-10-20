@@ -61,7 +61,7 @@ export const formatClock = (minutes: number): string => {
 /** Pick an existing derivative close to `width` for local or Sanity images. */
 export const sizedImageSrc = pickResponsiveSource;
 
-export const buildBtsItems = (entries: WorkGalleryEntryView[], limit = 15): BtsItem[] => {
+export const buildBtsItems = (entries: WorkGalleryEntryView[], limit = 11, preserveOrder = false): BtsItem[] => {
   const seen = new Set<string>();
   const unique = entries.filter((entry) => {
     if (!entry.image.src || seen.has(entry.image.src)) return false;
@@ -85,7 +85,7 @@ export const buildBtsItems = (entries: WorkGalleryEntryView[], limit = 15): BtsI
   }
 
   const span = DAY_END - DAY_START;
-  return picked.map((entry, index) => {
+  return (preserveOrder ? unique.slice(0, limit) : picked).map((entry, index) => {
     const [department, note] = PLACEHOLDER_NOTES[index % PLACEHOLDER_NOTES.length]!;
     const minutes = DAY_START + (picked.length > 1 ? (span * index) / (picked.length - 1) : 0);
     const roundedMinutes = Math.round(minutes / 5) * 5;

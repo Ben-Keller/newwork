@@ -201,6 +201,9 @@ const retainGalleryLayer = (origin: WorkOrigin): void => {
   const documentTop = layerRect.top + window.scrollY;
   installGalleryFlowHold(layer, layerRect.height);
   layer.dataset.galleryLayerState = 'background';
+  // Freeze live scroll/pointer motion at the click, before route preparation
+  // or a queued animation frame can move the retained background.
+  document.dispatchEvent(new Event('new-work:gallery-layer-retained'));
   // A fixed layer loses the normal-flow offset contributed by the site
   // header. Carry that document position into the fixed scene so every card
   // keeps the exact same viewport coordinate when the layer is later released.

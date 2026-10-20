@@ -267,7 +267,18 @@ export interface FooterLineView {
   emphasis?: string;
 }
 
+export interface ClientLogoView {
+  key: string;
+  name: string;
+  artwork?: BrandAssetView;
+  url?: string;
+}
+
 export interface FooterSettingsView {
+  clientLogos: ClientLogoView[];
+  calloutText: string;
+  tickerWords: string[];
+  featuredHeading: string;
   strapline: FooterLineView[];
   peopleHeading: string;
   exploreHeading: string;
@@ -323,6 +334,13 @@ export interface SiteSettingsView {
     visible: boolean;
   }>;
   workIntroName: string;
+  headerDescriptor: string;
+  tickerWords: string[];
+  tickerCities: string[];
+  btsHeading: string;
+  btsSubtitle: string;
+  btsGallery?: WorkGalleryPlacementView[];
+  stackedWordmark?: BrandAssetView;
   workGallery?: WorkGalleryPlacementView[];
   wordmark?: BrandAssetView;
   compactMark?: BrandAssetView;

@@ -428,9 +428,6 @@ body[data-page-theme="dark"] :is(.site-header, .site-footer) .wordmark__image {
   justify-self: end;
 }
 
-[data-type-title] { align-items: flex-start; }
-[data-logo-descriptor] { text-align: start; }
-
 .gallery-order-tools {
   gap: 2px;
 }
@@ -608,8 +605,7 @@ body[data-page-theme="dark"] :is(.site-header, .site-footer) .wordmark__image {
   display: block;
 }
 
-.mobile-menu__trigger,
-.mobile-menu__close {
+.mobile-menu__trigger {
   display: inline-flex;
   min-inline-size: var(--control-size);
   min-block-size: var(--control-size);
@@ -660,28 +656,17 @@ body[data-page-theme="dark"] :is(.site-header, .site-footer) .wordmark__image {
   display: none;
 }
 
-.mobile-menu__summary-close-label {
-  display: none;
-}
+.mobile-menu__labels { display: grid; text-align: end; }
+.mobile-menu__labels > span { grid-area: 1 / 1; }
+.mobile-menu__summary-close-label { visibility: hidden; }
+.mobile-menu__disclosure[open] .mobile-menu__open-label { visibility: hidden; }
+.mobile-menu__disclosure[open] .mobile-menu__summary-close-label { visibility: visible; }
+.mobile-menu__disclosure[open] .mobile-menu__lines > span:first-child { transform: translateY(3px) rotate(45deg); }
+.mobile-menu__disclosure[open] .mobile-menu__lines > span:last-child { transform: translateY(-3px) rotate(-45deg); }
 
-.mobile-menu__disclosure[open] .mobile-menu__open-label {
-  display: none;
-}
-
-.mobile-menu__disclosure[open] .mobile-menu__summary-close-label {
-  display: inline;
-}
-
-.mobile-menu:not(.is-enhanced) .mobile-menu__disclosure[open] .mobile-menu__trigger {
-  position: fixed;
-  inset-block-start: max(1rem, env(safe-area-inset-top));
-  inset-inline-end: max(var(--site-gutter), env(safe-area-inset-right));
-}
-
-.mobile-menu.is-enhanced .mobile-menu__disclosure[open] .mobile-menu__trigger {
-  visibility: hidden;
-  pointer-events: none;
-}
+/* The real header remains above the menu; there is no replacement logo or
+   moving header inside the panel. These layers are present in both states. */
+.site-header__brand, .site-header__descriptor { position: relative; z-index: 112; }
 
 .mobile-menu__panel {
   position: fixed;
@@ -706,34 +691,10 @@ body[data-page-theme="dark"] :is(.site-header, .site-footer) .wordmark__image {
   min-block-size: 100%;
   flex-direction: column;
   padding:
-    max(.85rem, env(safe-area-inset-top))
+    max(4.75rem, env(safe-area-inset-top))
     max(var(--site-gutter), env(safe-area-inset-right))
     max(2rem, env(safe-area-inset-bottom))
     max(var(--site-gutter), env(safe-area-inset-left));
-}
-
-.mobile-menu__panel-header {
-  display: flex;
-  min-block-size: var(--control-size);
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.mobile-menu__close {
-  display: none;
-}
-
-.mobile-menu__close svg {
-  width: 20px;
-  height: 20px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1;
-}
-
-.mobile-menu.is-enhanced .mobile-menu__disclosure[open] .mobile-menu__close {
-  display: inline-flex;
 }
 
 .mobile-menu__list {

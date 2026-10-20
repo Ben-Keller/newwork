@@ -1,4 +1,6 @@
-# Oliver revision — verification
+# New Work — verification history
+
+**20 October consolidation:** the sole active app is `new-work-site/` at port 4327. The older comparison commands below are historical records. Follow the root README and EDITING.md for current instructions.
 
 Verified locally on 13 October 2026. All edits are in `new-work-oliver-review/` and the review/release tooling; the original app is preserved.
 
@@ -251,3 +253,56 @@ Checked **24 layouts on the prototype and 24 on the production CMS preview**, us
 Removed “A closer look” from the Oliver frontend defaults and the Studio/migration defaults. A dry run found exactly one matching published field (`workPage.btsSubtitle`) and no matching draft; the scoped mutation backed up the document privately, required its current revision and unset only that field. A follow-up query confirmed no matching caption remains.
 
 Studio deploy checks passed: schema validation, regenerated schema/query types (no generated diff), typecheck, lint and build. Website Astro check reported 182 files with zero errors/warnings/hints; ESLint and all 174 existing unit tests passed. Rebuilt the CMS preview at port 4330: 93 HTML pages, 981 files and 553 primary/legacy routes verified. Desktop/mobile browser checks against both prototype and CMS previews confirmed no small-caption element or matching text, with the heading and mosaic retained and no horizontal overflow. The original 1,110-file baseline remains intact.
+
+## V3 implementation — 20 October 2026
+
+- Astro typecheck: 185 files, zero errors/warnings/hints. Frontend and Studio lint/typecheck passed.
+- Unit suite: 178 tests pass. Coverage gates pass: statements 70.84%, branches 65.45%, functions 82.16%, lines 75.76%. Added coverage for interrupted flap targets, instant/static settling, disposal and editable client-logo collection behavior.
+- Studio `deploy:check` passed (schema validation, extraction/TypeGen, typecheck, lint, build). Regenerated `studio-new-work/schema.json` and revision `src/sanity.types.ts`. The pinned local Studio/runtime auto-update version notice remains informational; no dependency upgrade was included.
+- Sanity documents validation: 115 valid documents, zero errors. Release audit: 17/17 public Work documents, 16 gallery placements, zero public Notes. Six placeholder SVGs uploaded; 37 guarded document updates, including one draft's client label only; private backups retained. Migration dry-run afterward reports zero proposed changes.
+- Browser regression checks cover Chrome/Safari desktop and mobile: six viewport widths (320/390/768/1024/1440/1920), 16 work cards, 11 BTS photographs, client-only hover/focus, latest-target settling after rapid hover, live city clocks, reduced motion, splash exclusion across initial load/reload/return, footer board/logo alignment, inline copyright, and no horizontal overflow. The reversible dock travel also passed six repeated Chrome/Safari checks via the real splash-entry flow.
+- Safari exposed zero-width aspect-ratio grid items with absolutely positioned image children. Adding an explicit tile width fixed the issue; the same responsive checks passed afterward without loosening layout assertions.
+- Production browser suite: all 15 cases verified across desktop/mobile Chromium and desktop WebKit, including ordinary navigation, real 404s, legacy V1/V2 routes, actual CDN logo decoding, updated BTS count and absence of personal names. Background CDN media initially delayed `load`; route checks now use DOM readiness and retain explicit image-decoding assertions. The external-artwork check allows 15 seconds per image and scrolls lazy client marks into view. Final targeted CMS checks passed in all three projects.
+- Prototype build: 71 HTML pages / 963 files. Final production package: 93 HTML pages / 985 files; 277 root/legacy routes verified. Public text, alt labels and search/share copy checked across all 93 pages: zero Oliver/Michael matches. Existing source/URL identifiers are retained.
+- Ten affected desktop/mobile visual snapshots refreshed; hero, BTS and footer captures visually inspected. Local final captures are in `/tmp/newwork-v3-*.png`; maintained snapshots remain under the revision's `tests/e2e/visual.spec.ts-snapshots/`.
+- Side-by-side review confirmed: original at 4325 has no revision HomeIdentity; updated preview at 4327 has one. Baseline integrity: all 1,110 captured files unchanged. `git diff --check` passed.
+- Production-content candidate: `http://127.0.0.1:4330/newwork/`. Prototype comparison: `http://127.0.0.1:4328/`. Website/Studio code and visual baselines are uncommitted and undeployed; Sanity content changes have been applied. DNS is unchanged.
+
+## Single-project consolidation — 20 October 2026
+
+Ben requested one project, one app and one working tree. The latest V3 source was
+moved into `new-work-site/`; all 1,142 source/media files matched their pre-move
+hashes before the small path/configuration cleanup. The prior baseline, V1
+snapshot, Reel prototype and comparison/versioned packaging tools were retired.
+A verified private recovery archive and pre-change patch are retained under
+ignored `output/consolidation-2026-10-20/`; Git history preserves committed versions.
+
+Both release profiles, workflows, Sanity query generation and maintenance imports
+now use `new-work-site/`. The only Project Studio card is **New Work**, keeping
+its original `new-work-portfolio` identity/history and port 4327. CMS development
+uses the same app/port when explicitly selected. Current instructions replace
+the former baseline preservation rules. The separate Sanity directory remains
+the CMS tooling within this project.
+
+Validation after consolidation:
+
+- Website: 185-file Astro check with zero errors/warnings/hints, lint, all 178 unit
+  tests and coverage thresholds passed.
+- Studio: schema validation, generation of 15 query types/50 schema types into
+  the canonical app, TypeScript, lint and build passed. No deployment/mutation.
+- Prototype build: 71 pages and 963 built files verified.
+- Production CMS package: 277 canonical/legacy routes, sixteen gallery tiles,
+  local references and metadata verified. All ten desktop/mobile package browser
+  tests passed, including CMS artwork, navigation, redirects and real 404s.
+- Desktop/mobile review and V3 browser tests: 31 passed, three expected skips for
+  hover/docking on touch. Includes 320–1920px layout checks and browser Back after
+  the storage namespace changed to `new-work`.
+- Hosting's ten unit tests passed; `git diff --check` passed.
+- Project Studio Python/JavaScript syntax and registry checks passed with zero
+  registry errors. Existing unrelated registry warnings were unchanged.
+- Project Studio launch/status/resource checks identify one website process at
+  the canonical path. Browser checks confirmed one New Work card, working search
+  and details, and zero page errors. Card and detail screenshots were refreshed.
+
+No commit, push, website/Studio deployment or production Sanity content change
+was performed as part of consolidation. Release builds here are local validation.

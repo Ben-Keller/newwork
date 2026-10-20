@@ -17,5 +17,17 @@ export const ensureGsapPlugins = (): void => {
   registered = true;
 };
 
-export { CustomEase, Flip, ScrollTrigger, SplitText, gsap };
+/** Preserve explicit navigation/restoration while a newly swapped route refreshes.
+ * ScrollTrigger can still hold the previous route's cached zero scroll position.
+ * These layouts have no pinned sections, so refreshing must not move the page.
+ */
+export const refreshMotionLayout = (): void => {
+  const left = window.scrollX;
+  const top = window.scrollY;
+  ScrollTrigger.refresh();
+  if (window.scrollX !== left || window.scrollY !== top) {
+    window.scrollTo({ left, top, behavior: 'auto' });
+  }
+};
 
+export { CustomEase, Flip, ScrollTrigger, SplitText, gsap };

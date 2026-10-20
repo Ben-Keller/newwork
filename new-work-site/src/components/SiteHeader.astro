@@ -2,7 +2,7 @@
 import DesktopNav from './DesktopNav.astro';
 import type { NavItem } from './DesktopNav.astro';
 import MobileMenu from './MobileMenu.astro';
-import NwMark from './NwMark.astro';
+import OliverBrand from './OliverBrand.astro';
 import type { WordmarkPath, WordmarkTone, WordmarkVariant } from './Wordmark.astro';
 import type { BrandAssetView } from '../lib/types';
 import { withBase, withoutBase } from '../lib/base-path';
@@ -11,9 +11,9 @@ export interface Props {
   currentPath?: string;
   showNotes?: boolean;
   siteName?: string;
+  descriptor?: string;
   navItems?: readonly NavItem[];
-  /* Retained for callers and for restoring a designed mark; the header now
-     draws "nw" from type, so these are not read here. */
+  /* Asset metadata remains available to route transitions. */
   logoVariant?: WordmarkVariant;
   tone?: WordmarkTone;
   wordmarkPaths?: readonly (string | WordmarkPath)[];
@@ -30,6 +30,7 @@ const {
   currentPath = withoutBase(Astro.url.pathname),
   showNotes = false,
   siteName = 'New Work Agency',
+  descriptor = 'film + photo\nproduction agency',
   navItems,
   wordmarkAsset,
   compactMarkAsset,
@@ -40,7 +41,7 @@ const {
 } = Astro.props;
 
 const defaultItems: NavItem[] = [
-  { href: withBase('/'), label: 'Work', match: 'section' },
+  { href: withBase('/#work-gallery'), label: 'Work', match: 'section' },
   ...(showNotes ? [{ href: withBase('/notes'), label: 'Notes', match: 'section' as const }] : []),
   { href: withBase('/contact'), label: 'Contact', match: 'section' },
 ];
@@ -62,14 +63,11 @@ const showGalleryTools = galleryEditing && currentPath === '/';
       class:list={['site-header__brand', compactMarkAsset && 'site-header__brand--has-compact']}
       aria-label={siteName}
     >
-      {/* Review round 2: the header mark is just "nw", the title's own n and w
-          side by side. The split-flap board lives in the footer. The stacked
-          lockup and the supplied artwork stay wired through the layout, so
-          either can be dropped back in by restoring the BrandLockup here. */}
-      <NwMark class="site-header__mark" />
+      <OliverBrand variant="compact" asset={compactMarkAsset} class="site-header__mark" />
     </a>
 
     <div class="site-header__actions">
+      <p class="site-header__descriptor" style="white-space: pre-line">{descriptor}</p>
       {showGalleryTools ? (
         <div class="gallery-order-tools" data-gallery-order-tools hidden>
           <button type="button" data-gallery-shuffle aria-label="Shuffle gallery order">
@@ -181,10 +179,6 @@ const showGalleryTools = galleryEditing && currentPath === '/';
     }
   };
 
-  const resetWorkScroll = (): void => {
-    window.scrollTo({top: 0, left: 0, behavior: 'auto'});
-  };
-
   const workEntryIsActive = (): boolean => (
     readStorageValue('session', WORK_NAVIGATION_ENTRY_KEY) === 'true'
   );
@@ -288,7 +282,6 @@ const showGalleryTools = galleryEditing && currentPath === '/';
     const incomingEntrance = incomingGallery?.querySelector<HTMLElement>('[data-gallery-entrance]');
     if (incomingWorkPage) {
       incomingWorkPage.dataset.handoff = 'true';
-      incomingWorkPage.dataset.workEntryAtTop = 'true';
     }
     targetDocument.querySelector<HTMLElement>('[data-logo-work-hero]')?.setAttribute('data-faded', 'true');
     targetDocument.querySelector<HTMLElement>('[data-logo-work-content]')?.setAttribute('aria-hidden', 'false');
@@ -348,7 +341,6 @@ const showGalleryTools = galleryEditing && currentPath === '/';
     window.__newWorkEntryStaticRevealsUntil = performance.now() + 5000;
     document.body.dataset.logoHeaderVisible = 'true';
     prepareWorkDocumentForDirectEntry(document);
-    resetWorkScroll();
   };
 
   const setupGalleryOrderTools = (): void => {

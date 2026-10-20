@@ -39,7 +39,7 @@ describe('browser storage', () => {
     const scoped = await import('../../src/lib/browser-storage');
     expect(scoped.readStorageValue('session', 'route')).toBeNull();
     expect(scoped.writeStorageValue('session', 'route', 'v2')).toBe(true);
-    expect(storage.getItem('/newwork/v2:route')).toBe('v2');
+    expect(storage.getItem('new-work:/newwork/v2:route')).toBe('v2');
     expect(scoped.removeStorageValue('session', 'route')).toBe(true);
     expect(storage.getItem('route')).toBe('legacy');
     expect(storage.getItem('/newwork/v1:route')).toBe('v1');
@@ -64,10 +64,10 @@ describe('browser storage', () => {
     expect(writeStorageJson('local', 'preferences', {theme: 'dark'})).toBe(true);
     expect(readStorageJson('local', 'preferences')).toEqual({theme: 'dark'});
 
-    localStorage.setItem('order', JSON.stringify(['one', 2, 'three', null]));
+    localStorage.setItem('new-work::order', JSON.stringify(['one', 2, 'three', null]));
     expect(readStorageStringArray('local', 'order')).toEqual(['one', 'three']);
 
-    localStorage.setItem('invalid', '{');
+    localStorage.setItem('new-work::invalid', '{');
     expect(readStorageJson('local', 'invalid')).toBeUndefined();
   });
 

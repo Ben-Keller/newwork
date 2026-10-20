@@ -9,15 +9,24 @@ export const footerSettings = defineType({
   icon: ControlsIcon,
   groups: [
     {name: 'strapline', title: 'Callout & ticker', default: true},
-    {name: 'directory', title: 'Link columns'},
+    {name: 'directory', title: 'Client logos'},
     {name: 'legal', title: 'Legal line'},
     hiddenAllFieldsGroup,
   ],
   fields: [
+    defineField({name: 'clientLogos', title: 'Client logos', type: 'array', group: 'directory',
+      description: 'Drag to reorder. The numbered marks are temporary placeholders. Replace each name and artwork with an approved client logo; links are optional. Remove all entries to hide the collection.',
+      of: [defineArrayMember({name: 'clientLogo', title: 'Client logo', type: 'object', fields: [
+        defineField({name: 'name', title: 'Client name', type: 'string', description: 'Also used as accessible image text.', validation: Rule => Rule.required().max(100)}),
+        defineField({name: 'artwork', title: 'Logo artwork', type: 'brandAsset', description: 'Use a monochrome SVG or transparent PNG. The website adapts it to light and dark pages.'}),
+        defineField({name: 'url', title: 'Optional link', type: 'url', validation: Rule => Rule.uri({scheme: ['https']})}),
+      ], preview: {select: {title: 'name', media: 'artwork.image'}, prepare: ({title, media}) => ({title, media, subtitle: 'Client logo'})}})],
+      validation: Rule => Rule.max(12),
+    }),
     defineField({name: 'oliverRevision', title: 'Revision migration', type: 'string', hidden: true, readOnly: true}),
     defineField({name: 'calloutText', title: 'Contact callout', type: 'string', group: 'strapline', initialValue: 'Looking to create something impactful?', validation: (Rule) => Rule.required().max(120)}),
     defineField({name: 'tickerWords', title: 'Footer ticker messages', type: 'array', group: 'strapline', description: 'Independent from the homepage ticker. Long messages page across the single-line board.', of: [defineArrayMember({type: 'string', validation: (Rule) => Rule.required().max(60)})], initialValue: ['Arriving', 'In transit', 'Departing', 'Early'], validation: (Rule) => Rule.min(1).max(12)}),
-    defineField({name: 'featuredHeading', title: 'Featured projects heading', type: 'string', group: 'directory', initialValue: 'Featured', description: 'Links follow the front-gallery project order, with each project listed once (up to eight).', validation: (Rule) => Rule.max(40)}),
+    defineField({name: 'featuredHeading', hidden: true, readOnly: true, deprecated: {reason: 'V3 replaces the project list with Client logos.'}, title: 'Featured projects heading', type: 'string', group: 'directory', initialValue: 'Featured', description: 'Links follow the front-gallery project order, with each project listed once (up to eight).', validation: (Rule) => Rule.max(40)}),
     defineField({
       name: 'strapline', hidden: true, readOnly: true, deprecated: {reason: 'Retained for the previous footer; use the callout, ticker and Featured fields.'},
       title: 'Strapline lines',
@@ -75,5 +84,5 @@ export const footerSettings = defineType({
     copyrightLine: 'All rights reserved.',
     showYear: true,
   },
-  preview: {prepare: () => ({title: 'Footer', subtitle: 'Contact callout, ticker, Featured links and legal copy'})},
+  preview: {prepare: () => ({title: 'Footer', subtitle: 'Contact callout, ticker, client logos and legal copy'})},
 })
