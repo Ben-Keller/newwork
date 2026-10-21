@@ -259,6 +259,7 @@ const initializeColumns = (environment: MotionEnvironment): MotionCleanup => {
     let animationFrame = 0;
     let disposed = false;
     let previousTime = 0;
+    let layoutWidth = window.innerWidth;
 
     const renderLane = (lane: ColumnLane): void => {
       const transform = `translate3d(0, ${lane.lagOffset.toFixed(3)}px, 0)`;
@@ -350,10 +351,17 @@ const initializeColumns = (environment: MotionEnvironment): MotionCleanup => {
     const onVisibilityChange = (): void => {
       if (document.hidden) resetFiltering();
     };
+    const onResize = (): void => {
+      // Mobile browser toolbars resize the viewport after a swipe. A height
+      // change does not rearrange the lanes and must not erase their momentum.
+      if (window.innerWidth === layoutWidth) return;
+      layoutWidth = window.innerWidth;
+      resetFiltering();
+    };
 
     resetFiltering();
     window.addEventListener('scroll', startFiltering, { passive: true });
-    window.addEventListener('resize', resetFiltering, { passive: true });
+    window.addEventListener('resize', onResize, { passive: true });
     document.addEventListener('visibilitychange', onVisibilityChange);
     document.addEventListener('new-work:gallery-layer-retained', freezeRetainedGallery);
 
@@ -361,7 +369,7 @@ const initializeColumns = (environment: MotionEnvironment): MotionCleanup => {
       disposed = true;
       if (animationFrame) window.cancelAnimationFrame(animationFrame);
       window.removeEventListener('scroll', startFiltering);
-      window.removeEventListener('resize', resetFiltering);
+      window.removeEventListener('resize', onResize);
       document.removeEventListener('visibilitychange', onVisibilityChange);
       document.removeEventListener('new-work:gallery-layer-retained', freezeRetainedGallery);
       debugPanel?.remove();

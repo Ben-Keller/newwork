@@ -48,16 +48,26 @@ const { wordmark, projects, words = ['Film + photo', 'In production', 'New work'
     if (!dock || !board || !page || !title || !gallery) return;
     const controller = new AbortController(); const { signal } = controller;
     const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+    const touchViewport = matchMedia('(hover: none) and (pointer: coarse)');
     const ticker = board.querySelector<HTMLElement>('[data-flap-ticker]')!;
     let hovered: HTMLElement | null = null; let focused: HTMLElement | null = null; let frame = 0;
     let entered = false;
     let entrance: Animation | null = null;
+    let viewportWidth = innerWidth;
+    let viewportHeight = innerHeight;
     const setLabel = () => {
       const card = focused || hovered;
       ticker.dispatchEvent(new CustomEvent('new-work:ticker-label', { detail: { label: card ? projectLabel(card.dataset.tickerClient) : '' } }));
     };
     const update = () => {
       frame = 0;
+      // Keep the scroll track stable while mobile browser chrome expands or
+      // collapses. Rotation/width changes establish a new midpoint; desktop
+      // window resizing continues to use the current height.
+      if (!touchViewport.matches || innerWidth !== viewportWidth) {
+        viewportWidth = innerWidth;
+        viewportHeight = innerHeight;
+      }
       const active = document.body.classList.contains('home-page') && page.dataset.handoff === 'true'
         && title.dataset.titleState === 'home' && title.dataset.titleMotion === 'settled'
         && !gallery.closest('[data-gallery-layer-state="background"]');
@@ -66,16 +76,16 @@ const { wordmark, projects, words = ['Film + photo', 'In production', 'New work'
         if (!active) entered = false;
       }
       const bounds = gallery.getBoundingClientRect(); const anchor = dock.getBoundingClientRect();
-      const start = Math.min(innerHeight * .82, bounds.top + scrollY - 64);
-      const floating = bounds.top < start && bounds.bottom > innerHeight * .52;
-      const dockVisible = anchor.bottom > 0 && anchor.top < innerHeight;
+      const start = Math.min(viewportHeight * .82, bounds.top + scrollY - 64);
+      const floating = bounds.top < start && bounds.bottom > viewportHeight * .52;
+      const dockVisible = anchor.bottom > 0 && anchor.top < viewportHeight;
       board.hidden = !active || (!floating && !dockVisible);
       board.dataset.placement = floating ? 'floating' : 'docked';
       if (board.parentElement !== document.body) document.body.append(board);
       board.style.position = 'fixed';
       const height = board.offsetHeight;
       const dockY = anchor.top + (anchor.height - height) / 2;
-      const targetY = (innerHeight - height) / 2;
+      const targetY = (viewportHeight - height) / 2;
       board.style.right = 'max(var(--home-board-inset), env(safe-area-inset-right))';
       board.style.top = '0';
       board.style.transform = `translate3d(0, ${boardPosition(dockY, scrollY, targetY, reduced.matches)}px, 0)`;
