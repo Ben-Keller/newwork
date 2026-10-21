@@ -43,19 +43,28 @@ const { wordmark, projects, words = ['Film + photo', 'In production', 'New work'
     const dock = document.querySelector<HTMLElement>('[data-ticker-dock]');
     const board = dock?.querySelector<HTMLElement>('[data-home-departures]');
     const page = document.querySelector<HTMLElement>('[data-logo-work-page]');
+    const title = page?.querySelector<HTMLElement>('[data-logo-intro]');
     const gallery = document.querySelector<HTMLElement>('[data-work-gallery]');
-    if (!dock || !board || !page || !gallery) return;
+    if (!dock || !board || !page || !title || !gallery) return;
     const controller = new AbortController(); const { signal } = controller;
     const reduced = matchMedia('(prefers-reduced-motion: reduce)');
     const ticker = board.querySelector<HTMLElement>('[data-flap-ticker]')!;
     let hovered: HTMLElement | null = null; let focused: HTMLElement | null = null; let frame = 0;
+    let entered = false;
+    let entrance: Animation | null = null;
     const setLabel = () => {
       const card = focused || hovered;
       ticker.dispatchEvent(new CustomEvent('new-work:ticker-label', { detail: { label: card ? projectLabel(card.dataset.tickerClient) : '' } }));
     };
     const update = () => {
       frame = 0;
-      const active = document.body.classList.contains('home-page') && page.dataset.handoff === 'true' && !gallery.closest('[data-gallery-layer-state="background"]');
+      const active = document.body.classList.contains('home-page') && page.dataset.handoff === 'true'
+        && title.dataset.titleState === 'home' && title.dataset.titleMotion === 'settled'
+        && !gallery.closest('[data-gallery-layer-state="background"]');
+      if (!active || reduced.matches) {
+        entrance?.cancel(); entrance = null;
+        if (!active) entered = false;
+      }
       const bounds = gallery.getBoundingClientRect(); const anchor = dock.getBoundingClientRect();
       const start = Math.min(innerHeight * .82, bounds.top + scrollY - 64);
       const floating = bounds.top < start && bounds.bottom > innerHeight * .52;
@@ -70,6 +79,18 @@ const { wordmark, projects, words = ['Film + photo', 'In production', 'New work'
       board.style.right = 'max(var(--home-board-inset), env(safe-area-inset-right))';
       board.style.top = '0';
       board.style.transform = `translate3d(0, ${boardPosition(dockY, scrollY, targetY, reduced.matches)}px, 0)`;
+      if (!board.hidden && !entered) {
+        entered = true;
+        if (!reduced.matches) {
+          // Reveal the casing in place. The outer board still owns its scroll
+          // position, so entering never adds a second movement or scales type.
+          entrance = ticker.animate([
+            { opacity: 0, clipPath: 'inset(0 0 0 18%)' },
+            { opacity: 1, clipPath: 'inset(0 0 0 0%)' },
+          ], { duration: 520, easing: 'cubic-bezier(.22, 1, .36, 1)', fill: 'backwards' });
+          entrance.addEventListener('finish', () => { entrance = null; }, { once: true, signal });
+        }
+      }
     };
     const requestUpdate = () => { if (!frame) frame = requestAnimationFrame(update); };
     const cardAt = (target: EventTarget | null) => target instanceof Element ? target.closest<HTMLElement>('[data-project-card]') : null;
@@ -82,10 +103,12 @@ const { wordmark, projects, words = ['Film + photo', 'In production', 'New work'
     document.addEventListener('new-work:work-layout-settled', requestUpdate, { signal });
     reduced.addEventListener('change', requestUpdate, { signal });
     const state = new MutationObserver(requestUpdate); state.observe(page, { attributes: true, attributeFilter: ['data-handoff'] });
+    state.observe(title, { attributes: true, attributeFilter: ['data-title-state', 'data-title-motion'] });
     const resize = new ResizeObserver(requestUpdate); resize.observe(dock); resize.observe(gallery);
     update();
     disposeHome = () => {
       controller.abort(); state.disconnect(); resize.disconnect(); if (frame) cancelAnimationFrame(frame);
+      entrance?.cancel(); entrance = null;
       board.hidden = true;
       dock.append(board); board.removeAttribute('style');
       disposeHome = () => {};

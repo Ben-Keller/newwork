@@ -1,5 +1,72 @@
 import { expect, test } from '@playwright/test';
 
+test('the board fades into place once per splash exit without replaying on ordinary scroll', async ({ page, isMobile }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.goto('/');
+  await expect(page.locator('[data-logo-work-page]')).toHaveAttribute('data-logo-page-ready', 'true');
+  await page.evaluate(() => {
+    const board = document.querySelector<HTMLElement>('[data-home-departures]')!;
+    const ticker = board.querySelector<HTMLElement>('[data-flap-ticker]')!;
+    const samples: {opacity: number; transform: string; clip: string}[] = [];
+    Object.assign(window, { boardEntranceSamples: samples });
+    const until = performance.now() + 2200;
+    const capture = () => {
+      if (!board.hidden && getComputedStyle(board).display !== 'none') {
+        const style = getComputedStyle(ticker);
+        samples.push({opacity: Number(style.opacity), transform: style.transform, clip: style.clipPath});
+      }
+    };
+    // Capture the actual reveal before the first painted frame. WebKit may
+    // deliver its first RAF several animation ticks after a visibility change.
+    const observer = new MutationObserver(capture);
+    observer.observe(board, {attributes: true, attributeFilter: ['hidden']});
+    const sample = () => {
+      capture();
+      if (performance.now() < until) requestAnimationFrame(sample);
+      else observer.disconnect();
+    };
+    requestAnimationFrame(sample);
+  });
+  if (isMobile) {
+    await page.evaluate(() => {
+      for (const [type, y] of [['touchstart', 650], ['touchmove', 350], ['touchend', 350]] as const) {
+        const event = new Event(type, {cancelable: true});
+        Object.defineProperty(event, 'touches', {value: type === 'touchend' ? [] : [{clientY: y}]});
+        window.dispatchEvent(event);
+      }
+    });
+  } else await page.mouse.wheel(0, 300);
+  const board = page.locator('[data-home-departures]');
+  const ticker = board.locator('[data-flap-ticker]');
+  await expect(page.locator('[data-logo-work-page]')).toHaveAttribute('data-handoff', 'true');
+  await expect(page.locator('[data-logo-intro]')).toHaveAttribute('data-title-motion', 'settled');
+  await expect(board).toBeVisible();
+  await expect(ticker).toHaveCSS('opacity', '1');
+  const samples = await page.evaluate(() => Reflect.get(window, 'boardEntranceSamples') as {opacity: number; transform: string; clip: string}[]);
+  expect(samples.length).toBeGreaterThan(5);
+  expect(samples[0]!.opacity).toBeLessThan(.2);
+  expect(samples.some(sample => sample.opacity > .1 && sample.opacity < .9)).toBe(true);
+  expect(samples.every(sample => sample.transform === 'none')).toBe(true);
+  expect(samples.some(sample => sample.clip.startsWith('inset'))).toBe(true);
+  await page.locator('[data-bts]').scrollIntoViewIfNeeded();
+  await expect(board).toBeHidden();
+  await page.evaluate(() => scrollTo(0, 0));
+  await expect(board).toBeVisible();
+  await expect(ticker).toHaveCSS('opacity', '1');
+  expect(await ticker.evaluate(element => element.getAnimations().length)).toBe(0);
+});
+
+test('reduced motion shows the board immediately with no entrance animation', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/');
+  await expect(page.locator('[data-logo-work-page]')).toHaveAttribute('data-logo-page-ready', 'true');
+  await page.keyboard.press('Enter');
+  const ticker = page.locator('[data-home-departures] [data-flap-ticker]');
+  await expect(ticker).toBeVisible();
+  await expect(ticker).toHaveCSS('opacity', '1');
+  expect(await ticker.evaluate(element => element.getAnimations().length)).toBe(0);
+});
+
 test('train boards stay hidden while first-load scripts are delayed', async ({ page }) => {
   let releaseScripts = () => {};
   const scriptsReady = new Promise<void>(resolve => { releaseScripts = resolve; });
