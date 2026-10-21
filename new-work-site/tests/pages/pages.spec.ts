@@ -75,7 +75,12 @@ test('published CMS artwork, ticker options and Contact details reach the root r
     await expect(mark).toHaveAttribute('src', /https:\/\/cdn\.sanity\.io\/(?:files|images)\/7un4plyu\/production\//);
     await expect.poll(() => mark.evaluate(image => (image as HTMLImageElement).naturalWidth > 0), {timeout: 15_000}).toBe(true);
   }
-  await expect(page.locator('.bts__frame')).toHaveCount(11);
+  await expect(page.locator('[data-bts]')).toHaveAttribute('data-bts-layout', 'pinboard');
+  await expect(page.locator('.bts__frame')).toHaveCount(12);
+  await expect(page.locator('[data-bts-review], .bts__mosaic, img[src*="swatches"]')).toHaveCount(0);
+  const storyboard = page.locator('.bts__storyboard img');
+  await storyboard.scrollIntoViewIfNeeded();
+  await expect.poll(() => storyboard.evaluate(image => (image as HTMLImageElement).naturalWidth), {timeout: 15_000}).toBeGreaterThan(0);
   expect(await page.locator('body').innerText()).not.toMatch(/\b(?:Oliver|Michael)\b/u);
   const homeTicker = page.locator('[data-home-departures] [data-flap-ticker]');
   const words = JSON.parse((await homeTicker.getAttribute('data-ticker-words'))!);

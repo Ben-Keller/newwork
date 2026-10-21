@@ -1,14 +1,17 @@
 const ALPHABET = ' ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789:+-/&.';
-const STEP_MS = 90;
+const TIMINGS = {
+  ambient: { stepMs: 90, maxSteps: 14, staggerMs: 24, maxDelayMs: Infinity },
+  interactive: { stepMs: 90, maxSteps: 1, staggerMs: 1, maxDelayMs: 18 },
+} as const;
 
-/** Forward-only mechanical steps, bounded so long labels settle in under 1.8s. */
-export function flapSequence(from: string, to: string): string[] {
+/** Skip intermediate glyphs when fewer mechanical steps are needed. */
+export function flapSequence(from: string, to: string, maxSteps = 14): string[] {
   if (from === to) return [to];
   const start = Math.max(0, ALPHABET.indexOf(from));
   const end = ALPHABET.indexOf(to);
   if (end < 0) return [from, to];
   const distance = (end - start + ALPHABET.length) % ALPHABET.length || 1;
-  const steps = Math.min(distance, 14);
+  const steps = Math.min(distance, maxSteps);
   return [from, ...Array.from({ length: steps }, (_, i) =>
     i === steps - 1 ? to : ALPHABET[(start + Math.ceil(distance * (i + 1) / steps)) % ALPHABET.length]!)];
 }
@@ -29,7 +32,7 @@ export function createFlapMotion(ticker: HTMLElement) {
     delete cell.element.dataset.flipping;
   };
   return {
-    render(target: string, animate: boolean) {
+    render(target: string, animate: boolean, pace: keyof typeof TIMINGS = 'ambient') {
       cancel();
       if (!animate) {
         cells.forEach((cell, i) => settle(cell, target[i] || ' '));
@@ -37,10 +40,12 @@ export function createFlapMotion(ticker: HTMLElement) {
       }
       // A new hover replaces the in-flight target, using the currently visible
       // lower half. One shared RAF owns all cells; no queued timers survive it.
+      // Hover goes straight to the new glyph in one flap: at most 108ms.
+      const timing = TIMINGS[pace];
       cells.forEach(cell => settle(cell, cell.bottom.textContent || ' '));
       const moves = cells.map((cell, i) => ({
-        cell, delay: i * 24, step: -1,
-        sequence: flapSequence(cell.bottom.textContent || ' ', target[i] || ' '),
+        cell, delay: Math.min(i * timing.staggerMs, timing.maxDelayMs), step: -1,
+        sequence: flapSequence(cell.bottom.textContent || ' ', target[i] || ' ', timing.maxSteps),
       }));
       const started = performance.now();
       const tick = (now: number) => {
@@ -48,7 +53,7 @@ export function createFlapMotion(ticker: HTMLElement) {
         for (const move of moves) {
           const { cell, sequence } = move;
           const elapsed = now - started - move.delay;
-          const duration = (sequence.length - 1) * STEP_MS;
+          const duration = (sequence.length - 1) * timing.stepMs;
           if (elapsed >= duration || duration === 0) {
             if (move.step !== Infinity) settle(cell, sequence.at(-1)!);
             move.step = Infinity;
@@ -56,8 +61,8 @@ export function createFlapMotion(ticker: HTMLElement) {
           }
           pending = true;
           if (elapsed < 0) continue;
-          const step = Math.floor(elapsed / STEP_MS);
-          const progress = (elapsed % STEP_MS) / STEP_MS;
+          const step = Math.floor(elapsed / timing.stepMs);
+          const progress = (elapsed % timing.stepMs) / timing.stepMs;
           if (step !== move.step) {
             cell.top.textContent = cell.leafBottom.textContent = sequence[step + 1]!;
             cell.bottom.textContent = cell.leafTop.textContent = sequence[step]!;

@@ -19,9 +19,10 @@ const first = tickerPages(words[0] || 'New Work', cells, rows)[0]!;
   </span>
 </div>
 <style>
-  .flap-ticker { --flap-height: clamp(1.5rem, 2.1vw, 2.25rem); display: inline-flex; max-width: 100%; }
-  .flap-ticker__board { display: grid; position: relative; grid-template-columns: repeat(var(--flap-columns), minmax(0, 1fr)); gap: clamp(1px, .14vw, 2px); padding: 3px; background: #0b0b0b; border-radius: 2px; }
-  .flap { --tile-height: calc(var(--flap-height) * 1.35); display: block; position: relative; width: calc(var(--flap-height) * .64); height: var(--tile-height); color: #f4f0e5; font: 700 calc(var(--flap-height) * .76)/var(--tile-height) var(--font-body); font-variant-numeric: tabular-nums; text-align: center; perspective: calc(var(--tile-height) * 6); }
+  .flap-ticker { --flap-height: clamp(1.5rem, 2.1vw, 2.25rem); --flap-gap: clamp(1px, .14vw, 2px); display: inline-block; vertical-align: bottom; container-type: inline-size; width: calc(var(--flap-columns) * var(--flap-height) * .64 + (var(--flap-columns) - 1) * var(--flap-gap) + 6px); max-width: 100%; min-width: 0; }
+  .flap-ticker__board { display: grid; position: relative; width: 100%; grid-template-columns: repeat(var(--flap-columns), minmax(0, 1fr)); gap: var(--flap-gap); padding: 3px; background: #0b0b0b; border-radius: 2px; }
+  /* Fit the type and tall tiles to the available width together, keeping one line. */
+  .flap { --fitted-height: min(var(--flap-height), calc((100cqi - 6px - (var(--flap-columns) - 1) * var(--flap-gap)) / var(--flap-columns) / .64)); --tile-height: calc(var(--fitted-height) * 1.35); display: block; position: relative; width: 100%; height: var(--tile-height); color: #f4f0e5; font: 700 calc(var(--fitted-height) * .76)/var(--tile-height) var(--font-body); font-variant-numeric: tabular-nums; text-align: center; perspective: calc(var(--tile-height) * 6); }
   .flap__half, .flap__leaf { position: absolute; left: 0; width: 100%; height: 50%; overflow: hidden; background: #171715; backface-visibility: hidden; }
   .flap__half--top, .flap__leaf--top { top: 0; border-radius: 2px 2px 0 0; background: linear-gradient(#292926, #20201d); transform-origin: 50% 100%; }
   .flap__half--bottom, .flap__leaf--bottom { bottom: 0; border-radius: 0 0 2px 2px; transform-origin: 50% 0; }
@@ -68,11 +69,11 @@ const first = tickerPages(words[0] || 'New Work', cells, rows)[0]!;
         ticker.dataset.tickerText = value;
         const accessible = ticker.querySelector<HTMLElement>('[data-ticker-accessible]');
         if (accessible) accessible.textContent = label || `${words.join('. ')}${clock ? `. Local times: ${cityIndexes.map(i => cityTime(i)).join(', ')}.` : ''}`;
-        motion.render(target, animate && visible && !reduced.matches && !document.hidden);
+        motion.render(target, animate && visible && !reduced.matches && !document.hidden, label ? 'interactive' : 'ambient');
       };
       const scheduleRotation = () => {
         clearTimeout(rotation);
-        if (document.hidden || !visible || reduced.matches) return;
+        if (document.hidden || !visible || reduced.matches || (label && pageCount === 1)) return;
         rotation = window.setTimeout(() => {
           if (label) pageIndex = (pageIndex + 1) % pageCount;
           else if (++pageIndex >= pageCount) { pageIndex = 0; index = (index + 1) % entries.length; }
@@ -85,7 +86,9 @@ const first = tickerPages(words[0] || 'New Work', cells, rows)[0]!;
         minute = window.setTimeout(() => { if (!label) render(false); scheduleMinute(); }, 60_000 - Date.now() % 60_000 + 20);
       };
       ticker.addEventListener('new-work:ticker-label', ((event: CustomEvent<{ label?: string }>) => {
-        label = event.detail.label || ''; pageIndex = 0; render(); scheduleRotation();
+        const nextLabel = event.detail.label || '';
+        if (nextLabel === label) return;
+        label = nextLabel; pageIndex = 0; render(); scheduleRotation();
       }) as EventListener, { signal });
       const observer = new IntersectionObserver(entries => { visible = entries[0]?.isIntersecting ?? false; if (!visible) render(false); scheduleRotation(); }, { rootMargin: '80px' });
       observer.observe(ticker);

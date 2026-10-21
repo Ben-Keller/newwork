@@ -1,5 +1,4 @@
 ---
-import { wordmarkGlyphs } from '../lib/brand/wordmark-artwork';
 import ResponsiveImage from './ResponsiveImage.astro';
 import VideoControls from './VideoControls.astro';
 import ErrorMedia from './ErrorMedia.astro';
@@ -19,32 +18,31 @@ const mobileMime = inferVideoMimeType(reel.mobileSource || reel.desktopSource);
 {ready ? (
   <section class="reel" aria-labelledby="reel-heading">
     <h2 id="reel-heading" class="sr-only">Showreel</h2>
-    <div class="reel__texture" aria-hidden="true">
-      <svg class="reel__word reel__word--new" viewBox="558.68 384 353.28 188.30" focusable="false">{wordmarkGlyphs.filter(letter => letter.word === 'new').map(letter => <path d={letter.path} fill="currentColor" />)}</svg>
-      <svg class="reel__word reel__word--work" viewBox="939.90 384 461.55 188.30" focusable="false">{wordmarkGlyphs.filter(letter => letter.word === 'work').map(letter => <path d={letter.path} fill="currentColor" />)}</svg>
-    </div>
-    <div class="reel__frame" data-reel-shell data-media-frame style={`aspect-ratio:${reel.aspectRatio || '16 / 9'}`}>
-      <ResponsiveImage image={reel.poster!} sizes="70vw" />
-      <video
-        id={id}
-        muted
-        playsinline
-        preload="none"
-        poster={reel.poster!.src}
-        aria-labelledby="reel-heading"
-        data-reel-video
-      >
-        <source
-          data-deferred-source
-          data-desktop-src={reel.desktopSource}
-          data-mobile-src={reel.mobileSource}
-          data-desktop-type={desktopMime}
-          data-mobile-type={mobileMime}
-          type={desktopMime}
-        />
-      </video>
-      <VideoControls targetId={id} />
-      <ErrorMedia message="Reel video unavailable" />
+    <div class="reel__stage">
+      <div class="reel__projection" aria-hidden="true"></div>
+      <div class="reel__frame" data-reel-shell data-media-frame style={`aspect-ratio:${reel.aspectRatio || '16 / 9'}`}>
+        <ResponsiveImage image={reel.poster!} sizes="(max-width: 599px) 88vw, 70vw" />
+        <video
+          id={id}
+          muted
+          playsinline
+          preload="none"
+          poster={reel.poster!.src}
+          aria-labelledby="reel-heading"
+          data-reel-video
+        >
+          <source
+            data-deferred-source
+            data-desktop-src={reel.desktopSource}
+            data-mobile-src={reel.mobileSource}
+            data-desktop-type={desktopMime}
+            data-mobile-type={mobileMime}
+            type={desktopMime}
+          />
+        </video>
+        <VideoControls targetId={id} />
+        <ErrorMedia message="Reel video unavailable" />
+      </div>
     </div>
     {reel.caption ? <p class="reel__caption">{reel.caption}</p> : null}
     {reel.credits ? <p class="reel__credits">{reel.credits}</p> : null}
@@ -60,7 +58,6 @@ const mobileMime = inferVideoMimeType(reel.mobileSource || reel.desktopSource);
 
   const setupReels = (): void => {
     disposeReels();
-    const controller = new AbortController();
     const videos = Array.from(document.querySelectorAll<HTMLVideoElement>('[data-reel-video]'));
     const observers: IntersectionObserver[] = [];
     const unregisterControllers: Array<() => void> = [];
@@ -106,18 +103,7 @@ const mobileMime = inferVideoMimeType(reel.mobileSource || reel.desktopSource);
       }));
     });
 
-    // Temporary backdrop studies live in one lazy module. Remove this block
-    // and its two review files when a direction is selected.
-    const reel = videos[0]?.closest<HTMLElement>('.reel');
-    if (reel && ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname)
-      && new URLSearchParams(location.search).has('reel-backdrop')) {
-      void import('../lib/review/reel-backdrop-review').then(({ mountReelBackdropReview }) => {
-        if (!controller.signal.aborted) mountReelBackdropReview(reel, controller.signal);
-      });
-    }
-
     disposeReels = () => {
-      controller.abort();
       observers.forEach((observer) => observer.disconnect());
       unregisterControllers.forEach((unregister) => unregister());
       videos.forEach((video) => video.pause());
@@ -131,14 +117,20 @@ const mobileMime = inferVideoMimeType(reel.mobileSource || reel.desktopSource);
 </script>
 
 <style>
-  .reel { position: relative; isolation: isolate; }
-  .reel .reel__texture { position: absolute; inset: 0; width: 100%; margin: 0; overflow: clip; pointer-events: none; z-index: -1; color: var(--color-ink); opacity: .075; }
-  .reel__word { position: absolute; top: 50%; transform: translateY(-55%) rotate(-90deg); width: 36%; height: auto; }
-  .reel__word--new { width: 42%; left: -12%; }
-  .reel__word--work { width: 48%; right: -15%; transform: translateY(-55%) rotate(90deg); }
+  .reel {
+    width: 100%; max-width: none; margin: 0; padding: 0;
+  }
+  .reel .reel__stage {
+    position: relative; isolation: isolate; overflow: clip;
+    width: 100%; margin: 0;
+  }
+  .reel .reel__projection {
+    position: absolute; inset: 0; z-index: -1;
+    width: auto; margin: 0; overflow: clip; pointer-events: none;
+    background: #000;
+  }
+  .reel__frame { width: 70%; margin-inline: auto; }
   @media (max-width: 599px) {
-    .reel__word { width: 49%; }
-    .reel__word--new { left: -20%; }
-    .reel__word--work { right: -22%; }
+    .reel__frame { width: 88%; }
   }
 </style>

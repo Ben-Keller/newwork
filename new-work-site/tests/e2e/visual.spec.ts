@@ -31,10 +31,11 @@ test('four-row gallery visual baseline', async ({ page }) => {
   await page.goto('/#work-gallery'); await settle(page);
   await expect(page).toHaveScreenshot('oliver-gallery.png', options);
 });
-test('BTS mosaic visual baseline', async ({ page }) => {
+test('BTS pinboard visual baseline', async ({ page }) => {
   await page.goto('/#work-gallery'); await settle(page);
-  await page.addStyleTag({ content: '[data-site-header] { opacity: 0 !important; }' });
-  await expect(page.locator('[data-bts]')).toHaveScreenshot('oliver-mosaic.png', options);
+  // Exclude fixed navigation from a section screenshot taller than the viewport.
+  await page.addStyleTag({ content: '[data-site-header], .skip-link { opacity: 0 !important; }' });
+  await expect(page.locator('[data-bts]')).toHaveScreenshot('bts-pinboard.png', options);
 });
 test('Contact and footer visual baseline', async ({ page }) => {
   await page.goto('/contact'); await settle(page);

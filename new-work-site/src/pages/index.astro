@@ -29,7 +29,7 @@ const workReel = settings.reel.enabled
     };
 // Placeholder BTS material drawn from the work gallery until real BTS content exists.
 const hasBtsSelection = Boolean(settings.btsGallery?.length);
-const btsItems = hasBtsSelection ? buildBtsItems(buildWorkGallery(projects, settings.btsGallery), 11, true) : buildBtsItems(galleryEntries);
+const btsItems = hasBtsSelection ? buildBtsItems(buildWorkGallery(projects, settings.btsGallery), 12, true) : buildBtsItems(galleryEntries, 12);
 const preloadEntry = galleryEntries[0];
 const preloadImageSizes = preloadEntry
   ? buildGalleryImageSizes(preloadEntry.image, {
