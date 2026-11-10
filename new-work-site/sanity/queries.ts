@@ -257,6 +257,7 @@ const PROJECT_CARD_PROJECTION = `{
 }`
 
 const REEL_PROJECTION = `{
+  visible,
   enabled,
   poster${IMAGE_PROJECTION},
   desktopSource${FILE_PROJECTION},
@@ -272,12 +273,21 @@ const REEL_PROJECTION = `{
 }`
 
 const WORK_PAGE_PROJECTION = `{
+  galleryCount,
+  showBts,
+  btsCount,
+  btsUseFallback,
+  btsShowCaptions,
+  btsShowNumbers,
+  btsArtworkMode,
+  btsArtworks[]{_key, hidden, afterPhoto, size, tilt, image${IMAGE_PROJECTION}},
   introName,
+  splash{video${FILE_PROJECTION}, poster${IMAGE_PROJECTION}},
   tickerWords,
   tickerCities,
   btsHeading,
   btsSubtitle,
-  behindTheScenes[]{_key, "workId": asset->project->_id, "assetId": asset->_id, cardSize, treatment},
+  behindTheScenes[]{_key, btsCaption, "workId": asset->project->_id, "assetId": asset->_id, cardSize, treatment},
   manifesto,
   gallery[]{_key, "workId": asset->project->_id, "assetId": asset->_id, cardSize, treatment},
   reel${REEL_PROJECTION},
@@ -309,6 +319,7 @@ const CONTACT_PAGE_PROJECTION = `{
   introduction,
   email,
   formspreeEndpoint,
+  confirmationMessage,
   location,
   socialLinks[]{_key, label, url},
   seo${SEO_PROJECTION}

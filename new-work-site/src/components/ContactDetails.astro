@@ -12,7 +12,7 @@ const { settings } = Astro.props;
     <RichText value={settings.contactIntroduction} class="contact-introduction" />
   ) : null}
   <div class="contact-layout">
-    <ContactForm email={settings.contactEmail} endpoint={settings.formspreeEndpoint} />
+    <ContactForm email={settings.contactEmail} endpoint={settings.formspreeEndpoint} confirmationMessage={settings.confirmationMessage} />
     <aside class="contact-direct" aria-label="Other ways to get in touch">
       {settings.contactEmail ? (
         <div>

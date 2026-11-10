@@ -197,3 +197,16 @@ test('works as a native POST when JavaScript is disabled', async ({ browser, bas
     expect(body).toContain('email=alex%40client.com');
   } finally { await context.close(); }
 });
+
+
+test('shows the configured confirmation as plain text only after acceptance', async ({ page }) => {
+  await configureForm(page);
+  await page.route(endpoint, route => route.fulfill({ json: success }));
+  await page.goto('/contact');
+  const confirmation = 'Thanks <team> — we will reply soon.';
+  await page.locator('[data-contact-form]').evaluate((form, value) => { (form as HTMLElement).dataset.confirmationMessage = value; }, confirmation);
+  await fillEnquiry(page);
+  await page.getByRole('button', { name: 'Send enquiry' }).click();
+  await expect(page.locator('[data-enquiry-status]')).toHaveText(confirmation);
+  await expect(page.locator('[data-enquiry-status] team')).toHaveCount(0);
+});

@@ -1,13 +1,13 @@
 ---
 import { isContactInboxReady } from '../lib/contact-enquiry';
 import { safeFormspreeEndpoint } from '../../shared/content-policy';
-interface Props { email?: string; endpoint?: string }
-const { email, endpoint: configuredEndpoint } = Astro.props;
+interface Props { email?: string; endpoint?: string; confirmationMessage?: string }
+const { email, endpoint: configuredEndpoint, confirmationMessage } = Astro.props;
 const endpoint = safeFormspreeEndpoint(configuredEndpoint);
 const emailReady = isContactInboxReady(email);
 ---
 
-<form class="contact-form" data-contact-form data-contact-recipient={emailReady ? email : undefined}
+<form data-confirmation-message={confirmationMessage} class="contact-form" data-contact-form data-contact-recipient={emailReady ? email : undefined}
   action={endpoint} method="post" aria-labelledby="enquiry-heading">
   <h2 id="enquiry-heading">Tell us what you have in mind.</h2>
   <p class="contact-form__intro">A new project, an idea, or a question. Start here.</p>
@@ -156,7 +156,7 @@ const emailReady = isContactInboxReady(email);
         if (result.kind === 'success') {
           sent = true;
           form.reset();
-          status.textContent = 'Thank you — your enquiry has been sent. We’ll be in touch by email.';
+          status.textContent = form.dataset.confirmationMessage || 'Thank you — your enquiry has been sent. We’ll be in touch by email.';
           status.focus({ preventScroll: true });
         } else {
           status.textContent = result.message;

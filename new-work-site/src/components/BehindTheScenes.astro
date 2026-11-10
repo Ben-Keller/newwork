@@ -1,10 +1,11 @@
 ---
+import type { BtsArtworkView } from '../lib/types';
 import type { BtsItem } from '../lib/bts';
 import { withBase } from '../lib/base-path';
 import ResponsiveImage from './ResponsiveImage.astro';
 
-interface Props { items: BtsItem[]; heading?: string; subtitle?: string }
-const { items, heading = 'Behind the scenes', subtitle = '' } = Astro.props;
+interface Props { items: BtsItem[]; heading?: string; subtitle?: string; artworks?: BtsArtworkView[]; artworkMode?: 'default' | 'custom' | 'none'; showCaptions?: boolean; showNumbers?: boolean }
+const { items, heading = 'Behind the scenes', subtitle = '', artworks = [], artworkMode = 'default', showCaptions = true, showNumbers = true } = Astro.props;
 const outline = /^(Behind)(\b.*)$/iu.exec(heading);
 const poses = [
   { span: 2, ratio: '3 / 2', angle: -1.8, offset: -3 },
@@ -21,45 +22,52 @@ const poses = [
   { span: 1, ratio: '4 / 5', angle: -1.7, offset: 4 },
 ] as const;
 const frames = items.map((item, index) => ({ item, pose: poses[index % poses.length]! }));
+const artworkEntries: Array<{afterPhoto: number; artwork?: BtsArtworkView}> = artworkMode === 'custom'
+  ? artworks.map(artwork => ({afterPhoto: Math.min(artwork.afterPhoto, items.length), artwork}))
+  : artworkMode === 'default' && items.length >= 2 ? [{afterPhoto: 2}] : [];
+const board = Array.from({length: items.length + 1}, (_, index) => [
+  ...artworkEntries.filter(entry => entry.afterPhoto === index).map(entry => ({kind: 'artwork' as const, artwork: entry.artwork})),
+  ...(frames[index] ? [{kind: 'photo' as const, ...frames[index], index}] : []),
+]).flat();
 const imageSizes = (wide: boolean) => wide
-  ? '(min-width: 1800px) 600px, (min-width: 1000px) 36vw, (min-width: 600px) 62vw, 88vw'
-  : '(min-width: 1800px) 280px, (min-width: 1000px) 18vw, (min-width: 600px) 30vw, 42vw';
+  ? '(min-width: 1800px) 510px, (min-width: 1000px) 30.6vw, (min-width: 600px) 52.7vw, 74.8vw'
+  : '(min-width: 1800px) 238px, (min-width: 1000px) 15.3vw, (min-width: 600px) 25.5vw, 35.7vw';
 ---
 {items.length > 0 && (
   <section class="bts" id="behind-the-scenes" aria-labelledby="bts-heading" data-bts data-bts-layout="pinboard">
     <header class="bts__header"><h2 id="bts-heading">{outline ? <><span class="bts__outline">{outline[1]}</span>{outline[2]}</> : heading}</h2>{subtitle && <span aria-hidden="true">{subtitle}</span>}</header>
     <div class="bts__board" style={`--pinboard-surface: url("${withBase('/media/bts-pinboard/board.webp')}")`}>
-      {frames.map(({ item, pose }, index) => (
-        <>
-          <a class="bts__frame" href={item.href} aria-label={`Explore ${item.project}`}
-            style={`--board-span:${pose.span};--board-ratio:${pose.ratio};--board-angle:${pose.angle}deg;--board-offset:${pose.offset}px`}>
-            <ResponsiveImage image={item.image} sizes={imageSizes(pose.span === 2)} />
-            <span class="bts__caption" aria-hidden="true"><span>{String(index + 1).padStart(2, '0')}</span><span>{item.project}</span><span>↗</span></span>
-          </a>
-          {index === 1 && (
-            <div class="bts__storyboard" aria-hidden="true">
-              <img src={withBase('/media/bts-pinboard/storyboard.webp')} alt="" width="640" height="960" loading="lazy" decoding="async" />
-            </div>
-          )}
-        </>
+      {board.map(entry => entry.kind === 'photo' ? (
+        <div class="bts__frame" style={`--board-span:${entry.pose.span};--board-ratio:${entry.pose.ratio};--board-angle:${entry.pose.angle}deg;--board-offset:${entry.pose.offset}px`}>
+          <ResponsiveImage image={entry.item.image} sizes={imageSizes(entry.pose.span === 2)} />
+          {showCaptions && <span class="bts__caption">{showNumbers && <span class="bts__number">{String(entry.index + 1).padStart(2, '0')}</span>}<span class="bts__label">{entry.item.caption || entry.item.project}</span></span>}
+        </div>
+      ) : (
+        <div class:list={['bts__storyboard', {'bts__storyboard--custom': !!entry.artwork}]} aria-hidden="true"
+          style={`grid-column:span ${entry.artwork?.size === 'large' ? 2 : 1};--artwork-angle:${entry.artwork?.tilt === 'left' ? -3 : entry.artwork?.tilt === 'straight' ? 0 : 3}deg`}>
+          {entry.artwork ? <ResponsiveImage image={entry.artwork.image} sizes={imageSizes(entry.artwork.size === 'large')} /> : <img src={withBase('/media/bts-pinboard/storyboard.webp')} alt="" width="640" height="960" loading="lazy" decoding="async" />}
+        </div>
       ))}
     </div>
   </section>
 )}
 <style>
-  .bts { max-width: 1800px; margin: clamp(2rem, 4vw, 4rem) auto clamp(4rem, 8vw, 9rem); padding: .5rem var(--page-gutter) 0; }
-  .bts__header { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin-bottom: clamp(1.5rem, 3vw, 3rem); padding-bottom: 1rem; border-bottom: 1px solid var(--color-rule); }
-  .bts__header h2 { font-family: var(--font-body); font-size: clamp(2rem, 5vw, 5rem); font-weight: 800; letter-spacing: -.07em; line-height: .95; }
+  .bts { width: 85%; max-width: 1530px; margin: clamp(4rem, 8vw, 8rem) auto clamp(3.4rem, 6.8vw, 7.65rem); padding: .425rem calc(var(--page-gutter) * .85) 0; }
+  .bts__header { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin-bottom: clamp(1.5rem, 3vw, 3rem); }
+  .bts__header h2 { font-family: var(--font-body); font-size: clamp(1.7rem, 4.25vw, 4.25rem); font-weight: 800; letter-spacing: -.07em; line-height: .95; }
   .bts__outline { margin-inline-end: .16em; color: transparent; -webkit-text-stroke: max(1px, .013em) var(--color-ink); paint-order: stroke fill; }
   .bts__header > span { font-size: .75rem; white-space: nowrap; }
   .bts__board {
-    position: relative; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
-    align-items: center; gap: clamp(28px, 3.8vw, 62px) clamp(22px, 2.7vw, 44px);
-    padding: clamp(38px, 4.6vw, 76px) clamp(30px, 3.7vw, 60px);
+    position: relative; isolation: isolate; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
+    align-items: center; gap: clamp(24px, 3.23vw, 53px) clamp(19px, 2.3vw, 37px);
+    padding: clamp(32px, 3.91vw, 65px) clamp(26px, 3.15vw, 51px);
+  }
+  .bts__board::before {
+    content: ''; position: absolute; z-index: -1; pointer-events: none;
+    inset-block: 0; left: 50%; width: 100vw; transform: translateX(-50%);
     background-color: #e5e4df;
     background-image: linear-gradient(#e5e4dfb8, #e5e4dfb8), var(--pinboard-surface);
     background-size: auto, 480px 480px;
-    border: 1px solid #b6b6ab55; box-shadow: inset 0 0 0 3px #ffffff28;
   }
   /* Explicit width keeps WebKit's aspect-ratio items from shrinking around
      their absolutely positioned image children. DOM order is reading order. */
@@ -68,7 +76,6 @@ const imageSizes = (wide: boolean) => wide
     padding: clamp(7px, .7vw, 11px); color: #32332e; background: #faf9f4;
     transform: translateY(var(--board-offset)) rotate(var(--board-angle)); transform-origin: 50% 4px;
     box-shadow: 0 1px 2px #272b261f, 2px 6px 9px #272b261a;
-    transition: transform 180ms ease, box-shadow 180ms ease;
   }
   .bts__frame :global(.responsive-image) { position: relative; width: 100%; aspect-ratio: var(--board-ratio); overflow: hidden; }
   .bts__frame :global(picture), .bts__frame :global(img) { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: cover; }
@@ -79,23 +86,18 @@ const imageSizes = (wide: boolean) => wide
     box-shadow: 1px 2px 2px #0005;
   }
   .bts__caption { display: flex; align-items: center; gap: .55rem; padding: 10px 1px 2px; color: #62645a; font-size: clamp(9px, .7vw, 11px); line-height: 1.25; }
-  .bts__caption > :first-child { font-variant-numeric: tabular-nums; color: #929489; }
-  .bts__caption > :nth-child(2) { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .bts__caption > :last-child { color: #929489; }
-  .bts__frame:focus-visible { z-index: 4; outline: 2px solid #343b33; outline-offset: 5px; }
-  .bts__storyboard { position: relative; min-width: 0; margin: -12% -8%; pointer-events: none; transform: rotate(3deg); filter: drop-shadow(1px 4px 3px #22281e12); }
-  .bts__storyboard img { display: block; width: 100%; height: auto; }
+  .bts__number { font-variant-numeric: tabular-nums; color: #929489; }
+  .bts__label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bts__storyboard { position: relative; min-width: 0; margin: -12% -8%; pointer-events: none; transform: rotate(var(--artwork-angle, 3deg)); filter: drop-shadow(1px 4px 3px #22281e12); }
+  .bts__storyboard--custom { margin: 0; }
+  .bts__storyboard :global(.responsive-image) { background: transparent; }
+  .bts__storyboard :global(img) { display: block; width: 100%; height: auto; }
   .bts__storyboard::before { top: 16%; }
-  @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
-    .bts__frame:hover { z-index: 3; transform: translateY(var(--board-offset)) rotate(0deg); box-shadow: 0 2px 4px #272b2626, 3px 9px 15px #272b2621; }
-  }
   @media (min-width: 600px) and (max-width: 999px) { .bts__board { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
   @media (max-width: 599px) {
-    .bts__board { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px 20px; padding: 28px 22px 34px; }
+    .bts__board { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 27px 17px; padding: 24px 19px 29px; }
     .bts__frame { --board-offset: 0px !important; padding: 6px; }
     .bts__header > span { display: none; }
     .bts__caption { gap: 4px; padding-top: 8px; font-size: 9px; }
-    .bts__caption > :last-child { display: none; }
   }
-  @media (prefers-reduced-motion: reduce) { .bts__frame { transition: none; } }
 </style>

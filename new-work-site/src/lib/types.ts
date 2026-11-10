@@ -241,6 +241,7 @@ export interface WorkAssetView {
 }
 
 export interface WorkGalleryPlacementView {
+  btsCaption?: string;
   _key: string;
   workId: string;
   assetId?: string;
@@ -251,6 +252,7 @@ export interface WorkGalleryPlacementView {
 }
 
 export interface WorkGalleryEntryView {
+  btsCaption?: string;
   id: string;
   work: ProjectView;
   asset?: WorkAssetView;
@@ -326,7 +328,27 @@ export interface AboutPageView {
   seo?: SeoFields;
 }
 
+export interface BtsArtworkView {
+  key: string;
+  image: ImageView;
+  afterPhoto: number;
+  size: 'standard' | 'large';
+  tilt: 'left' | 'straight' | 'right';
+}
+
 export interface SiteSettingsView {
+  btsShowCaptions?: boolean;
+  btsShowNumbers?: boolean;
+  btsArtworkMode?: 'default' | 'custom' | 'none';
+  btsArtworks?: BtsArtworkView[];
+  confirmationMessage?: string;
+  galleryCount: number;
+  showBts: boolean;
+  btsCount: number;
+  btsUseFallback: boolean;
+  showReel: boolean;
+  workSeo?: SeoFields;
+  splash?: {video: string; poster: ImageView};
   siteName: string;
   navigation: Array<{
     _key?: string;

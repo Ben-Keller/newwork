@@ -11,12 +11,13 @@ import {SANITY_API_VERSION} from '../sanity.constants'
 import {PUBLISHING_HELP, WEBSITE_URL} from '../website'
 
 const PREVIEW_ENABLED = Boolean(process.env.SANITY_STUDIO_PREVIEW_ORIGIN) || process.env.NODE_ENV === 'development'
-type Stats = {projects: number; assets: number; gallery: number; missingDescriptions: number; updatedAt?: string}
+type Stats = {projects: number; assets: number; gallery: number; galleryCount: number; missingDescriptions: number; updatedAt?: string}
 type Release = {builtAt: string; contentUpdatedAt: string}
 const query = defineQuery(/* groq */ `{
   "projects": count(*[_type == "work" && !(_id in path("drafts.**")) && editorialStatus == "approved"]),
   "assets": count(*[_type == "mediaItem" && !(_id in path("drafts.**"))]),
   "gallery": count(*[_id == "workPage"][0].gallery),
+  "galleryCount": coalesce(*[_id == "workPage"][0].galleryCount, 16),
   "missingDescriptions": count(*[_type == "mediaItem" && !(_id in path("drafts.**")) && kind in ["image", "video"] && decorative != true && (!defined(alt) || alt == "")]),
   "updatedAt": *[!(_id in path("drafts.**")) && !(_id in path("versions.**")) && _type in ["siteSettings", "workPage", "footerSettings", "contactPage", "work", "mediaItem", "sanity.imageAsset", "sanity.fileAsset"]] | order(_updatedAt desc)[0]._updatedAt
 }`)
@@ -71,7 +72,7 @@ const Guide = styled.div`
   @media(max-width: 720px) { grid-template-columns: 1fr; }
 `
 const actions = [
-  {href: '/structure/workPage', title: 'Homepage', description: 'Curate the 16 gallery tiles, train-board messages, city clocks and behind-the-scenes photographs.'},
+  {href: '/structure/workPage', title: 'Homepage', description: 'Choose the gallery tiles and display count, splash and reel videos, ticker messages and behind-the-scenes photographs.'},
   {href: '/structure/work;work-live', title: 'Project pages', description: 'Edit approved work, shape project stories or create a new film, photo or featured project.'},
   {href: '/structure/assets', title: 'Asset library', description: 'Keep images, short clips and brand files organized by project, with useful descriptions.'},
   {href: '/structure/contactPage', title: 'Contact details', description: 'Update the public email, address and social links. Current placeholders can stay until ready.'},
@@ -111,6 +112,7 @@ export function ClientDashboard() {
         <Hero>
           <HeroTop>
             <NewWorkWordmark />
+            <a href="/static/New-Work-Visual-Editing-Guide.pdf" target="_blank" rel="noopener noreferrer">Editing guide (PDF) <ArrowTopRightIcon /></a>
             <a href={WEBSITE_URL} target="_blank" rel="noopener noreferrer">Open website <ArrowTopRightIcon /></a>
           </HeroTop>
           <HeroBottom>
@@ -121,7 +123,7 @@ export function ClientDashboard() {
         {failed ? <Card padding={4} tone="caution" border><Text>Content counts are unavailable. Refresh to try again.</Text></Card> : stats ? (
           <StatsGrid aria-label="Published content">
             <div><strong>{stats.projects}</strong><span>Approved projects</span></div>
-            <div><strong>{stats.gallery} / 16</strong><span>Gallery tiles</span></div>
+            <div><strong>{stats.gallery} / {stats.galleryCount}</strong><span>Gallery entries / display limit</span></div>
             <div><strong>{stats.assets}</strong><span>Library assets</span></div>
           </StatsGrid>
         ) : <Flex gap={3} align="center"><Spinner /><Text>Loading your content…</Text></Flex>}

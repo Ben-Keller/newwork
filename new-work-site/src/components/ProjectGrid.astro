@@ -1,18 +1,20 @@
 ---
 import ProjectCard from './ProjectCard.astro';
+import { displayCount } from '../lib/gallery-settings';
 import type { ContentMode, WorkGalleryEntryView } from '../lib/types';
 
 interface Props {
   entries: WorkGalleryEntryView[];
   mode?: ContentMode;
+  count?: number;
 }
 
-const { entries, mode = 'prototype' } = Astro.props;
+const { entries, mode = 'prototype', count } = Astro.props;
 // Temporary editorial tooling remains implemented, but is not rendered in the
 // review UI. Switch this flag back on when another curation pass is needed.
 const galleryEditingEnabled = false;
-// Keep the home gallery's curated selection to 16 pieces: four tiles in each of four desktop columns.
-const MAX_GALLERY_ENTRIES = 16;
+// Cap the curated selection at the Studio count (16 by default).
+const MAX_GALLERY_ENTRIES = displayCount(count);
 const selectedEntries = entries.slice(0, MAX_GALLERY_ENTRIES);
 const hasPreviewVideo = (entry: WorkGalleryEntryView) => Boolean(
   entry.asset?.kind === 'video' ? entry.asset.video?.src
@@ -23,7 +25,7 @@ const photos = selectedEntries.filter((entry) => !hasPreviewVideo(entry));
 const rowCount = Math.ceil(selectedEntries.length / 4);
 const firstRowVideos = videos.length ? Math.max(1, Math.floor(videos.length / rowCount)) : 0;
 const remainingVideos = videos.length - firstRowVideos;
-// Keep the selected 16 pieces, spreading motion across rows instead of
+// Keep the selected pieces, spreading motion across rows instead of
 // bunching films in the same lanes. The opening video's fourth position is
 // fixed; later rows move it across the composition. Extra videos are spaced
 // through the remaining rows when the edit contains more than one per row.
@@ -63,7 +65,7 @@ const tabletColumnStarts = tabletColumns.map((column, index) =>
   column !== undefined && tabletColumns.indexOf(column) === index);
 ---
 
-<section aria-labelledby="work-heading" class="work-index" data-work-gallery>
+<section aria-labelledby="work-heading" class="work-index" data-work-gallery data-gallery-limit={MAX_GALLERY_ENTRIES} data-gallery-available={entries.length}>
   <h1 id="work-heading" class="sr-only">Selected work</h1>
   <div class="project-grid-stage" data-gallery-entrance data-gallery-entrance-state="pending">
     <div class="project-grid" data-project-grid data-gallery-plane>

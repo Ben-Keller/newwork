@@ -1,12 +1,12 @@
 ---
 import LogoIntro from './LogoIntro.astro';
 import SplitFlapTicker from './SplitFlapTicker.astro';
-import type { BrandAssetView, ProjectView } from '../lib/types';
-interface Props { wordmark?: BrandAssetView; projects?: ProjectView[]; words?: string[]; cities?: string[] }
-const { wordmark, projects, words = ['Film + photo', 'In production', 'New work'], cities = ['sf', 'la', 'nyc'] } = Astro.props;
+import type { BrandAssetView, ProjectView, SiteSettingsView } from '../lib/types';
+interface Props { wordmark?: BrandAssetView; projects?: ProjectView[]; splash?: SiteSettingsView['splash']; words?: string[]; cities?: string[] }
+const { wordmark, projects, splash, words = ['Film + photo', 'In production', 'New work'], cities = ['sf', 'la', 'nyc'] } = Astro.props;
 ---
 <section class="home-identity" aria-label="New Work Agency" data-home-identity>
-  <div class="home-identity__wordmark"><LogoIntro asset={wordmark} projects={projects} /></div>
+  <div class="home-identity__wordmark"><LogoIntro asset={wordmark} projects={projects} splash={splash} /></div>
   <div class="home-identity__dock" data-ticker-dock>
     <div class="home-departures" data-home-departures data-placement="docked" hidden>
       <SplitFlapTicker words={words} cities={cities} label="Film and photo production. San Francisco, Los Angeles, New York." cells={20} clock size="var(--home-flap-height)" />

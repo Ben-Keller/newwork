@@ -181,15 +181,14 @@ test('live clock updates minutes while reduced motion holds the rotation still',
   expect(await home.locator('[data-flap-glyph]').evaluateAll(cells => cells.flatMap(cell => cell.getAnimations()).length)).toBe(0);
 });
 
-test('pinboard uses lazy photographs and ordinary keyboard-accessible links', async ({ page }) => {
+test('pinboard uses lazy display-only photographs', async ({ page }) => {
   await openHome(page);
   const bts = page.locator('[data-bts]');
   await expect(bts).toHaveAttribute('data-bts-layout', 'pinboard');
   await expect(bts.locator('[data-carousel-stage], button, canvas')).toHaveCount(0);
   const frames=bts.locator('.bts__frame'); expect(await frames.count()).toBeGreaterThan(3);
   for (const image of await bts.locator('img').all()) await expect(image).toHaveAttribute('loading', 'lazy');
-  await frames.first().focus(); await expect(frames.first()).toBeFocused();
-  await expect(frames.first()).toHaveAttribute('href', /\/work\//);
+  await expect(bts.locator('a, button, [tabindex]')).toHaveCount(0);
   const sizes=await frames.first().evaluate(el=>({frame:el.getBoundingClientRect().height,image:el.querySelector('img')!.getBoundingClientRect().height}));
   expect(sizes.image).toBeGreaterThan(0);
   expect(sizes.frame).toBeGreaterThan(sizes.image);

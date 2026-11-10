@@ -15,7 +15,11 @@ export async function verifyRootRelease(output, config, {production = false} = {
   const html = files.filter(file => file.endsWith('.html'));
   const home = await readFile(path.join(output, 'index.html'), 'utf8');
   assert(!home.includes('http-equiv="refresh"'), 'The root must render the site, not a version redirect.');
-  assert.equal((home.match(/data-project-card(?:\s|>)/gu) || []).length, 16, 'The release must contain sixteen gallery tiles.');
+  const limit = Number(home.match(/data-gallery-limit="(\d+)"/u)?.[1]);
+  const available = Number(home.match(/data-gallery-available="(\d+)"/u)?.[1]);
+  assert(Number.isInteger(limit) && limit >= 1 && limit <= 40, 'The gallery display limit must be between 1 and 40.');
+  assert(Number.isInteger(available) && available > 0, 'The gallery must have eligible entries.');
+  assert.equal((home.match(/data-project-card(?:\s|>)/gu) || []).length, Math.min(limit, available), 'The gallery tile count must match its display limit and eligible entries.');
   const canonical = home.match(/<link\b[^>]*rel="canonical"[^>]*>/iu)?.[0].match(/href="([^"]+)"/iu)?.[1];
   assert.equal(canonical, `${config.site}${base}/`, 'Homepage canonical must match the configured address.');
   const failures = [];

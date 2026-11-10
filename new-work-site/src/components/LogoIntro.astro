@@ -2,11 +2,12 @@
 import OliverBrand from './OliverBrand.astro';
 import { inferVideoMimeType } from './media/video-mime';
 import { splashRendition } from '../lib/media/splash-renditions';
+import { pickResponsiveSource } from '../lib/responsive-images';
 import { wordmarkGlyphs, wordmarkViewBox, usesApprovedWordmark } from '../lib/brand/wordmark-artwork';
-import type { BrandAssetView, ProjectView } from '../lib/types';
+import type { BrandAssetView, ProjectView, SiteSettingsView } from '../lib/types';
 
-interface Props { asset?: BrandAssetView; projects?: ProjectView[] }
-const { asset, projects = [] } = Astro.props;
+interface Props { asset?: BrandAssetView; projects?: ProjectView[]; splash?: SiteSettingsView['splash'] }
+const { asset, projects = [], splash } = Astro.props;
 const approved = usesApprovedWordmark(asset);
 const assignments = [
   'mercury-an-unexpected-life', 'native-cucumber-mint-stop-motion', 'cradlewise',
@@ -17,8 +18,8 @@ const letterProjects = assignments.map((slug, index) => projects.find(project =>
   || mediaProjects[(index + 1) % Math.max(1, mediaProjects.length)]);
 const splashProject = letterProjects.find(project => project?.cover.previewVideo) || mediaProjects[0];
 const hd = splashRendition(splashProject?.cover.previewVideo);
-const splashVideo = hd?.video || splashProject?.cover.previewVideo;
-const splashPoster = hd?.poster || splashProject?.cover.previewPosterOverride?.src || splashProject?.cover.poster.src;
+const splashVideo = splash?.video || hd?.video || splashProject?.cover.previewVideo;
+const splashPoster = (splash && pickResponsiveSource(splash.poster, 1920)) || hd?.poster || splashProject?.cover.previewPosterOverride?.src || splashProject?.cover.poster.src;
 const [, , width, height] = wordmarkViewBox.split(' ').map(Number);
 const ratio = !approved && asset?.width && asset.height ? asset.width / asset.height : width! / height!;
 ---

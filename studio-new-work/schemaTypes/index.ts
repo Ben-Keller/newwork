@@ -1,3 +1,4 @@
+import {btsArtwork} from './objects/btsArtwork'
 import {caption} from './blocks/caption'
 import {containedImage} from './blocks/containedImage'
 import {fullBleedImage} from './blocks/fullBleedImage'
@@ -27,6 +28,7 @@ import {imageItem} from './objects/imageItem'
 import {mediaAsset} from './objects/mediaAsset'
 import {portableText} from './objects/portableText'
 import {reelSettings} from './objects/reelSettings'
+import {splashSettings} from './objects/splashSettings'
 import {seoFields} from './objects/seoFields'
 import {socialLink} from './objects/socialLink'
 import {footerLine} from './objects/footerLine'
@@ -57,6 +59,8 @@ export const schemaTypes = [
   credit,
   seoFields,
   reelSettings,
+  splashSettings,
+  btsArtwork,
   coverMedia,
   mediaAsset,
   imageItem,

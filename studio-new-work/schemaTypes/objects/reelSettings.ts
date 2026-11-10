@@ -14,6 +14,7 @@ export const reelSettings = defineType({
   type: 'object',
   icon: PlayIcon,
   fields: [
+    defineField({name: 'visible', title: 'Show reel section', type: 'boolean', initialValue: true, description: 'Turn off to hide the player entirely. Unset means shown. Your media selection is kept.'}),
     defineField({name: 'enabled', title: 'Show the reel preview on the Work page', type: 'boolean', initialValue: false}),
     defineField({name: 'poster', title: 'Poster', type: 'editorialImage'}),
     defineField({
@@ -82,7 +83,7 @@ export const reelSettings = defineType({
   ],
   validation: (Rule) =>
     Rule.custom((value) => {
-      if (!isRecord(value) || value.enabled !== true) return true
+      if (!isRecord(value) || value.visible === false || value.enabled !== true) return true
       const problems: string[] = []
       if (!hasAssetReference(value.poster)) problems.push('poster')
       if (!isPlayableVideoAssetReference(value.desktopSource) && !isApprovedHostedMediaUrl(value.desktopSourceUrl)) {

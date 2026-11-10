@@ -1,6 +1,7 @@
 import {sanityClient} from 'sanity:client';
 import placeholderLogos from '../../shared/client-logo-placeholders.json';
 import { withBase } from './base-path';
+import { displayCount } from './gallery-settings';
 import fixtureProjects from '../content/local/projects.json';
 import fixtureSettings from '../content/local/site-settings.json';
 import attributionRecords from '../content/local/asset-attribution.json';
@@ -651,6 +652,14 @@ export function normalizeProject(raw: UnknownRecord): ProjectView {
   };
 }
 
+function normalizeSplash(value: unknown): SiteSettingsView['splash'] {
+  const splash = recordOrEmpty(value);
+  const video = safeHostedVideoUrl(sourceUrl(splash.video));
+  // Incomplete selections fall back as a pair: never combine an old still with new footage.
+  if (!video || !isApprovedSanityAsset(splash.poster, 'image') || hasBlockedContent(splash)) return undefined;
+  return {video, poster: resolveImage(splash.poster, {alt: ''})};
+}
+
 function normalizeReel(value: unknown): ReelView {
   const reel = recordOrEmpty(value);
   const structuredCredits = normalizeCredits(reel.credits);
@@ -729,6 +738,7 @@ function normalizeWorkGallery(value: unknown): WorkGalleryPlacementView[] | unde
     if (!workId) return [];
     return [{
       _key: stringFrom(placement?._key) || `gallery-${index + 1}`,
+      btsCaption: stringFrom(placement?.btsCaption)?.slice(0, 100),
       workId: workId.replace(/^drafts\./u, ''),
       assetId: stringFrom(placement?.assetId)?.replace(/^drafts\./u, ''),
       photoId: stringFrom(placement?.photoId)?.replace(/^drafts\./u, ''),
@@ -823,9 +833,30 @@ export function normalizeSiteSettings(
     tickerCities: Array.isArray(workPage?.tickerCities) ? [...new Set(workPage.tickerCities.filter((city): city is string => typeof city === 'string' && ['sf', 'la', 'nyc'].includes(city)))] : ['sf', 'la', 'nyc'],
     btsHeading: stringFrom(workPage?.btsHeading) || 'Behind the scenes',
     btsSubtitle: typeof workPage?.btsSubtitle === 'string' ? workPage.btsSubtitle.trim() : '',
+    btsShowCaptions: workPage?.btsShowCaptions !== false,
+    btsShowNumbers: workPage?.btsShowNumbers !== false,
+    btsArtworkMode: enumValue(workPage?.btsArtworkMode, ['default', 'custom', 'none'] as const) || 'default',
+    btsArtworks: (Array.isArray(workPage?.btsArtworks) ? workPage.btsArtworks : []).flatMap((candidate, index) => {
+      const artwork = optionalRecord(candidate);
+      if (!artwork || artwork.hidden === true || hasBlockedContent(artwork) || !isApprovedSanityAsset(artwork.image, 'image')) return [];
+      const image = resolveImage(artwork.image, {alt: ''});
+      if (!image.src) return [];
+      const position = artwork.afterPhoto;
+      return [{key: stringFrom(artwork._key) || `artwork-${index}`, image,
+        afterPhoto: typeof position === 'number' && Number.isInteger(position) && position >= 0 && position <= 24 ? position : 2,
+        size: enumValue(artwork.size, ['standard', 'large'] as const) || 'standard',
+        tilt: enumValue(artwork.tilt, ['left', 'straight', 'right'] as const) || 'right'}];
+    }),
+    confirmationMessage: stringFrom(contactPage?.confirmationMessage)?.slice(0, 400),
     btsGallery: normalizeWorkGallery(workPage?.behindTheScenes),
     stackedWordmark: normalizeBrandAsset(raw.stackedWordmark),
     workGallery: normalizeWorkGallery(workPage?.gallery),
+    galleryCount: displayCount(workPage?.galleryCount),
+    showBts: workPage?.showBts !== false,
+    btsCount: displayCount(workPage?.btsCount, 12, 24),
+    btsUseFallback: workPage?.btsUseFallback !== false,
+    showReel: recordOrEmpty(workPage?.reel).visible !== false,
+    workSeo: normalizeSeo(workPage?.seo),
     wordmark: normalizeBrandAsset(raw.wordmark),
     compactMark: normalizeBrandAsset(raw.compactMark),
     manifesto: stringFrom(workPage?.manifesto) || stringFrom(fixtureFallback.manifesto),
@@ -845,6 +876,7 @@ export function normalizeSiteSettings(
           return url && label ? [{ _key: typeof item._key === 'string' ? item._key : undefined, label, url }] : [];
         })
       : [],
+    splash: normalizeSplash(workPage?.splash),
     reel: normalizeReel(workPage?.reel || fixtureFallback.reel),
     notesEnabled: Boolean(workPage ? workPage.notesEnabled : fixtureFallback.notesEnabled),
     defaultSeo: normalizeSeo(raw.defaultSeo) || { noIndex: true },
@@ -950,7 +982,8 @@ async function sanityContent(mode: 'preview' | 'production'): Promise<SiteConten
           defaultSeo: rawSettings.defaultSeo,
         },
         workSeo: workPage.seo,
-        activeReel: reel.enabled === true ? reel : undefined,
+        activeReel: reel.visible !== false && reel.enabled === true ? reel : undefined,
+        splash: workPage.splash,
         aboutPage: rawSettings.aboutPage,
         contactPage: rawSettings.contactPage,
       };
@@ -964,7 +997,7 @@ async function sanityContent(mode: 'preview' | 'production'): Promise<SiteConten
       : [];
     const parsed = parseCmsPayload({settings: settingsRaw, projects: projectsRaw, notes: notesRaw});
     const settings = normalizeSiteSettings(parsed.settings, mode);
-    if (mode === 'production' && !hasEligibleEnabledReel(settings.reel)) {
+    if (mode === 'production' && settings.showReel && !hasEligibleEnabledReel(settings.reel)) {
       throw new Error('The enabled Reel is missing an approved poster or hosted source.');
     }
     const eligibleProjects = mode === 'production'

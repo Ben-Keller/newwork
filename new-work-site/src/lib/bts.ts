@@ -17,6 +17,7 @@ export interface BtsItem {
   large: string;
   video?: string;
   project: string;
+  caption?: string;
   client?: string;
   year?: number;
   href: string;
@@ -96,6 +97,7 @@ export const buildBtsItems = (entries: WorkGalleryEntryView[], limit = 11, prese
       large: sizedImageSrc(entry.image, 1200),
       video: entry.photo ? undefined : entry.work.cover.previewVideo,
       project: entry.work.title,
+      caption: entry.btsCaption,
       client: entry.work.client,
       year: entry.work.year,
       href: withBase(entry.href),

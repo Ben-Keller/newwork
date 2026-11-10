@@ -4,7 +4,12 @@ const base = review ? '/newwork' : '';
 const route = (path: string) => `${base}${path}`;
 const canonical = review ? 'https://ben-keller.github.io/newwork/' : 'https://newworkagency.com/';
 
-test('root release has sixteen cards and working project, Back and Contact navigation', async ({ page }) => {
+async function galleryCount(page: import('@playwright/test').Page) {
+  const gallery = page.locator('[data-work-gallery]');
+  return Math.min(Number(await gallery.getAttribute('data-gallery-limit')), Number(await gallery.getAttribute('data-gallery-available')));
+}
+
+test('root release has the configured cards and working project, Back and Contact navigation', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
   page.on('response', response => {
@@ -13,7 +18,7 @@ test('root release has sixteen cards and working project, Back and Contact navig
   });
   // Navigation readiness is independent of background CDN video requests.
   await page.goto(route('/#work-gallery'), {waitUntil: 'domcontentloaded'});
-  await expect(page.locator('[data-project-card]')).toHaveCount(16);
+  await expect(page.locator('[data-project-card]')).toHaveCount(await galleryCount(page));
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', canonical);
   await expect(page.locator('meta[name=robots]')).toHaveAttribute('content', review ? 'noindex, nofollow' : 'index, follow');
   const first = page.locator('[data-project-link]').first();
@@ -21,7 +26,7 @@ test('root release has sixteen cards and working project, Back and Contact navig
   await first.click();
   await expect(page.locator('.project-header')).toBeVisible();
   await page.locator('[data-project-overlay-return]').click();
-  await expect(page.locator('[data-project-card]')).toHaveCount(16);
+  await expect(page.locator('[data-project-card]')).toHaveCount(await galleryCount(page));
   await page.goto(route('/contact'), {waitUntil: 'domcontentloaded'});
   await expect(page.getByRole('heading', { level: 1, name: 'Contact', exact: true })).toBeVisible();
   await expect(page.locator('.client-logos__mark')).toHaveCount(6);
@@ -33,7 +38,7 @@ for (const prefix of (review ? ['v1', 'v2'] : ['v1', 'v2', 'newwork', 'newwork/v
   test(`${prefix} bookmarks preserve query and fragment while returning to root routes`, async ({ page }) => {
     await page.goto(route(`/${prefix}/?review=legacy#work-gallery`), {waitUntil: 'domcontentloaded'});
     await expect(page).toHaveURL(/\/\?review=legacy#work-gallery$/);
-    await expect(page.locator('[data-project-card]')).toHaveCount(16);
+    await expect(page.locator('[data-project-card]')).toHaveCount(await galleryCount(page));
     await page.goto(route(`/${prefix}/contact/?review=legacy#contact`), {waitUntil: 'domcontentloaded'});
     await expect(page).toHaveURL(/\/contact\/\?review=legacy#contact$/);
     await expect(page.getByRole('heading', { level: 1, name: 'Contact', exact: true })).toBeVisible();
@@ -45,7 +50,7 @@ test('unknown routes return a real 404 and an ordinary working home link', async
   expect(missing?.status()).toBe(404);
   await page.getByRole('link', { name: 'Return to all work', exact: true }).click();
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.locator('[data-project-card]')).toHaveCount(16);
+  await expect(page.locator('[data-project-card]')).toHaveCount(await galleryCount(page));
 });
 
 test('published CMS artwork, ticker options and Contact details reach the root release', async ({ page, request }) => {
@@ -89,7 +94,7 @@ test('published CMS artwork, ticker options and Contact details reach the root r
   expect(cities.every(city => ['sf', 'la', 'nyc'].includes(city))).toBe(true);
   await expect(page.locator('.contact-callout')).not.toBeEmpty();
   const hrefs = await page.locator('[data-project-card] [data-project-link]').evaluateAll(links => links.map(link => link.getAttribute('href')!));
-  expect(new Set(hrefs).size).toBe(16);
+  expect(new Set(hrefs).size).toBe(await galleryCount(page));
   for (const href of hrefs) expect((await request.get(href)).status(), href).toBe(200);
   await page.goto(route('/contact/'), {waitUntil: 'domcontentloaded'});
   // The text reveal can briefly hide/rebuild its spans on entry. Compare the

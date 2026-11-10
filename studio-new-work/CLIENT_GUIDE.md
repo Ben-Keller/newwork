@@ -4,11 +4,13 @@ Open [New Work Studio](https://new-work.sanity.studio/) and choose **Website con
 
 | Change | Where to edit |
 |---|---|
+| Opening splash footage | Work page → Opening splash → Splash video and Splash still image |
+| Homepage reel | Work page → Homepage reel preview → Poster and Desktop source; enable the preview |
 | Public email | Contact page → Contact details → Contact email |
 | Enable website enquiries | Contact page → Enquiry form → Formspree form endpoint |
 | City or multiline address | Contact page → Contact details → Location or public address |
 | Social destinations | Contact page → Contact details → Social links; change the label and URL or remove an entry |
-| Homepage tiles | Work page → Front gallery; select and order 16 placements for the four-row desktop layout |
+| Homepage tiles | Work page → Front gallery; select and order placements; set Gallery tiles shown (default 16, range 1–40) |
 | Keep unused placements | Work page → Front gallery → Reserve gallery assets; these do not appear on the site |
 | Homepage train-board messages | Work page → Homepage ticker → Ticker messages |
 | City/time entries | Work page → Homepage ticker → City clocks; select SF, LA and/or NYC, or clear all for messages only |
@@ -29,15 +31,25 @@ To connect it, create an agency-owned [Formspree account](https://formspree.io/r
 
 The receiving inbox, notifications, spam settings and submission archive are managed in Formspree. Changing the public email in Sanity does not change the form's recipient. The website includes a hidden honeypot. If Formspree requires a CAPTCHA, the visitor can explicitly continue on Formspree to complete it. Test the account's selected spam settings before launch; do not disable them simply to make a test pass. Domain restrictions, when enabled, must allow `ben-keller.github.io` for review and the approved custom-domain hostnames at launch.
 
+**Contact page → Enquiry form → Enquiry confirmation message** controls the text shown after a successful send. Leave it empty for the standard thank-you message. It does not change error messages or copy-only mode.
+
 After the website rebuild finishes, submit one clearly marked test enquiry. Check both Formspree's submission archive and the receiving inbox, including spam, and check that replying addresses the visitor's email. A website success message confirms service acceptance; inbox delivery must be verified separately. Failed requests retain the typed details and offer a copy/email fallback. The website does not put enquiry text in the URL, browser storage or Sanity.
 
 Ticker styling is fixed to the selected Tall train board. Longer phrases cycle across a single line. City times update automatically using the correct local timezone, including daylight saving time. No manual daily time editing is needed.
 
-Gallery placement changes do not delete underlying projects or assets. Keep 16 placements to preserve the selected layout; the editor warns if the count differs. Extra placements can be kept in Gallery reserve. The frontend uses up to the first 16 eligible placements.
+Gallery placement changes do not delete underlying projects or assets. Set **Gallery tiles shown** under **Work page → Front gallery** to choose the count (1–40, default 16). The top eligible entries appear; extra entries remain hidden. If fewer entries are available, only those appear. Multiples of four fill desktop rows. Publish the Work page after changing the count.
 
-For BTS, use the Asset library to upload a photograph, add its image description and connect it to the relevant approved Project. Publish that Asset and choose it under Work page → Behind the scenes. The website displays the first 12 photos in a pinboard layout; additional placements stay in reserve. An empty BTS selection shows 12 portfolio-derived placeholders. Photographs link to their Projects. The felt surface and pencil storyboard are decorative. The default heading outlines “Behind”. Real BTS photos have not been supplied yet.
+For BTS, use the Asset library to upload a photograph, add its image description and connect it to the relevant approved Project. Publish that Asset and choose it under Work page → Behind the scenes. Set **BTS photos shown** (1–24, default 12) to control how many top photographs appear. Turn off **Show Behind the scenes** to hide the section. Turn off **Use portfolio photos when empty** to prevent fallback pictures appearing before real BTS photographs are selected. Photographs are display-only; clicking them does not open a project. Open a selected photograph and enter **Photo caption** to replace its project-title label. **Show photo captions** and **Show photo numbers** control labels across the board.
+
+Under **Pinboard artwork**, keep **Original storyboard**, choose **No artwork**, or select **Custom artwork** to replace it with your own pieces. Add each image under **Custom artwork pieces**, give it a Studio name, and set **Place after photo** (0 means before the first; numbers beyond the photo count place it at the end). Choose Standard or Large and Left, Straight or Right tilt. Drag pieces to order artwork sharing the same position, or turn on **Hide artwork** to keep a piece for later. Transparent PNG/WebP works well; the full image is shown. Artwork is decorative and non-clickable, requires no Project assignment, and does not count toward the photo limit. An empty custom list shows no artwork. The felt background stays unchanged. The default heading outlines “Behind”. Real BTS photos have not been supplied yet.
 
 Use transparent SVG logo artwork where available; supply its width and height (viewBox dimensions) to preserve its proportions. PNG images are also supported, but use transparency because the site renders these logos in black. Clearing an optional logo field falls back to the approved local artwork. The opening and homepage share one wordmark implementation. The approved horizontal artwork keeps its individual-letter media treatment; custom replacement artwork displays as a single image.
+
+## Splash and reel
+
+The opening splash and the homepage reel are separate videos. For the splash, open **Work page → Opening splash**, upload a short compressed MP4 or WebM (5–15 seconds, up to 20 MB), and add a matching **Splash still image**. Publish the Work page. The clip loops silently inside the opening lettering; the still appears while loading and for reduced-motion visitors. Clear both fields and publish to restore the automatic footage selection.
+
+For the player below the gallery, open **Work page → Homepage reel preview**. Upload a **Poster** and **Desktop source** (a short MP4 or WebM preview); optionally add **Mobile source**. Turn on **Show the reel preview on the Work page**, then Publish. Turning it off restores the existing project-preview fallback. To hide the entire player, turn off **Show reel section**. Full-length films belong on a dedicated streaming service.
 
 ## Save and publish
 
@@ -63,3 +75,7 @@ Every image, video or file has one Asset record with its description, caption an
 The six numbered footer marks are temporary client-logo placeholders. Replace them individually under **Footer → Client logos** with an approved monochrome SVG or transparent PNG and the correct client name. Artwork is displayed in the current page color. Choose **Project** to link a logo to its project page and preview that project's cover image on hover or keyboard focus. On touchscreens, tapping opens the project directly. The project must be published and visible. Existing entries without a selection automatically use the project with the same client name when there is exactly one match; select a Project explicitly if a client has multiple projects. An optional HTTPS external link is used only without a Project selection and has no image preview. Clear the collection to hide it entirely.
 
 Photography uses neutral public titles and numbered Client labels until the final names are supplied. Edit the client label in **Projects → Project details** and individual photograph titles in **Assets**. Internal ownership and existing URLs are preserved. Personal photographer/director names were removed from public titles and credits for this revision.
+
+## Homepage search and sharing
+
+Use **Work page → Search & sharing** to edit the homepage search title, description and sharing image. Publish the Work page. The review website remains excluded from search engines until launch.

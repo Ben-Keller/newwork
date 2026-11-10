@@ -8,6 +8,7 @@ export const workPlacement = defineType({
   type: 'object',
   icon: ProjectsIcon,
   fields: [
+    defineField({name: 'btsCaption', title: 'Photo caption', type: 'string', description: 'Optional. Replaces the project title beneath this BTS photo.', hidden: ({path}) => !path.includes('behindTheScenes'), validation: Rule => Rule.max(100)}),
     defineField({
       name: 'asset',
       title: 'Gallery asset',

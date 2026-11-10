@@ -16,6 +16,7 @@ export const contactPage = defineType({
     hiddenAllFieldsGroup,
   ],
   fields: [
+    defineField({name: 'confirmationMessage', title: 'Enquiry confirmation message', type: 'text', rows: 3, group: 'enquiries', description: 'Shown only after an enquiry is successfully sent. Leave empty for the standard thank-you message.', validation: Rule => Rule.max(400)}),
     defineField({name: 'oliverRevision', title: 'Revision migration', type: 'string', hidden: true, readOnly: true}),
     defineField({name: 'heading', title: 'Page heading', type: 'string', group: 'content', initialValue: 'Contact', validation: (Rule) => Rule.required().max(80)}),
     defineField({name: 'introduction', title: 'Introduction', type: 'portableText', group: 'content'}),

@@ -29,7 +29,7 @@ const workReel = settings.reel.enabled
     };
 // Placeholder BTS material drawn from the work gallery until real BTS content exists.
 const hasBtsSelection = Boolean(settings.btsGallery?.length);
-const btsItems = hasBtsSelection ? buildBtsItems(buildWorkGallery(projects, settings.btsGallery), 12, true) : buildBtsItems(galleryEntries, 12);
+const btsItems = hasBtsSelection ? buildBtsItems(buildWorkGallery(projects, settings.btsGallery), settings.btsCount, true) : settings.btsUseFallback ? buildBtsItems(galleryEntries, settings.btsCount) : [];
 const preloadEntry = galleryEntries[0];
 const preloadImageSizes = preloadEntry
   ? buildGalleryImageSizes(preloadEntry.image, {
@@ -42,7 +42,7 @@ const preloadImageSizes = preloadEntry
   content={content}
   title={settings.siteName}
   description={settings.defaultSeo.metaDescription}
-  seo={settings.defaultSeo}
+  seo={settings.workSeo || settings.defaultSeo}
   structuredData={{
     '@type': 'Organization',
     name: settings.siteName,
@@ -116,7 +116,7 @@ const preloadImageSizes = preloadEntry
 
     <div class="logo-work-page__content" data-logo-work-content>
       <div class="logo-work-page__title" data-logo-work-title>
-        <HomeIdentity wordmark={mode === 'prototype' ? undefined : settings.wordmark} projects={homeProjects} words={settings.tickerWords} cities={settings.tickerCities} />
+        <HomeIdentity wordmark={mode === 'prototype' ? undefined : settings.wordmark} projects={homeProjects} splash={settings.splash} words={settings.tickerWords} cities={settings.tickerCities} />
       </div>
       <!-- Everything below the title is what actually fades in behind it. The
            title itself must stay out of this group: an opacity group would
@@ -129,13 +129,13 @@ const preloadImageSizes = preloadEntry
           transition:persist="new-work-gallery-scene"
         >
           <div class="route-gallery-layer__content" data-route-gallery-content>
-            <ProjectGrid entries={galleryEntries} mode={mode} />
+            <ProjectGrid entries={galleryEntries} mode={mode} count={settings.galleryCount} />
           </div>
         </div>
         <GalleryBackdropCapture />
         <NotesStrip notes={notes} mode={mode} />
-        <Reel reel={workReel} />
-        <BehindTheScenes items={btsItems} heading={settings.btsHeading} subtitle={settings.btsSubtitle} />
+        {settings.showReel && <Reel reel={workReel} />}
+        {settings.showBts && btsItems.length > 0 && <BehindTheScenes artworks={settings.btsArtworks} artworkMode={settings.btsArtworkMode} showCaptions={settings.btsShowCaptions} showNumbers={settings.btsShowNumbers} items={btsItems} heading={settings.btsHeading} subtitle={settings.btsSubtitle} />}
         <ContactCallout text={settings.footer.calloutText} />
       </div>
     </div>

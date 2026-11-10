@@ -89,6 +89,7 @@ export function buildWorkGallery(
     assetId?: string,
     cardSize = work.homeCardSize,
     treatment = work.homeTreatment,
+    btsCaption?: string,
   ): WorkGalleryEntryView => {
     const asset = assetId ? work.assets.find((candidate) => candidate.id === assetId) : undefined;
     const photo = !asset && assetId
@@ -99,6 +100,7 @@ export function buildWorkGallery(
       : undefined);
     const doorwayId = asset?.slug || photo?.id;
     return {
+      btsCaption,
       id: workGalleryEntryId(work, doorwayId),
       work,
       asset,
@@ -118,6 +120,7 @@ export function buildWorkGallery(
         placement.assetId || placement.photoId,
         placement.cardSize,
         placement.treatment,
+        placement.btsCaption,
       )] : [];
     }));
   }

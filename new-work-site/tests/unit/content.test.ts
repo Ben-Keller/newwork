@@ -91,6 +91,49 @@ function approvedRawProject() {
 }
 
 describe('content mode', () => {
+  it('normalizes BTS artwork, caption controls and enquiry confirmation without changing defaults', () => {
+    const defaults = normalizeSiteSettings({}, 'production');
+    expect([defaults.btsArtworkMode, defaults.btsShowCaptions, defaults.btsShowNumbers]).toEqual(['default', true, true]);
+    const image = {asset: {url: 'https://cdn.sanity.io/images/7un4plyu/production/art-640x960.png'}};
+    const settings = normalizeSiteSettings({workPage: {
+      btsArtworkMode: 'custom', btsShowCaptions: false, btsShowNumbers: false,
+      behindTheScenes: [{workId: 'work-1', btsCaption: '  On set  '}],
+      btsArtworks: [
+        {_key: 'first', image, afterPhoto: 0, size: 'large', tilt: 'left'},
+        {_key: 'hidden', image, hidden: true},
+        {_key: 'missing'},
+        {_key: 'unsafe', image: {asset: {url: 'javascript:alert(1)'}}},
+        {_key: 'last', image, afterPhoto: -5, size: 'invalid', tilt: 'invalid'},
+      ],
+    }, contactPage: {confirmationMessage: '  Thanks, we will reply soon.  '}}, 'production');
+    expect(settings.btsArtworks).toHaveLength(2);
+    expect(settings.btsArtworks?.[0]).toMatchObject({key: 'first', afterPhoto: 0, size: 'large', tilt: 'left'});
+    expect(settings.btsArtworks?.[1]).toMatchObject({key: 'last', afterPhoto: 2, size: 'standard', tilt: 'right'});
+    expect(settings.btsGallery?.[0]?.btsCaption).toBe('On set');
+    expect(settings.btsShowCaptions).toBe(false);
+    expect(settings.btsShowNumbers).toBe(false);
+    expect(settings.confirmationMessage).toBe('Thanks, we will reply soon.');
+  });
+  it('defaults display controls and accepts explicit counts and hidden sections', () => {
+    const defaults = normalizeSiteSettings({}, 'production');
+    expect([defaults.galleryCount, defaults.btsCount, defaults.showBts, defaults.showReel, defaults.btsUseFallback]).toEqual([16, 12, true, true, true]);
+    const settings = normalizeSiteSettings({workPage: {galleryCount: 7, btsCount: 5, showBts: false, btsUseFallback: false, reel: {visible: false}, seo: {metaTitle: 'Our work'}}}, 'production');
+    expect([settings.galleryCount, settings.btsCount, settings.showBts, settings.showReel, settings.btsUseFallback]).toEqual([7, 5, false, false, false]);
+    expect(settings.workSeo?.metaTitle).toBe('Our work');
+    for (const galleryCount of [0, -1, 41, 3.5, '20', null]) expect(normalizeSiteSettings({workPage: {galleryCount}}, 'production').galleryCount).toBe(16);
+  });
+  it('uses the dedicated splash selection and rejects incomplete or unsafe media pairs', () => {
+    const video = {asset: {url: 'https://cdn.sanity.io/files/7un4plyu/production/splash.mp4'}};
+    const poster = {asset: {url: 'https://cdn.sanity.io/images/7un4plyu/production/still-1920x1080.jpg'}};
+    const settings = (splash: unknown) => normalizeSiteSettings({workPage: {splash}}, 'production').splash;
+    expect(settings({video, poster})?.video).toBe(video.asset.url);
+    expect(settings({video, poster})?.poster.src).toContain('still-1920x1080.jpg');
+    expect(settings(undefined)).toBeUndefined();
+    expect(settings({video})).toBeUndefined();
+    expect(settings({poster})).toBeUndefined();
+    expect(settings({video: {asset: {url: 'https://untrusted.example/clip.mp4'}}, poster})).toBeUndefined();
+    expect(settings({video, poster: {...poster, needsReview: true}})).toBeUndefined();
+  });
   it('projects a valid enquiry endpoint while leaving unconfigured or unsafe destinations disabled', () => {
     expect(normalizeSiteSettings({contactPage: {formspreeEndpoint: 'https://formspree.io/f/abcdefgh'}}, 'production')
       .formspreeEndpoint).toBe('https://formspree.io/f/abcdefgh');

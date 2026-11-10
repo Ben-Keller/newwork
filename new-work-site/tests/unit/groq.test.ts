@@ -157,6 +157,18 @@ describe('About page projection', () => {
     closingHeadline: 'What should we make next?',
   };
 
+  it.each([SITE_SETTINGS_QUERY, PREVIEW_SITE_SETTINGS_QUERY])('resolves splash uploads for public and preview settings', async query => {
+    const video = {_id: 'file-splash', _type: 'sanity.fileAsset', url: 'https://cdn.sanity.io/files/7un4plyu/production/clip.mp4', size: 1000000};
+    const image = {_id: 'image-splash', _type: 'sanity.imageAsset', url: 'https://cdn.sanity.io/images/7un4plyu/production/still.jpg'};
+    const work = {_id: 'workPage', _type: 'workPage', splash: {
+      video: {_type: 'editorialFile', asset: {_ref: video._id}},
+      poster: {_type: 'editorialImage', asset: {_ref: image._id}},
+    }};
+    const result = await queryResult<{workPage: {splash: {video: {asset: {url: string}}; poster: {asset: {url: string}}}}}>(query, [settings, work, video, image]);
+    expect(result.workPage.splash.video.asset.url).toBe(video.url);
+    expect(result.workPage.splash.poster.asset.url).toBe(image.url);
+  });
+
   it.each([SITE_SETTINGS_QUERY, PREVIEW_SITE_SETTINGS_QUERY])(
     'returns the editable About text',
     async (query) => {

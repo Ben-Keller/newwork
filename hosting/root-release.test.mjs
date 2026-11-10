@@ -10,7 +10,7 @@ async function fixture(t, mode = 'production') {
   const dir = await mkdtemp(path.join(tmpdir(), 'newwork-release-'));
   t.after(() => rm(dir, {recursive: true, force: true}));
   await writeFile(path.join(dir, 'release-info.json'), JSON.stringify({source: config.source, origin: config.site, base: '/', mode}));
-  await writeFile(path.join(dir, 'index.html'), `<link rel="canonical" href="${config.site}/">${mode === 'prototype' ? '<meta name="robots" content="noindex">' : ''}${'<article data-project-card></article>'.repeat(16)}`);
+  await writeFile(path.join(dir, 'index.html'), `<link rel="canonical" href="${config.site}/">${mode === 'prototype' ? '<meta name="robots" content="noindex">' : ''}<section data-gallery-limit="16" data-gallery-available="16">${'<article data-project-card></article>'.repeat(16)}</section>`);
   await writeFile(path.join(dir, 'sitemap-index.xml'), '<sitemapindex/>');
   for (const prefix of config.legacyPrefixes) {
     await mkdir(path.join(dir, prefix), {recursive: true});
@@ -21,6 +21,18 @@ async function fixture(t, mode = 'production') {
 test('accepts production and all legacy bookmark prefixes', async t => {
   const dir = await fixture(t);
   assert.deepEqual(await verifyRootRelease(dir, config, {production: true}), {pages: 6, mode: 'production'});
+});
+test('accepts custom limits and fewer available tiles without accepting missing cards', async t => {
+  const dir = await fixture(t);
+  const file = path.join(dir, 'index.html');
+  const original = await readFile(file, 'utf8');
+  for (const [limit, available] of [[7, 16], [24, 16], [1, 16], [40, 40]]) {
+    const home = original.replace('data-gallery-limit="16"', `data-gallery-limit="${limit}"`).replace('data-gallery-available="16"', `data-gallery-available="${available}"`).replace(/(?:<article data-project-card><\/article>)+/u, '<article data-project-card></article>'.repeat(Math.min(limit, available)));
+    await writeFile(file, home);
+    await verifyRootRelease(dir, config);
+    await writeFile(file, home.replace('<article data-project-card></article>', ''));
+    await assert.rejects(verifyRootRelease(dir, config), /gallery tile count/);
+  }
 });
 test('prototype is reviewable but cannot enter the production publisher', async t => {
   const dir = await fixture(t, 'prototype');
@@ -42,14 +54,14 @@ test('rejects noindex production and an incorrect gallery count', async t => {
   await writeFile(home, `${original}<meta name="robots" content="noindex">`);
   await assert.rejects(verifyRootRelease(dir, config), /allow indexing/);
   await writeFile(home, original.replace('<article data-project-card></article>', ''));
-  await assert.rejects(verifyRootRelease(dir, config), /sixteen gallery/);
+  await assert.rejects(verifyRootRelease(dir, config), /gallery tile count/);
 });
 
 test('review releases keep all links inside the repository base and stay noindex', async t => {
   const dir = await fixture(t);
   const review = {...config, site: 'https://ben-keller.github.io', base: '/newwork', indexable: false};
   await writeFile(path.join(dir, 'release-info.json'), JSON.stringify({source: review.source, origin: review.site, base: review.base, mode: 'production'}));
-  const home = `<link rel="canonical" href="${review.site}/newwork/"><meta name="robots" content="noindex">${'<article data-project-card></article>'.repeat(16)}`;
+  const home = `<link rel="canonical" href="${review.site}/newwork/"><meta name="robots" content="noindex"><section data-gallery-limit="16" data-gallery-available="16">${'<article data-project-card></article>'.repeat(16)}</section>`;
   await writeFile(path.join(dir, 'index.html'), home);
   for (const prefix of review.legacyPrefixes) await writeFile(path.join(dir, prefix, 'index.html'), redirectHtml('/newwork/'));
   await verifyRootRelease(dir, review, {production: true});

@@ -69,3 +69,6 @@
 /review-release-dist/
 /output/
 /reviews/oliver-2026-10/captures/
+
+# Local guide renders and verification scratch files
+/tmp/
