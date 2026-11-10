@@ -22,7 +22,7 @@ const query = defineQuery(/* groq */ `{
   "updatedAt": *[!(_id in path("drafts.**")) && !(_id in path("versions.**")) && _type in ["siteSettings", "workPage", "footerSettings", "contactPage", "work", "mediaItem", "sanity.imageAsset", "sanity.fileAsset"]] | order(_updatedAt desc)[0]._updatedAt
 }`)
 const Shell = styled(Box)`min-height: 100%; background: var(--card-bg-color);`
-const Content = styled.div`max-width: 1120px; margin: auto; display: grid; gap: 2rem;`
+const Content = styled.div`max-width: 1120px; margin: auto; display: grid; gap: 2rem; container-type: inline-size;`
 const Hero = styled.header`
   background: #191a17; color: #f3f0e8; padding: clamp(1.5rem, 4vw, 3rem);
   display: grid; gap: 2.5rem; border-radius: 3px;
@@ -42,6 +42,19 @@ const Board = styled.div`
   display: flex; gap: 2px; padding: 5px; background: #090a08; border: 1px solid #47483e;
   span { position: relative; display: grid; place-items: center; width: 1.25rem; height: 2rem; background: linear-gradient(#30322b 49%, #20221c 50%); font: 500 1rem/1 monospace; }
   span::after { content: ''; position: absolute; inset: 49% 0 auto; border-top: 1px solid #090a08; }
+`
+const GuideFeature = styled.section`
+  display: grid; grid-template-columns: 132px minmax(0, 1fr); gap: clamp(1.25rem, 3vw, 2rem);
+  align-items: center; padding: clamp(1rem, 3vw, 2rem); background: #f3f0e8; color: #191a17;
+  border: 1px solid #d9d5ca; border-radius: 3px;
+  img { display: block; width: 100%; height: auto; border: 1px solid #d9d5ca; }
+  h2 { margin: 0 0 .7rem; font-size: 1.5rem; font-weight: 500; letter-spacing: -.03em; }
+  p { margin: 0; max-width: 35rem; font-size: .9rem; line-height: 1.6; }
+  .guide-actions { display: flex; flex-wrap: wrap; gap: .8rem 1.25rem; align-items: center; margin-top: 1.25rem; }
+  a { color: inherit; text-underline-offset: 3px; font-size: .875rem; }
+  a:focus-visible { outline: 2px solid currentColor; outline-offset: 5px; }
+  .guide-open { display: inline-flex; gap: .75rem; align-items: center; background: #191a17; color: #f3f0e8; padding: .85rem 1rem; text-decoration: none; border-radius: 2px; }
+  @container(max-width: 520px) { grid-template-columns: 1fr; img { width: 96px; } h2 { font-size: 1.25rem; } }
 `
 const StatsGrid = styled.div`
   display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); border-block: 1px solid var(--card-border-color);
@@ -120,6 +133,19 @@ export function ClientDashboard() {
             <Board aria-label="Studio"><span>S</span><span>T</span><span>U</span><span>D</span><span>I</span><span>O</span></Board>
           </HeroBottom>
         </Hero>
+        <GuideFeature aria-labelledby="editing-guide-heading">
+          <a href="/static/New-Work-Visual-Editing-Guide.pdf" target="_blank" rel="noopener noreferrer" aria-label="Open the New Work editing guide">
+            <img src="/static/editing-guide-cover.webp" width="320" height="453" alt="New Work visual editing guide contents" />
+          </a>
+          <div>
+            <h2 id="editing-guide-heading">Website editing guide</h2>
+            <p>Step-by-step instructions with screenshots of your website and Studio. Covers the splash, gallery, projects, reel, BTS, contact details and footer.</p>
+            <div className="guide-actions">
+              <a className="guide-open" href="/static/New-Work-Visual-Editing-Guide.pdf" target="_blank" rel="noopener noreferrer">Open guide <ArrowTopRightIcon /></a>
+              <a href="/static/New-Work-Visual-Editing-Guide.pdf" download>Download PDF</a>
+            </div>
+          </div>
+        </GuideFeature>
         {failed ? <Card padding={4} tone="caution" border><Text>Content counts are unavailable. Refresh to try again.</Text></Card> : stats ? (
           <StatsGrid aria-label="Published content">
             <div><strong>{stats.projects}</strong><span>Approved projects</span></div>
