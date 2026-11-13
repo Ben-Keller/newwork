@@ -257,6 +257,7 @@ const PROJECT_CARD_PROJECTION = `{
 }`
 
 const REEL_PROJECTION = `{
+  vimeoUrl,
   visible,
   enabled,
   poster${IMAGE_PROJECTION},

@@ -1,4 +1,5 @@
 ---
+import VimeoReel from './VimeoReel.astro';
 import ResponsiveImage from './ResponsiveImage.astro';
 import VideoControls from './VideoControls.astro';
 import ErrorMedia from './ErrorMedia.astro';
@@ -9,7 +10,7 @@ interface Props {
   reel: ReelView;
 }
 const { reel } = Astro.props;
-const ready = reel.enabled && reel.poster && reel.desktopSource;
+const ready = reel.enabled && (reel.vimeoUrl || (reel.poster && reel.desktopSource));
 const id = 'new-work-reel';
 const desktopMime = inferVideoMimeType(reel.desktopSource);
 const mobileMime = inferVideoMimeType(reel.mobileSource || reel.desktopSource);
@@ -21,6 +22,7 @@ const mobileMime = inferVideoMimeType(reel.mobileSource || reel.desktopSource);
     <div class="reel__stage">
       <div class="reel__projection" aria-hidden="true"></div>
       <div class="reel__frame" data-reel-shell data-media-frame style={`aspect-ratio:${reel.aspectRatio || '16 / 9'}`}>
+        {reel.vimeoUrl ? <VimeoReel url={reel.vimeoUrl} /> : <>
         <ResponsiveImage image={reel.poster!} sizes="(max-width: 599px) 88vw, 70vw" />
         <video
           id={id}
@@ -42,6 +44,7 @@ const mobileMime = inferVideoMimeType(reel.mobileSource || reel.desktopSource);
         </video>
         <VideoControls targetId={id} />
         <ErrorMedia message="Reel video unavailable" />
+        </>}
       </div>
     </div>
     {reel.caption ? <p class="reel__caption">{reel.caption}</p> : null}

@@ -34,7 +34,8 @@
     }
   ],
   "reel": {
-    "enabled": false,
+    "enabled": true,
+    "vimeoUrl": "https://vimeo.com/1043174924",
     "poster": null,
     "desktopSource": null,
     "mobileSource": null,

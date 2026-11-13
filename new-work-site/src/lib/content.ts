@@ -668,6 +668,7 @@ function normalizeReel(value: unknown): ReelView {
     : reel.credits;
   return {
     enabled: Boolean(reel.enabled),
+    vimeoUrl: parseApprovedWatchUrl(reel.vimeoUrl)?.provider === 'vimeo' ? parseApprovedWatchUrl(reel.vimeoUrl)?.href : undefined,
     poster: reel.poster ? resolveImage(reel.poster, { alt: '' }) : undefined,
     desktopSource: sourceUrl(reel.desktopSource) || safeHostedVideoUrl(reel.desktopSourceUrl),
     mobileSource: sourceUrl(reel.mobileSource) || safeHostedVideoUrl(reel.mobileSourceUrl),

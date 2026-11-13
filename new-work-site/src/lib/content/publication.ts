@@ -178,6 +178,7 @@ export function isProductionEligibleNote(raw: UnknownRecord): boolean {
 
 export function hasEligibleEnabledReel(reel: ReelView): boolean {
   if (!reel.enabled) return true;
+  if (reel.vimeoUrl) return parseApprovedWatchUrl(reel.vimeoUrl)?.provider === 'vimeo';
   if (!reel.poster?.src || !isApprovedSanityAsset({asset: {url: reel.poster.src}}, 'image')) return false;
   if (!safeHostedVideoUrl(reel.desktopSource)) return false;
   if (reel.mobileSource && !safeHostedVideoUrl(reel.mobileSource)) return false;

@@ -1,0 +1,104 @@
+---
+interface Props { url: string }
+const { url } = Astro.props;
+---
+<div class="vimeo-reel" data-vimeo-reel data-reel-url={url}>
+  <div class="vimeo-reel__player" data-reel-player></div>
+  <p class="vimeo-reel__status" data-reel-status>Loading reel…</p>
+  <a class="vimeo-reel__fallback" href={url} target="_blank" rel="noopener noreferrer" data-reel-fallback hidden>Watch reel on Vimeo ↗</a>
+  <noscript><a href={url}>Watch reel on Vimeo ↗</a></noscript>
+</div>
+<script>
+  import type Player from '@vimeo/player';
+  import type {VimeoUrl} from '@vimeo/player';
+  import { registerMediaController } from '../lib/motion/media-controller';
+
+  let dispose = () => {};
+  function setup() {
+    dispose();
+    const cleanups: Array<() => void> = [];
+    document.querySelectorAll<HTMLElement>('[data-vimeo-reel]').forEach(shell => {
+      const mount = shell.querySelector<HTMLElement>('[data-reel-player]')!;
+      const status = shell.querySelector<HTMLElement>('[data-reel-status]')!;
+      const fallback = shell.querySelector<HTMLAnchorElement>('[data-reel-fallback]')!;
+      const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+      const saveData = Boolean((navigator as Navigator & {connection?: {saveData?: boolean}}).connection?.saveData);
+      let player: Player | undefined;
+      let loading = false;
+      let timeout: ReturnType<typeof setTimeout> | undefined;
+      let disposed = false;
+      let inView = false;
+      let ready = false;
+      let userPaused = false;
+      let commandedPause = false;
+      const pause = () => {
+        commandedPause = true;
+        void player?.pause().catch(() => {});
+      };
+      const sync = () => {
+        if (!ready || !player) return;
+        if (inView && !document.hidden && !reduced.matches && !saveData && !userPaused) {
+          void player.play().catch(() => { /* Vimeo's controls remain available if autoplay is blocked. */ });
+        } else if (!inView || document.hidden || reduced.matches || saveData) pause();
+      };
+      const load = async () => {
+        if (loading || player || disposed) return;
+        loading = true;
+        timeout = setTimeout(() => {
+          if (!disposed && !ready) { status.textContent = 'Having trouble loading?'; fallback.hidden = false; }
+        }, 12000);
+        try {
+          const {default: VimeoPlayer} = await import('@vimeo/player');
+          if (disposed) return;
+          player = new VimeoPlayer(mount, {
+            url: shell.dataset.reelUrl as VimeoUrl, responsive: true, autoplay: false,
+            muted: true, loop: true, controls: true, playsinline: true,
+            title: false, byline: false, portrait: false, dnt: true,
+          });
+          player.on('play', () => { commandedPause = false; userPaused = false; if (!inView || document.hidden) pause(); });
+          player.on('pause', () => { if (!commandedPause) userPaused = true; });
+          await player.ready();
+          if (disposed) return;
+          mount.querySelector('iframe')?.setAttribute('title', 'New Work showreel');
+          clearTimeout(timeout);
+          ready = true;
+          fallback.hidden = true;
+          status.hidden = true;
+          sync();
+        } catch {
+          clearTimeout(timeout);
+          if (!disposed) { status.textContent = 'Reel unavailable here.'; fallback.hidden = false; }
+        }
+      };
+      const observer = new IntersectionObserver(([entry]) => {
+        inView = Boolean(entry && entry.intersectionRatio >= .6);
+        if (inView) void load();
+        sync();
+      }, {threshold: [0, .6, 1]});
+      observer.observe(shell);
+      const unregister = registerMediaController({pause, refresh: sync});
+      document.addEventListener('visibilitychange', sync);
+      reduced.addEventListener('change', sync);
+      cleanups.push(() => {
+        disposed = true;
+        clearTimeout(timeout);
+        observer.disconnect();
+        unregister();
+        document.removeEventListener('visibilitychange', sync);
+        reduced.removeEventListener('change', sync);
+        void player?.destroy().catch(() => {});
+      });
+    });
+    dispose = () => { cleanups.forEach(cleanup => cleanup()); };
+  }
+  setup();
+  document.addEventListener('astro:page-load', setup);
+  document.addEventListener('astro:before-swap', () => dispose());
+</script>
+<style>
+  .vimeo-reel { position: absolute; inset: 0; color: #fff; background: #000; }
+  .vimeo-reel__player { width: 100%; height: 100%; }
+  .vimeo-reel__player :global(iframe) { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+  .vimeo-reel__status { position: absolute; top: 42%; width: 100%; text-align: center; pointer-events: none; }
+  .vimeo-reel__fallback { position: absolute; top: 58%; width: 100%; text-align: center; color: inherit; }
+</style>

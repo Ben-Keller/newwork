@@ -298,6 +298,7 @@ export interface FooterSettingsView {
 }
 
 export interface ReelView {
+  vimeoUrl?: string;
   enabled: boolean;
   poster?: ImageView;
   desktopSource?: string;

@@ -5,7 +5,7 @@ Open [New Work Studio](https://new-work.sanity.studio/) and choose **Website con
 | Change | Where to edit |
 |---|---|
 | Opening splash footage | Work page → Opening splash → Splash video and Splash still image |
-| Homepage reel | Work page → Homepage reel preview → Poster and Desktop source; enable the preview |
+| Homepage reel | Work page → Homepage reel preview → Vimeo reel URL (or Poster and Desktop source); enable the preview |
 | Public email | Contact page → Contact details → Contact email |
 | Enable website enquiries | Contact page → Enquiry form → Formspree form endpoint |
 | City or multiline address | Contact page → Contact details → Location or public address |
@@ -49,7 +49,7 @@ Use transparent SVG logo artwork where available; supply its width and height (v
 
 The opening splash and the homepage reel are separate videos. For the splash, open **Work page → Opening splash**, upload a short compressed MP4 or WebM (5–15 seconds, up to 20 MB), and add a matching **Splash still image**. Publish the Work page. The clip loops silently inside the opening lettering; the still appears while loading and for reduced-motion visitors. Clear both fields and publish to restore the automatic footage selection.
 
-For the player below the gallery, open **Work page → Homepage reel preview**. Upload a **Poster** and **Desktop source** (a short MP4 or WebM preview); optionally add **Mobile source**. Turn on **Show the reel preview on the Work page**, then Publish. Turning it off restores the existing project-preview fallback. To hide the entire player, turn off **Show reel section**. Full-length films belong on a dedicated streaming service.
+For the player below the gallery, open **Work page → Homepage reel preview**. For a streamed reel, paste its public share link into **Vimeo reel URL** (for example, `https://vimeo.com/1043174924`, not a `/manage/` address). Vimeo supplies the poster and playback controls. The video loops muted when in view, pauses offscreen, and stays manual for reduced-motion or data-saving visitors. To use a short uploaded preview instead, clear the Vimeo URL, upload a **Poster** and **Desktop source**, and optionally add **Mobile source**. Turn on **Show the reel preview on the Work page**, then Publish. Turning it off restores the existing project-preview fallback. To hide the entire player, turn off **Show reel section**. Full-length films belong on a dedicated streaming service.
 
 ## Save and publish
 

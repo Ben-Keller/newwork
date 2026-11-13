@@ -93,6 +93,14 @@ const imageSizes = (wide: boolean) => wide
   .bts__storyboard :global(.responsive-image) { background: transparent; }
   .bts__storyboard :global(img) { display: block; width: 100%; height: auto; }
   .bts__storyboard::before { top: 16%; }
+  @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+    .bts__frame { transition: transform 240ms ease-out, box-shadow 240ms ease-out; }
+    .bts__frame:hover {
+      z-index: 3;
+      transform: translateY(calc(var(--board-offset) - 3px)) rotate(0deg);
+      box-shadow: 0 2px 4px #272b2626, 3px 9px 15px #272b2621;
+    }
+  }
   @media (min-width: 600px) and (max-width: 999px) { .bts__board { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
   @media (max-width: 599px) {
     .bts__board { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 27px 17px; padding: 24px 19px 29px; }

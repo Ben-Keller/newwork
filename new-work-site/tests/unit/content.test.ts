@@ -1,3 +1,4 @@
+import {hasEligibleEnabledReel} from '../../src/lib/content/publication';
 import { describe, expect, it } from 'vitest';
 import canonicalFixtureProjectsJson from '../../../content/projects.json';
 import canonicalFixtureSettingsJson from '../../../content/site-settings.json';
@@ -91,6 +92,15 @@ function approvedRawProject() {
 }
 
 describe('content mode', () => {
+  it('accepts the public Vimeo reel and rejects management or unrelated URLs', () => {
+    const reel = (vimeoUrl: string) => normalizeSiteSettings({workPage: {reel: {enabled: true, vimeoUrl}}}, 'production').reel;
+    expect(reel('https://vimeo.com/1043174924').vimeoUrl).toBe('https://vimeo.com/1043174924');
+    expect(hasEligibleEnabledReel(reel('https://vimeo.com/1043174924'))).toBe(true);
+    expect(hasEligibleEnabledReel(reel('https://vimeo.com/manage/videos/1043174924'))).toBe(false);
+    expect(reel('https://vimeo.com/manage/videos/1043174924').vimeoUrl).toBeUndefined();
+    expect(reel('https://example.com/1043174924').vimeoUrl).toBeUndefined();
+    expect(reel('https://www.youtube.com/watch?v=abcdefghijk').vimeoUrl).toBeUndefined();
+  });
   it('normalizes BTS artwork, caption controls and enquiry confirmation without changing defaults', () => {
     const defaults = normalizeSiteSettings({}, 'production');
     expect([defaults.btsArtworkMode, defaults.btsShowCaptions, defaults.btsShowNumbers]).toEqual(['default', true, true]);

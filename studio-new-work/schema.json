@@ -2068,6 +2068,13 @@
           },
           "optional": true
         },
+        "vimeoUrl": {
+          "type": "objectAttribute",
+          "value": {
+            "type": "string"
+          },
+          "optional": true
+        },
         "poster": {
           "type": "objectAttribute",
           "value": {
